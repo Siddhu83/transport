@@ -3,6 +3,10 @@ import cors from '@fastify/cors';
 import jwt from '@fastify/jwt';
 import { env } from './config/env.js';
 import { healthRoutes } from './modules/health/health.routes.js';
+import { authRoutes } from './modules/auth/auth.routes.js';
+import { telemetryRoutes } from './modules/telemetry/telemetry.routes.js';
+import { sosRoutes } from './modules/sos/sos.routes.js';
+import { routeManagementRoutes } from './modules/routes/routes.routes.js';
 export function buildApp() {
     const app = Fastify({
         logger: env.NODE_ENV === 'development'
@@ -26,5 +30,10 @@ export function buildApp() {
     });
     // Register Health Routes
     app.register(healthRoutes);
+    // Register API Modular Routes
+    app.register(authRoutes, { prefix: '/api/v1/auth' });
+    app.register(telemetryRoutes, { prefix: '/api/v1/telemetry' });
+    app.register(sosRoutes, { prefix: '/api/v1/sos' });
+    app.register(routeManagementRoutes, { prefix: '/api/v1/routes' });
     return app;
 }
