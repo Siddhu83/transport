@@ -31,9 +31,10 @@ A high-throughput, sub-second latency real-time transport tracking and emergency
 
 Explore the detailed architecture and specification documents:
 
-1. [01. Requirements, User Roles & Business Rules](file:///s:/my-exps/transport/docs/01_requirements_and_roles.md) — Scale constraints, RBAC matrix, personas, and non-functional requirements.
-2. [02. System Architecture & Topology](file:///s:/my-exps/transport/docs/02_system_architecture.md) — Hot/cold data plane separation, topology diagram, and BullMQ worker pipeline.
-3. [03. Telemetry & Real-Time Protocol Specification](file:///s:/my-exps/transport/docs/03_telemetry_and_realtime_protocol.md) — Ingestion contracts, Zod schemas, Redis memory structures, and SSE streaming.
-4. [04. SOS Breakdown & Emergency Dispatch Workflow](file:///s:/my-exps/transport/docs/04_sos_and_dispatch_workflow.md) — Incident lifecycle state machine, candidate matching algorithms, and BullMQ worker jobs.
-5. [05. Frontend Engineering & UI/UX Standards](file:///s:/my-exps/transport/docs/05_frontend_guidelines.md) — FIDS design tokens, WebGL map integration, LERP math engine, and UX layout wireframes.
-6. [AGENT Instructions](file:///s:/my-exps/transport/AGENT.md) — System invariants, strict coding rules, and core tech stack constraints.
+1. [01. Requirements, User Roles & Business Rules](https://github.com/Siddhu83/transport/docs/01_requirements_and_roles.md) — Scale constraints, RBAC matrix, personas, and non-functional requirements.
+2. [02. System Architecture & Topology](https://github.com/Siddhu83/transport/docs/02_system_architecture.md) — Hot/cold data plane separation, topology diagram, and BullMQ worker pipeline.
+3. [03. Telemetry & Real-Time Protocol Specification](https://github.com/Siddhu83/transport/docs/03_telemetry_and_realtime_protocol.md) — Ingestion contracts, Zod schemas, Redis memory structures, and SSE streaming.
+4. [04. SOS Breakdown & Emergency Dispatch Workflow](https://github.com/Siddhu83/transport/docs/04_sos_and_dispatch_workflow.md) — Incident lifecycle state machine, candidate matching algorithms, and BullMQ worker jobs.
+5. [05. Frontend Engineering & UI/UX Standards](https://github.com/Siddhu83/transport/docs/05_frontend_guidelines.md) — FIDS design tokens, WebGL map integration, LERP math engine, and UX layout wireframes.
+6. [06. Resilience, Failure Modes & Disaster Recovery](https://github.com/Siddhu83/transport/docs/06_resilience_and_failure_modes.md) — Mobile OS background survival, cellular ring buffer, circuit breakers, and triage playbook.
+7. [AGENT Instructions](https://github.com/Siddhu83/transport/AGENT.md) — System invariants, strict coding rules, and core tech stack constraints.
