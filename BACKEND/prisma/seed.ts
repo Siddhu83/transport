@@ -105,6 +105,7 @@ async function main() {
     });
   }
 
+
   // 4. Create 4 Super Admin Accounts
   console.info('👑 Creating 4 Super Admin Accounts...');
   for (let i = 1; i <= 4; i++) {

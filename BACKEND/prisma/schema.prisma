@@ -86,7 +86,7 @@ model Bus {
   licensePlate     String    @unique
   capacity         Int       @default(50)
   status           BusStatus @default(ACTIVE)
-  driverId         String?   @uniquejb
+  driverId         String?   @unique
   currentRouteId   String?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
