@@ -9,3 +9,184 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+// User Role Hierarchy (RBAC Matrix)
+enum Role {
+  SUPER_ADMIN
+  BUS_INCHARGE
+  DRIVER
+  STUDENT
+}
+
+// Vehicle Operational States
+enum BusStatus {
+  ACTIVE
+  INACTIVE
+  MAINTENANCE
+  EMERGENCY
+}
+
+// Driver Shift Lifecycle
+enum ShiftStatus {
+  IDLE
+  ON_DUTY
+  COMPLETED
+}
+
+// Emergency Incident Lifecycle States
+enum SosIncidentStatus {
+  OPEN
+  ACKNOWLEDGED
+  DISPATCHED
+  RESOLVED
+  CANCELLED
+}
+
+// Stranded Passenger Band Categorization
+enum PassengerBand {
+  BAND_A_UNDER_15
+  BAND_B_15_TO_30
+  BAND_C_30_TO_50
+  BAND_D_OVER_50
+}
+
+// Emergency Incident Reasons
+enum SosReason {
+  MECHANICAL_BREAKDOWN
+  ACCIDENT
+  MEDICAL_EMERGENCY
+  STUDENT_OVERFLOW
+  ROAD_BLOCKED
+  OTHER
+}
+
+model User {
+  id               String   @id @default(uuid())
+  email            String   @unique
+  passwordHash     String
+  name             String
+  role             Role     @default(STUDENT)
+  assignedBusId    String?  @unique
+  assignedRouteId  String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  assignedBus      Bus?     @relation("DriverVehicle", fields: [assignedBusId], references: [id])
+  assignedRoute    Route?   @relation("StudentRoute", fields: [assignedRouteId], references: [id])
+  shifts           Shift[]
+  sosIncidents     SosIncident[] @relation("ReportedIncidents")
+
+  @@index([email])
+  @@index([role])
+}
+
+model Bus {
+  id               String    @id @default(uuid())
+  busNumber        String    @unique
+  licensePlate     String    @unique
+  capacity         Int       @default(50)
+  status           BusStatus @default(ACTIVE)
+  driverId         String?   @uniquejb
+  currentRouteId   String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  driver           User?     @relation("DriverVehicle")
+  currentRoute     Route?    @relation("ActiveRouteBuses", fields: [currentRouteId], references: [id])
+  shifts           Shift[]
+  sosIncidents     SosIncident[] @relation("DisabledBusIncidents")
+  reliefIncidents  SosIncident[] @relation("ReliefBusIncidents")
+
+  @@index([status])
+  @@index([currentRouteId])
+}
+
+model Route {
+  id               String   @id @default(uuid())
+  routeNumber      String   @unique
+  name             String
+  polylineGeoJson  String?  @db.Text
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  students         User[]       @relation("StudentRoute")
+  buses            Bus[]        @relation("ActiveRouteBuses")
+  routeStops       RouteStop[]
+  shifts           Shift[]
+  sosIncidents     SosIncident[]
+
+  @@index([routeNumber])
+}
+
+model Stop {
+  id               String   @id @default(uuid())
+  name             String
+  code             String   @unique
+  latitude         Float
+  longitude        Float
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  routeStops       RouteStop[]
+
+  @@index([code])
+}
+
+model RouteStop {
+  id                       String   @id @default(uuid())
+  routeId                  String
+  stopId                   String
+  stopOrder                Int
+  estimatedMinutesFromStart Int      @default(0)
+
+  route                    Route    @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  stop                     Stop     @relation(fields: [stopId], references: [id], onDelete: Cascade)
+
+  @@unique([routeId, stopId])
+  @@unique([routeId, stopOrder])
+  @@index([routeId])
+  @@index([stopId])
+}
+
+model Shift {
+  id               String      @id @default(uuid())
+  busId            String
+  driverId         String
+  routeId          String
+  status           ShiftStatus @default(IDLE)
+  startTime        DateTime    @default(now())
+  endTime          DateTime?
+
+  bus              Bus         @relation(fields: [busId], references: [id])
+  driver           User        @relation(fields: [driverId], references: [id])
+  route            Route       @relation(fields: [routeId], references: [id])
+
+  @@index([busId])
+  @@index([driverId])
+  @@index([status])
+}
+
+model SosIncident {
+  id                    String            @id @default(uuid())
+  busId                 String
+  routeId               String
+  driverId              String
+  status                SosIncidentStatus @default(OPEN)
+  reason                SosReason
+  strandedPassengerBand PassengerBand
+  notes                 String?
+  reliefBusId           String?
+  ackByAdmin            Boolean           @default(false)
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+  resolvedAt            DateTime?
+
+  bus                   Bus               @relation("DisabledBusIncidents", fields: [busId], references: [id])
+  route                 Route             @relation(fields: [routeId], references: [id])
+  driver                User              @relation("ReportedIncidents", fields: [driverId], references: [id])
+  reliefBus             Bus?              @relation("ReliefBusIncidents", fields: [reliefBusId], references: [id])
+
+  @@index([busId])
+  @@index([status])
+  @@index([reliefBusId])
+}
