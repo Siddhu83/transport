@@ -1,10 +1,53 @@
 import { FastifyInstance } from 'fastify';
+import { randomUUID } from 'node:crypto';
 import { Role } from '@prisma/client';
 import { authenticate, requireRoles } from '../auth/rbac.middleware.js';
 import { TelemetryPingSchema, IngestionStatus } from './telemetry.schemas.js';
 import { processTelemetryPing } from './telemetry.service.js';
+import { sseHub } from './sseHub.js';
+
+interface StreamQueryParams {
+  routeId?: string;
+}
 
 export async function telemetryRoutes(fastify: FastifyInstance) {
+  /**
+   * GET /api/v1/telemetry/stream
+   * Real-time Server-Sent Events (SSE) telemetry stream broadcaster
+   * Query Parameters: ?routeId=<UUID> (Optional route filtering)
+   */
+  fastify.get<{ Querystring: StreamQueryParams }>('/stream', async (request, reply) => {
+    const clientId = randomUUID();
+    const routeId = request.query.routeId;
+    const res = reply.raw;
+
+    // Set SSE Headers
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+      'X-Accel-Buffering': 'no', // Disable proxy buffering for sub-second delivery
+    });
+
+    // Send initial heartbeat frame to establish pipe
+    res.write(': heartbeat\n\n');
+
+    // Register client connection with SSE Hub
+    sseHub.addClient({
+      id: clientId,
+      routeId,
+      res,
+    });
+
+    // Cleanup client connection on socket close
+    request.raw.on('close', () => {
+      sseHub.removeClient(clientId);
+    });
+
+    // Hi-jack Fastify default reply handling to maintain open HTTP/2 stream
+    return reply.hijack();
+  });
+
   /**
    * POST /api/v1/telemetry/ping
    * High-frequency ingestion endpoint for driver GPS telemetry
