@@ -15,6 +15,14 @@ jobs:
       run:
         working-directory: ./BACKEND
 
+    env:
+      NODE_ENV: test
+      PORT: 8000
+      HOST: 0.0.0.0
+      DATABASE_URL: postgresql://transport_admin:transport_pass@localhost:5432/transport_db?schema=public
+      REDIS_URL: redis://localhost:6379
+      JWT_SECRET: super-secret-jwt-key-replace-in-production-32-chars-min
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -27,7 +35,7 @@ jobs:
           cache-dependency-path: './BACKEND/package-lock.json'
 
       - name: Install Dependencies
-        run: npm ci
+        run: npm install
 
       - name: Generate Prisma Client
         run: npx prisma generate
