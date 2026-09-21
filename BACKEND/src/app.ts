@@ -18,7 +18,6 @@ export function buildApp() {
           },
         }
       : true,
-    disableRequestLogging: false,
   });
 
   // Register CORS
