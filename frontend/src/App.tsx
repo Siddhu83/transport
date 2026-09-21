@@ -15,7 +15,7 @@ export const App: React.FC = () => {
   useEffect(() => {
     const updateTime = () => {
       const now = new Date();
-      setCurrentTime(now.toLocaleTimeString('en-US', { hour12: false }));
+      setCurrentTime(now.toLocaleTimeString('en-US', { hour12: true }));
     };
     updateTime();
     const interval = setInterval(updateTime, 1000);
@@ -60,7 +60,7 @@ export const App: React.FC = () => {
             busId: `bus-uuid-${i + 1}`,
             plateNumber: `KA-01-F-${1000 + i}`,
             routeId: `route-${(i % 6) + 1}`,
-            routeName: `Route ${(i % 6) + 1} - Express Campus`,
+            routeName: `Route ${(i % 6) + 1} - ANITS`,
             speed: Math.floor(Math.random() * 45) + 15,
             heading: Math.floor(Math.random() * 360),
             status: i === 5 ? 'SOS' : i % 7 === 0 ? 'DELAYED' : 'ACTIVE',
@@ -92,12 +92,12 @@ export const App: React.FC = () => {
           </div>
           <div>
             <h1 className="text-sm font-bold tracking-wider uppercase flex items-center gap-2">
-              Campus Transit Fleet Operations
+              ANITS TRANSPORT SYSTEM
               <span className="text-[10px] px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 font-mono font-normal">
-                FIDS v1.0
+                ATS (v1.0)
               </span>
             </h1>
-            <p className="text-[11px] text-slate-400 font-mono">High-Throughput Telemetry & WebGL Dispatch Engine</p>
+            <p className="text-[11px] text-slate-400 font-mono">Real-Time Telemetry & Dispatch Engine</p>
           </div>
         </div>
 
