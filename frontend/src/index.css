@@ -1,0 +1,96 @@
+@import "tailwindcss";
+@import "maplibre-gl/dist/maplibre-gl.css";
+
+@layer base {
+  :root {
+    --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+
+    /* FIDS Color Palette System */
+    --color-canvas: #0b0f17;
+    --color-surface-card: #121824;
+    --color-surface-hover: #1b2333;
+    --color-border: #1e293b;
+    
+    /* Status Tokens */
+    --color-active: #10b981;    /* Emerald-500 */
+    --color-delayed: #f59e0b;   /* Amber-500 */
+    --color-sos: #ef4444;       /* Red-500 */
+    --color-offduty: #64748b;   /* Slate-500 */
+    --color-cyan-glow: #00f0ff; /* Neon Cyan */
+  }
+
+  body {
+    font-family: var(--font-sans);
+    background-color: var(--color-canvas);
+    color: #f8fafc;
+  }
+
+  .font-mono {
+    font-family: var(--font-mono);
+  }
+
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* Glassmorphism & Panel Utilities */
+.glass-panel {
+  background: rgba(18, 24, 36, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-panel-glow {
+  background: rgba(18, 24, 36, 0.90);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(0, 240, 255, 0.2);
+  box-shadow: 0 0 20px rgba(0, 240, 255, 0.08);
+}
+
+/* MapLibre Controls Override for FIDS Dark Aesthetic */
+.maplibregl-ctrl-group {
+  background: rgba(18, 24, 36, 0.9) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 8px !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5) !important;
+  overflow: hidden;
+}
+
+.maplibregl-ctrl-group button {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+}
+
+.maplibregl-ctrl-group button:last-child {
+  border-bottom: none !important;
+}
+
+.maplibregl-ctrl-icon {
+  filter: invert(1) brightness(1.5) !important;
+}
+
+.maplibregl-popup-content {
+  background: rgba(18, 24, 36, 0.95) !important;
+  color: #f8fafc !important;
+  border: 1px solid rgba(0, 240, 255, 0.3) !important;
+  border-radius: 8px !important;
+  padding: 12px 16px !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.7), 0 0 15px rgba(0, 240, 255, 0.15) !important;
+  font-family: var(--font-sans) !important;
+}
+
+.maplibregl-popup-anchor-top .maplibregl-popup-tip {
+  border-bottom-color: rgba(18, 24, 36, 0.95) !important;
+}
+.maplibregl-popup-anchor-bottom .maplibregl-popup-tip {
+  border-top-color: rgba(18, 24, 36, 0.95) !important;
+}
+.maplibregl-popup-anchor-left .maplibregl-popup-tip {
+  border-right-color: rgba(18, 24, 36, 0.95) !important;
+}
+.maplibregl-popup-anchor-right .maplibregl-popup-tip {
+  border-left-color: rgba(18, 24, 36, 0.95) !important;
+}
