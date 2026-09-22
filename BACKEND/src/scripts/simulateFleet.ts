@@ -3,7 +3,7 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:8000';
+const API_BASE_URL = process.env.API_BASE_URL || 'http://127.0.0.1:8000';
 const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-jwt-key-replace-in-production-32-chars-min';
 
 // Dependency-free HMAC-SHA256 JWT Token Signer
