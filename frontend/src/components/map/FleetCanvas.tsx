@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
-import { Compass, AlertCircle } from 'lucide-react';
+import { Compass, AlertCircle, Locate } from 'lucide-react';
 
 export interface VehicleFeatureProperties {
   busId: string;
@@ -23,10 +23,10 @@ export interface FleetCanvasProps {
   zoom?: number;
 }
 
-const DEFAULT_CENTER: [number, number] = [77.5946, 12.9716]; // Bangalore default
-const DEFAULT_ZOOM = 12;
+// ANITS Campus Tagarapuvalasa / Visakhapatnam Default Center
+const DEFAULT_CENTER: [number, number] = [83.4215, 17.9045];
+const DEFAULT_ZOOM = 13;
 
-// CartoDB Dark Matter vector style (free, fast, dark obsidian aesthetic)
 const DARK_MATTER_STYLE = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
 
 export const FleetCanvas: React.FC<FleetCanvasProps> = ({
@@ -41,6 +41,9 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
   const [isLoaded, setIsLoaded] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
   const [activeCount, setActiveCount] = useState<number>(0);
+  const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
+  const [isLocating, setIsLocating] = useState<boolean>(false);
+  const [locationStatusText, setLocationStatusText] = useState<string>('Campus Default');
 
   // Initialize MapLibre GL instance
   useEffect(() => {
@@ -68,10 +71,64 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
       );
 
       map.on('load', () => {
-        // Register WebGL GeoJSON source for zero-DOM marker rendering
+        // Register WebGL GeoJSON source for zero-DOM vehicle marker rendering
         map.addSource('buses-source', {
           type: 'geojson',
           data: geoJsonData || { type: 'FeatureCollection', features: [] },
+        });
+
+        // Register WebGL GeoJSON source for Student User Location
+        map.addSource('user-location-source', {
+          type: 'geojson',
+          data: {
+            type: 'FeatureCollection',
+            features: [],
+          },
+        });
+
+        // User Location Pulse Glow Ring
+        map.addLayer({
+          id: 'user-location-glow-layer',
+          type: 'circle',
+          source: 'user-location-source',
+          paint: {
+            'circle-radius': 18,
+            'circle-color': '#00f0ff',
+            'circle-opacity': 0.35,
+            'circle-blur': 0.6,
+          },
+        });
+
+        // User Location Core Dot
+        map.addLayer({
+          id: 'user-location-dot-layer',
+          type: 'circle',
+          source: 'user-location-source',
+          paint: {
+            'circle-radius': 7,
+            'circle-color': '#00f0ff',
+            'circle-stroke-width': 2.5,
+            'circle-stroke-color': '#ffffff',
+          },
+        });
+
+        // User Location Label
+        map.addLayer({
+          id: 'user-location-label-layer',
+          type: 'symbol',
+          source: 'user-location-source',
+          layout: {
+            'text-field': 'You (Student)',
+            'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
+            'text-size': 11,
+            'text-offset': [0, 1.4],
+            'text-anchor': 'top',
+          },
+          paint: {
+            'text-color': '#00f0ff',
+            'text-halo-color': '#0b0f17',
+            'text-halo-width': 2,
+          },
         });
 
         // 1. Outer Glow Layer for SOS/Active vehicles
@@ -95,7 +152,7 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
               '#f59e0b',
               'ACTIVE',
               '#10b981',
-              '#64748b', // Default/OFF_DUTY
+              '#64748b',
             ],
             'circle-opacity': 0.25,
             'circle-blur': 0.8,
@@ -177,6 +234,9 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
 
         mapRef.current = map;
         setIsLoaded(true);
+
+        // Auto-request HTML5 Geolocation on initial map load
+        detectUserLocation(map, false);
       });
 
       map.on('error', (e) => {
@@ -193,6 +253,61 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
       }
     };
   }, []);
+
+  // HTML5 Client-Side Geolocation Handler (Zero Backend Degradation)
+  const detectUserLocation = (mapInstance?: maplibregl.Map | null, flyTo = true) => {
+    const targetMap = mapInstance || mapRef.current;
+    if (!navigator.geolocation) {
+      setLocationStatusText('GPS Unsupported');
+      return;
+    }
+
+    setIsLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { longitude, latitude } = position.coords;
+        const coords: [number, number] = [longitude, latitude];
+        setUserLocation(coords);
+        setLocationStatusText('Live Location Active');
+        setIsLocating(false);
+
+        // Update User Location GeoJSON Source on Map
+        if (targetMap) {
+          const userSource = targetMap.getSource('user-location-source') as maplibregl.GeoJSONSource;
+          if (userSource) {
+            userSource.setData({
+              type: 'FeatureCollection',
+              features: [
+                {
+                  type: 'Feature',
+                  geometry: {
+                    type: 'Point',
+                    coordinates: coords,
+                  },
+                  properties: {},
+                },
+              ],
+            });
+          }
+
+          if (flyTo) {
+            targetMap.flyTo({
+              center: coords,
+              zoom: 14.5,
+              pitch: 25,
+              speed: 1.2,
+            });
+          }
+        }
+      },
+      (error) => {
+        console.info('HTML5 Geolocation info/fallback:', error.message);
+        setLocationStatusText('Campus Center');
+        setIsLocating(false);
+      },
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 }
+    );
+  };
 
   // Sync GeoJSON updates without re-instantiating WebGL map instance
   useEffect(() => {
@@ -226,8 +341,13 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
 
   const handleResetView = () => {
     if (mapRef.current) {
-      mapRef.current.flyTo({ center: DEFAULT_CENTER, zoom: DEFAULT_ZOOM, pitch: 30, bearing: 0 });
+      const targetCenter = userLocation || DEFAULT_CENTER;
+      mapRef.current.flyTo({ center: targetCenter, zoom: DEFAULT_ZOOM, pitch: 30, bearing: 0 });
     }
+  };
+
+  const handleLocateClick = () => {
+    detectUserLocation(mapRef.current, true);
   };
 
   return (
@@ -261,7 +381,12 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
             <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
           </div>
           <div>
-            <div className="text-[10px] font-mono tracking-wider text-slate-400 uppercase">WebGL Fleet Canvas</div>
+            <div className="text-[10px] font-mono tracking-wider text-slate-400 uppercase flex items-center gap-1.5">
+              <span>WebGL Fleet Canvas</span>
+              <span className="text-cyan-400 text-[9px] px-1.5 py-0.2 rounded bg-cyan-500/20 border border-cyan-500/30">
+                {locationStatusText}
+              </span>
+            </div>
             <div className="text-xs font-mono font-bold text-slate-100 flex items-center gap-1.5">
               <span>{activeCount}</span>
               <span className="text-[10px] text-slate-400 font-normal">Vehicles Rendered</span>
@@ -273,8 +398,22 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
       {/* Map Quick Action Floating Controls */}
       <div className="absolute top-4 right-4 z-10 flex flex-col gap-2 pointer-events-auto">
         <button
+          onClick={handleLocateClick}
+          title="Center on My Location (Student GPS)"
+          className={`glass-panel p-2.5 rounded-lg transition-all cursor-pointer shadow-lg ${
+            isLocating
+              ? 'text-cyan-400 animate-spin border-cyan-500/50'
+              : userLocation
+              ? 'text-cyan-400 border-cyan-500/30 hover:bg-cyan-500/10'
+              : 'text-slate-300 hover:text-cyan-400 hover:border-cyan-500/30'
+          }`}
+        >
+          <Locate className="w-4 h-4" />
+        </button>
+
+        <button
           onClick={handleResetView}
-          title="Reset Map View"
+          title="Reset Map Camera View"
           className="glass-panel p-2.5 rounded-lg text-slate-300 hover:text-cyan-400 hover:border-cyan-500/30 transition-all cursor-pointer shadow-lg"
         >
           <Compass className="w-4 h-4" />
