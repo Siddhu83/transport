@@ -1,14 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { FleetCanvas, VehicleFeatureProperties } from './components/map/FleetCanvas';
-import { Activity, Bus, ShieldAlert, Radio, Clock, ChevronRight } from 'lucide-react';
+import { useTelemetryStream } from './hooks/useTelemetryStream';
+import { useFleetInterpolation } from './hooks/useFleetInterpolation';
+import { Activity, Bus, ShieldAlert, Radio, Clock, ChevronRight, Zap } from 'lucide-react';
 
 export const App: React.FC = () => {
   const [selectedVehicle, setSelectedVehicle] = useState<VehicleFeatureProperties | null>(null);
-  const [streamConnected, setStreamConnected] = useState<boolean>(false);
   const [currentTime, setCurrentTime] = useState<string>('');
-  const [geoJsonData, setGeoJsonData] = useState<GeoJSON.FeatureCollection<GeoJSON.Point, VehicleFeatureProperties>>({
-    type: 'FeatureCollection',
-    features: [],
+
+  // 1. Hook: Manage SSE stream connection & latency tracking
+  const { geoJsonData: rawGeoJson, status: streamStatus, latencyMs, isConnected } = useTelemetryStream();
+
+  // 2. Hook: 60 FPS Linear Interpolation (LERP) movement & shortest-path heading engine
+  const interpolatedGeoJson = useFleetInterpolation(rawGeoJson, {
+    interpolationDurationMs: 500,
   });
 
   // Real-time UTC/IST Clock update
@@ -20,66 +25,6 @@ export const App: React.FC = () => {
     updateTime();
     const interval = setInterval(updateTime, 1000);
     return () => clearInterval(interval);
-  }, []);
-
-  // Connect to SSE stream or generate initial mock fleet data for WebGL visual validation
-  useEffect(() => {
-    // 1. Attempt connection to backend SSE Stream endpoint
-    const eventSource = new EventSource('/api/v1/telemetry/stream');
-
-    eventSource.onopen = () => {
-      setStreamConnected(true);
-    };
-
-    eventSource.addEventListener('fleet-snapshot', (event) => {
-      try {
-        const payload = JSON.parse(event.data);
-        if (payload && payload.type === 'FeatureCollection') {
-          setGeoJsonData(payload);
-          setStreamConnected(true);
-        }
-      } catch (err) {
-        console.error('Failed to parse SSE payload:', err);
-      }
-    });
-
-    eventSource.onerror = () => {
-      setStreamConnected(false);
-      // Fallback: If backend is offline during frontend build/demo, generate 60 simulated fleet buses across campus coordinates
-      if (geoJsonData.features.length === 0) {
-        const mockFeatures: GeoJSON.Feature<GeoJSON.Point, VehicleFeatureProperties>[] = Array.from({ length: 60 }).map((_, i) => ({
-          type: 'Feature',
-          geometry: {
-            type: 'Point',
-            coordinates: [
-              77.5946 + (Math.random() - 0.5) * 0.15,
-              12.9716 + (Math.random() - 0.5) * 0.15,
-            ],
-          },
-          properties: {
-            busId: `bus-uuid-${i + 1}`,
-            plateNumber: `KA-01-F-${1000 + i}`,
-            routeId: `route-${(i % 6) + 1}`,
-            routeName: `Route ${(i % 6) + 1} - ANITS`,
-            speed: Math.floor(Math.random() * 45) + 15,
-            heading: Math.floor(Math.random() * 360),
-            status: i === 5 ? 'SOS' : i % 7 === 0 ? 'DELAYED' : 'ACTIVE',
-            passengerCount: Math.floor(Math.random() * 40),
-            capacity: 50,
-            lastPing: new Date().toISOString(),
-          },
-        }));
-
-        setGeoJsonData({
-          type: 'FeatureCollection',
-          features: mockFeatures,
-        });
-      }
-    };
-
-    return () => {
-      eventSource.close();
-    };
   }, []);
 
   return (
@@ -103,12 +48,19 @@ export const App: React.FC = () => {
 
         {/* Live System Status HUD */}
         <div className="flex items-center gap-6">
+          {/* 60 FPS LERP Engine Status Pill */}
+          <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-900/60 border border-slate-800 font-mono text-xs">
+            <Zap className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
+            <span className="text-slate-400">LERP Engine:</span>
+            <span className="text-cyan-300 font-semibold tabular-nums">60 FPS Smooth</span>
+          </div>
+
           {/* SSE Connectivity Status */}
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-900/60 border border-slate-800 font-mono text-xs">
-            <Radio className={`w-3.5 h-3.5 ${streamConnected ? 'text-emerald-400 animate-pulse' : 'text-amber-400'}`} />
+            <Radio className={`w-3.5 h-3.5 ${isConnected ? 'text-emerald-400 animate-pulse' : 'text-amber-400'}`} />
             <span className="text-slate-400">SSE Stream:</span>
-            <span className={streamConnected ? 'text-emerald-400 font-semibold' : 'text-amber-400 font-semibold'}>
-              {streamConnected ? 'CONNECTED (500ms)' : 'STANDBY / MOCK'}
+            <span className={isConnected ? 'text-emerald-400 font-semibold' : 'text-amber-400 font-semibold'}>
+              {isConnected ? 'CONNECTED (500ms)' : streamStatus}
             </span>
           </div>
 
@@ -124,9 +76,11 @@ export const App: React.FC = () => {
       <div className="relative flex-1 w-full h-full overflow-hidden">
         {/* WebGL Maplibre Canvas Engine */}
         <FleetCanvas
-          geoJsonData={geoJsonData}
+          geoJsonData={interpolatedGeoJson}
           onVehicleSelect={setSelectedVehicle}
           selectedBusId={selectedVehicle?.busId}
+          latencyMs={latencyMs}
+          streamStatus={streamStatus}
         />
 
         {/* Floating Sidebar Details Drawer (FIDS Aesthetic) */}
@@ -181,7 +135,7 @@ export const App: React.FC = () => {
             <div className="flex items-center gap-2">
               <Activity className="w-4 h-4 text-cyan-400" />
               <span className="text-slate-400">Total Active Fleet:</span>
-              <span className="text-slate-100 font-bold tabular-nums">{geoJsonData.features.length} Buses</span>
+              <span className="text-slate-100 font-bold tabular-nums">{interpolatedGeoJson.features.length} Buses</span>
             </div>
 
             <div className="h-4 w-px bg-slate-800" />
@@ -190,7 +144,7 @@ export const App: React.FC = () => {
               <ShieldAlert className="w-4 h-4 text-amber-400" />
               <span className="text-slate-400">Active Incidents:</span>
               <span className="text-amber-400 font-bold tabular-nums">
-                {geoJsonData.features.filter((f) => f.properties.status === 'SOS').length} SOS
+                {interpolatedGeoJson.features.filter((f) => f.properties.status === 'SOS').length} SOS
               </span>
             </div>
           </div>

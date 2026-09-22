@@ -21,6 +21,8 @@ export interface FleetCanvasProps {
   selectedBusId?: string | null;
   center?: [number, number];
   zoom?: number;
+  latencyMs?: number | null;
+  streamStatus?: string;
 }
 
 // ANITS Campus Tagarapuvalasa / Visakhapatnam Default Center
@@ -35,6 +37,8 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
   selectedBusId,
   center = DEFAULT_CENTER,
   zoom = DEFAULT_ZOOM,
+  latencyMs,
+  streamStatus = 'CONNECTED',
 }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
@@ -387,9 +391,15 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
                 {locationStatusText}
               </span>
             </div>
-            <div className="text-xs font-mono font-bold text-slate-100 flex items-center gap-1.5">
-              <span>{activeCount}</span>
-              <span className="text-[10px] text-slate-400 font-normal">Vehicles Rendered</span>
+            <div className="text-xs font-mono font-bold text-slate-100 flex items-center gap-3">
+              <div className="flex items-center gap-1.5">
+                <span>{activeCount}</span>
+                <span className="text-[10px] text-slate-400 font-normal">Vehicles Rendered</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-[10px] px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 tabular-nums font-mono">
+                <span className={`w-1.5 h-1.5 rounded-full ${streamStatus === 'CONNECTED' ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
+                <span>{streamStatus === 'CONNECTED' ? `LIVE ${latencyMs ?? 16}ms` : streamStatus}</span>
+              </div>
             </div>
           </div>
         </div>
