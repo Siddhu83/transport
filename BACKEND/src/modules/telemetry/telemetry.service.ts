@@ -24,9 +24,12 @@ function haversineDistanceKm(lat1: number, lon1: number, lat2: number, lon2: num
  */
 export async function processTelemetryPing(ping: TelemetryPing): Promise<IngestionResult> {
   const nowMs = Date.now();
+  const pingTimestampMs = typeof ping.timestamp === 'number' ? ping.timestamp : new Date(ping.timestamp).getTime();
+  const pingAccuracy = ping.accuracy ?? 5;
+  const routeIdStr = ping.routeId || '00000000-0000-0000-0000-000000000000';
 
   // Guard 1: Clock Drift Check (Reject timestamps drifting > 60s from server host clock)
-  if (Math.abs(nowMs - ping.timestamp) > 60000) {
+  if (Math.abs(nowMs - pingTimestampMs) > 60000) {
     return {
       status: IngestionStatus.CLOCK_DRIFT_REJECTED,
       message: 'Telemetry timestamp rejected due to clock drift exceeding 60 seconds',
@@ -35,7 +38,7 @@ export async function processTelemetryPing(ping: TelemetryPing): Promise<Ingesti
   }
 
   // Guard 2: GPS Accuracy Filtering (If accuracy > 35m, drop coordinate to prevent map jitter)
-  if (ping.accuracy > 35) {
+  if (pingAccuracy > 35) {
     return {
       status: IngestionStatus.LOW_ACCURACY_DROPPED,
       message: 'Coordinate dropped from spatial index due to low GPS accuracy (>35m)',
@@ -47,7 +50,7 @@ export async function processTelemetryPing(ping: TelemetryPing): Promise<Ingesti
   const existingState = await redis.hgetall(`bus:${ping.busId}:state`);
   if (existingState && existingState.lastSeen) {
     const prevTimeMs = parseInt(existingState.lastSeen, 10);
-    const timeDeltaHours = (ping.timestamp - prevTimeMs) / 3600000;
+    const timeDeltaHours = (pingTimestampMs - prevTimeMs) / 3600000;
 
     if (timeDeltaHours > 0) {
       // Fetch previous coordinates from GEO set
@@ -77,18 +80,23 @@ export async function processTelemetryPing(ping: TelemetryPing): Promise<Ingesti
 
   // 2. Update Dynamic Bus Metadata Hash
   pipeline.hset(`bus:${ping.busId}:state`, {
-    routeId: ping.routeId,
+    routeId: routeIdStr,
     speed: ping.speed.toString(),
     heading: ping.heading.toString(),
     status: 'ACTIVE',
-    lastSeen: ping.timestamp.toString(),
+    lastSeen: pingTimestampMs.toString(),
   });
 
   // 3. Set short-lived TTL to auto-expire orphaned / disconnected vehicles after 30s
   pipeline.expire(`bus:${ping.busId}:state`, 30);
 
   // 4. Publish to internal real-time telemetry message bus channel
-  pipeline.publish('telemetry:broadcast', JSON.stringify(ping));
+  pipeline.publish('telemetry:broadcast', JSON.stringify({
+    ...ping,
+    timestamp: pingTimestampMs,
+    routeId: routeIdStr,
+    accuracy: pingAccuracy,
+  }));
 
   await pipeline.exec();
 

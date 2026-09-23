@@ -2,7 +2,7 @@ import { FastifyInstance } from 'fastify';
 import { randomUUID } from 'node:crypto';
 import { Role } from '@prisma/client';
 import { authenticate, requireRoles } from '../auth/rbac.middleware.js';
-import { TelemetryPingSchema, IngestionStatus } from './telemetry.schemas.js';
+import { TelemetryPingSchema, BatchDrainSchema, IngestionStatus } from './telemetry.schemas.js';
 import { processTelemetryPing } from './telemetry.service.js';
 import { sseHub } from './sseHub.js';
 
@@ -67,7 +67,13 @@ export async function telemetryRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const ping = parseResult.data;
+      const rawPing = parseResult.data;
+      const ping = {
+        ...rawPing,
+        timestamp: typeof rawPing.timestamp === 'number' ? rawPing.timestamp : new Date(rawPing.timestamp).getTime(),
+        routeId: rawPing.routeId || '00000000-0000-0000-0000-000000000000',
+        accuracy: rawPing.accuracy ?? 5,
+      };
 
       // Driver Claim Enforcement: Ensure driver only emits for their assigned bus
       if (request.user.assignedBusId && request.user.assignedBusId !== ping.busId) {
@@ -100,6 +106,66 @@ export async function telemetryRoutes(fastify: FastifyInstance) {
             busId: result.busId,
           });
       }
+    }
+  );
+
+  /**
+   * POST /api/v1/telemetry/batch-drain
+   * Cellular Dead-Zone Batch Drain Ingestion Endpoint
+   * Flushes offline buffered coordinates upon network recovery
+   * Applies LERP guard: processes latest ping for live Redis update and broadcasts via SSE
+   */
+  fastify.post(
+    '/batch-drain',
+    { preHandler: [authenticate, requireRoles(Role.DRIVER)] },
+    async (request, reply) => {
+      const parseResult = BatchDrainSchema.safeParse(request.body);
+      if (!parseResult.success) {
+        return reply.code(400).send({
+          statusCode: 400,
+          error: 'Bad Request',
+          message: 'Invalid batch drain payload',
+          details: parseResult.error.format(),
+        });
+      }
+
+      const { pings } = parseResult.data;
+
+      // Sort pings chronologically ascending by timestamp
+      const sortedPings = [...pings].sort((a, b) => {
+        const timeA = typeof a.timestamp === 'number' ? a.timestamp : new Date(a.timestamp).getTime();
+        const timeB = typeof b.timestamp === 'number' ? b.timestamp : new Date(b.timestamp).getTime();
+        return timeA - timeB;
+      });
+
+      const latest = sortedPings[sortedPings.length - 1];
+      if (!latest) {
+        return reply.code(400).send({
+          statusCode: 400,
+          error: 'Bad Request',
+          message: 'Empty batch drain array',
+        });
+      }
+
+      const formattedPing = {
+        busId: latest.busId,
+        latitude: latest.latitude,
+        longitude: latest.longitude,
+        speed: latest.speed,
+        heading: latest.heading,
+        accuracy: latest.accuracy ?? 5,
+        timestamp: typeof latest.timestamp === 'number' ? latest.timestamp : new Date(latest.timestamp).getTime(),
+        routeId: latest.routeId || '00000000-0000-0000-0000-000000000000',
+      };
+
+      const result = await processTelemetryPing(formattedPing);
+
+      return reply.code(200).send({
+        statusCode: 200,
+        message: `Processed batch of ${pings.length} telemetry pings. Live state updated with latest coordinate.`,
+        ingestedCount: pings.length,
+        busId: result.busId,
+      });
     }
   );
 }

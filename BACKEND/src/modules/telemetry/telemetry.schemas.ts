@@ -1,17 +1,23 @@
 import { z } from 'zod';
 
 export const TelemetryPingSchema = z.object({
-  busId: z.string().uuid(),
-  routeId: z.string().uuid(),
+  busId: z.string().uuid().or(z.string().min(1)),
+  routeId: z.string().uuid().optional(),
   latitude: z.number().min(-90).max(90),
   longitude: z.number().min(-180).max(180),
   speed: z.number().min(0).max(140),          // Speed in km/h
   heading: z.number().min(0).max(359),        // Degrees relative to true north (0-359)
-  accuracy: z.number().min(0).max(100),       // GPS accuracy radius in meters
-  timestamp: z.number().int().positive(),     // Epoch milliseconds
+  accuracy: z.number().min(0).max(100).optional().default(5),       // GPS accuracy radius in meters
+  timestamp: z.union([z.number(), z.string()]), // Epoch milliseconds or ISO String
 });
 
 export type TelemetryPing = z.infer<typeof TelemetryPingSchema>;
+
+export const BatchDrainSchema = z.object({
+  pings: z.array(TelemetryPingSchema).min(1).max(50),
+});
+
+export type BatchDrain = z.infer<typeof BatchDrainSchema>;
 
 export enum IngestionStatus {
   SUCCESS = 'SUCCESS',

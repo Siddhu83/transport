@@ -89,6 +89,9 @@ export class SSEHub {
       const routeFeatureMap: Map<string, GeoJSONFeature[]> = new Map();
 
       for (const [busId, ping] of this.telemetryBuffer.entries()) {
+        const routeId = ping.routeId || '';
+        const timestampMs = typeof ping.timestamp === 'number' ? ping.timestamp : new Date(ping.timestamp).getTime();
+
         const feature: GeoJSONFeature = {
           type: 'Feature',
           geometry: {
@@ -97,20 +100,22 @@ export class SSEHub {
           },
           properties: {
             busId,
-            routeId: ping.routeId,
+            routeId,
             speed: ping.speed,
             heading: ping.heading,
             status: 'ACTIVE',
-            lastSeen: ping.timestamp,
+            lastSeen: timestampMs,
           },
         };
 
         allFeatures.push(feature);
 
-        if (!routeFeatureMap.has(ping.routeId)) {
-          routeFeatureMap.set(ping.routeId, []);
+        if (routeId) {
+          if (!routeFeatureMap.has(routeId)) {
+            routeFeatureMap.set(routeId, []);
+          }
+          routeFeatureMap.get(routeId)!.push(feature);
         }
-        routeFeatureMap.get(ping.routeId)!.push(feature);
       }
 
       // Flush to connected SSE clients
