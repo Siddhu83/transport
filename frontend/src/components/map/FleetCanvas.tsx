@@ -23,6 +23,7 @@ export interface FleetCanvasProps {
   zoom?: number;
   latencyMs?: number | null;
   streamStatus?: string;
+  theme?: 'dark' | 'light';
 }
 
 // ANITS Campus Tagarapuvalasa / Visakhapatnam Default Center
@@ -30,6 +31,7 @@ const DEFAULT_CENTER: [number, number] = [83.4215, 17.9045];
 const DEFAULT_ZOOM = 13;
 
 const DARK_MATTER_STYLE = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
+const VOYAGER_STYLE = 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json';
 
 export const FleetCanvas: React.FC<FleetCanvasProps> = ({
   geoJsonData,
@@ -39,6 +41,7 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
   zoom = DEFAULT_ZOOM,
   latencyMs,
   streamStatus = 'CONNECTED',
+  theme = 'dark',
 }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
@@ -49,14 +52,203 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
   const [isLocating, setIsLocating] = useState<boolean>(false);
   const [locationStatusText, setLocationStatusText] = useState<string>('Campus Default');
 
+  // Helper to attach WebGL sources & layers onto map style load
+  const attachMapLayers = (map: maplibregl.Map, currentTheme: 'dark' | 'light') => {
+    // 1. Buses GeoJSON Source
+    if (!map.getSource('buses-source')) {
+      map.addSource('buses-source', {
+        type: 'geojson',
+        data: geoJsonData || { type: 'FeatureCollection', features: [] },
+      });
+    }
+
+    // 2. User Location GeoJSON Source
+    if (!map.getSource('user-location-source')) {
+      map.addSource('user-location-source', {
+        type: 'geojson',
+        data: {
+          type: 'FeatureCollection',
+          features: userLocation
+            ? [
+                {
+                  type: 'Feature',
+                  geometry: { type: 'Point', coordinates: userLocation },
+                  properties: {},
+                },
+              ]
+            : [],
+        },
+      });
+    }
+
+    // 3. User Location Glow Layer
+    if (!map.getLayer('user-location-glow-layer')) {
+      map.addLayer({
+        id: 'user-location-glow-layer',
+        type: 'circle',
+        source: 'user-location-source',
+        paint: {
+          'circle-radius': 18,
+          'circle-color': '#00f0ff',
+          'circle-opacity': 0.35,
+          'circle-blur': 0.6,
+        },
+      });
+    }
+
+    // 4. User Location Core Dot
+    if (!map.getLayer('user-location-dot-layer')) {
+      map.addLayer({
+        id: 'user-location-dot-layer',
+        type: 'circle',
+        source: 'user-location-source',
+        paint: {
+          'circle-radius': 7,
+          'circle-color': '#00f0ff',
+          'circle-stroke-width': 2.5,
+          'circle-stroke-color': '#ffffff',
+        },
+      });
+    }
+
+    // 5. User Location Label Layer
+    if (!map.getLayer('user-location-label-layer')) {
+      map.addLayer({
+        id: 'user-location-label-layer',
+        type: 'symbol',
+        source: 'user-location-source',
+        layout: {
+          'text-field': 'You (Student)',
+          'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
+          'text-size': 11,
+          'text-offset': [0, 1.4],
+          'text-anchor': 'top',
+        },
+        paint: {
+          'text-color': '#00f0ff',
+          'text-halo-color': currentTheme === 'dark' ? '#0b0f17' : '#ffffff',
+          'text-halo-width': 2,
+        },
+      });
+    }
+
+    // 6. Buses Glow Layer
+    if (!map.getLayer('buses-glow-layer')) {
+      map.addLayer({
+        id: 'buses-glow-layer',
+        type: 'circle',
+        source: 'buses-source',
+        paint: {
+          'circle-radius': [
+            'case',
+            ['==', ['get', 'busId'], selectedBusId || ''],
+            18,
+            12,
+          ],
+          'circle-color': [
+            'match',
+            ['get', 'status'],
+            'SOS',
+            '#ef4444',
+            'DELAYED',
+            '#f59e0b',
+            'ACTIVE',
+            '#10b981',
+            '#64748b',
+          ],
+          'circle-opacity': 0.25,
+          'circle-blur': 0.8,
+        },
+      });
+    }
+
+    // 7. Buses Circle Layer
+    if (!map.getLayer('buses-circle-layer')) {
+      map.addLayer({
+        id: 'buses-circle-layer',
+        type: 'circle',
+        source: 'buses-source',
+        paint: {
+          'circle-radius': [
+            'case',
+            ['==', ['get', 'busId'], selectedBusId || ''],
+            10,
+            7,
+          ],
+          'circle-color': [
+            'match',
+            ['get', 'status'],
+            'SOS',
+            '#ef4444',
+            'DELAYED',
+            '#f59e0b',
+            'ACTIVE',
+            '#10b981',
+            '#64748b',
+          ],
+          'circle-stroke-width': [
+            'case',
+            ['==', ['get', 'busId'], selectedBusId || ''],
+            3,
+            1.5,
+          ],
+          'circle-stroke-color': currentTheme === 'dark' ? '#0b0f17' : '#ffffff',
+        },
+      });
+    }
+
+    // 8. Buses Label Layer
+    if (!map.getLayer('buses-label-layer')) {
+      map.addLayer({
+        id: 'buses-label-layer',
+        type: 'symbol',
+        source: 'buses-source',
+        layout: {
+          'text-field': ['get', 'plateNumber'],
+          'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
+          'text-size': 11,
+          'text-offset': [0, 1.4],
+          'text-anchor': 'top',
+          'text-allow-overlap': false,
+          'text-ignore-placement': false,
+        },
+        paint: {
+          'text-color': currentTheme === 'dark' ? '#f8fafc' : '#0f172a',
+          'text-halo-color': currentTheme === 'dark' ? '#0b0f17' : '#ffffff',
+          'text-halo-width': 2,
+        },
+      });
+    }
+
+    // Event Handlers for WebGL Markers
+    map.off('click', 'buses-circle-layer', () => {});
+    map.on('click', 'buses-circle-layer', (e) => {
+      if (e.features && e.features.length > 0) {
+        const props = e.features[0].properties as VehicleFeatureProperties;
+        if (onVehicleSelect) {
+          onVehicleSelect(props);
+        }
+      }
+    });
+
+    map.on('mouseenter', 'buses-circle-layer', () => {
+      map.getCanvas().style.cursor = 'pointer';
+    });
+
+    map.on('mouseleave', 'buses-circle-layer', () => {
+      map.getCanvas().style.cursor = '';
+    });
+  };
+
   // Initialize MapLibre GL instance
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
 
     try {
+      const initialStyle = theme === 'dark' ? DARK_MATTER_STYLE : VOYAGER_STYLE;
       const map = new maplibregl.Map({
         container: mapContainerRef.current,
-        style: DARK_MATTER_STYLE,
+        style: initialStyle,
         center: center,
         zoom: zoom,
         pitch: 30,
@@ -75,167 +267,7 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
       );
 
       map.on('load', () => {
-        // Register WebGL GeoJSON source for zero-DOM vehicle marker rendering
-        map.addSource('buses-source', {
-          type: 'geojson',
-          data: geoJsonData || { type: 'FeatureCollection', features: [] },
-        });
-
-        // Register WebGL GeoJSON source for Student User Location
-        map.addSource('user-location-source', {
-          type: 'geojson',
-          data: {
-            type: 'FeatureCollection',
-            features: [],
-          },
-        });
-
-        // User Location Pulse Glow Ring
-        map.addLayer({
-          id: 'user-location-glow-layer',
-          type: 'circle',
-          source: 'user-location-source',
-          paint: {
-            'circle-radius': 18,
-            'circle-color': '#00f0ff',
-            'circle-opacity': 0.35,
-            'circle-blur': 0.6,
-          },
-        });
-
-        // User Location Core Dot
-        map.addLayer({
-          id: 'user-location-dot-layer',
-          type: 'circle',
-          source: 'user-location-source',
-          paint: {
-            'circle-radius': 7,
-            'circle-color': '#00f0ff',
-            'circle-stroke-width': 2.5,
-            'circle-stroke-color': '#ffffff',
-          },
-        });
-
-        // User Location Label
-        map.addLayer({
-          id: 'user-location-label-layer',
-          type: 'symbol',
-          source: 'user-location-source',
-          layout: {
-            'text-field': 'You (Student)',
-            'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
-            'text-size': 11,
-            'text-offset': [0, 1.4],
-            'text-anchor': 'top',
-          },
-          paint: {
-            'text-color': '#00f0ff',
-            'text-halo-color': '#0b0f17',
-            'text-halo-width': 2,
-          },
-        });
-
-        // 1. Outer Glow Layer for SOS/Active vehicles
-        map.addLayer({
-          id: 'buses-glow-layer',
-          type: 'circle',
-          source: 'buses-source',
-          paint: {
-            'circle-radius': [
-              'case',
-              ['==', ['get', 'busId'], selectedBusId || ''],
-              18,
-              12,
-            ],
-            'circle-color': [
-              'match',
-              ['get', 'status'],
-              'SOS',
-              '#ef4444',
-              'DELAYED',
-              '#f59e0b',
-              'ACTIVE',
-              '#10b981',
-              '#64748b',
-            ],
-            'circle-opacity': 0.25,
-            'circle-blur': 0.8,
-          },
-        });
-
-        // 2. Base Circle Layer (Core Vehicle Marker)
-        map.addLayer({
-          id: 'buses-circle-layer',
-          type: 'circle',
-          source: 'buses-source',
-          paint: {
-            'circle-radius': [
-              'case',
-              ['==', ['get', 'busId'], selectedBusId || ''],
-              10,
-              7,
-            ],
-            'circle-color': [
-              'match',
-              ['get', 'status'],
-              'SOS',
-              '#ef4444',
-              'DELAYED',
-              '#f59e0b',
-              'ACTIVE',
-              '#10b981',
-              '#64748b',
-            ],
-            'circle-stroke-width': [
-              'case',
-              ['==', ['get', 'busId'], selectedBusId || ''],
-              3,
-              1.5,
-            ],
-            'circle-stroke-color': '#0b0f17',
-          },
-        });
-
-        // 3. Vehicle Direction Arrow / Symbol Layer
-        map.addLayer({
-          id: 'buses-label-layer',
-          type: 'symbol',
-          source: 'buses-source',
-          layout: {
-            'text-field': ['get', 'plateNumber'],
-            'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
-            'text-size': 11,
-            'text-offset': [0, 1.4],
-            'text-anchor': 'top',
-            'text-allow-overlap': false,
-            'text-ignore-placement': false,
-          },
-          paint: {
-            'text-color': '#f8fafc',
-            'text-halo-color': '#0b0f17',
-            'text-halo-width': 2,
-          },
-        });
-
-        // Click Handler for WebGL Symbols
-        map.on('click', 'buses-circle-layer', (e) => {
-          if (e.features && e.features.length > 0) {
-            const props = e.features[0].properties as VehicleFeatureProperties;
-            if (onVehicleSelect) {
-              onVehicleSelect(props);
-            }
-          }
-        });
-
-        // Cursor state on hover over WebGL markers
-        map.on('mouseenter', 'buses-circle-layer', () => {
-          map.getCanvas().style.cursor = 'pointer';
-        });
-
-        map.on('mouseleave', 'buses-circle-layer', () => {
-          map.getCanvas().style.cursor = '';
-        });
-
+        attachMapLayers(map, theme);
         mapRef.current = map;
         setIsLoaded(true);
 
@@ -257,6 +289,29 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
       }
     };
   }, []);
+
+  // Handle Dynamic Theme Switching on Map Engine
+  useEffect(() => {
+    if (!mapRef.current || !isLoaded) return;
+
+    const targetStyle = theme === 'dark' ? DARK_MATTER_STYLE : VOYAGER_STYLE;
+    
+    // Listen to style reload completion
+    const handleStyleLoad = () => {
+      if (mapRef.current) {
+        attachMapLayers(mapRef.current, theme);
+        // Refresh GeoJSON Data
+        const source = mapRef.current.getSource('buses-source') as maplibregl.GeoJSONSource;
+        if (source && geoJsonData) {
+          source.setData(geoJsonData);
+        }
+      }
+    };
+
+    mapRef.current.once('style.load', handleStyleLoad);
+    mapRef.current.setStyle(targetStyle);
+
+  }, [theme]);
 
   // HTML5 Client-Side Geolocation Handler (Zero Backend Degradation)
   const detectUserLocation = (mapInstance?: maplibregl.Map | null, flyTo = true) => {
@@ -355,16 +410,16 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
   };
 
   return (
-    <div className="relative w-full h-full min-h-[500px] bg-[#0b0f17] overflow-hidden">
+    <div className={`relative w-full h-full min-h-[500px] overflow-hidden ${theme === 'dark' ? 'bg-[#0b0f17]' : 'bg-[#f8fafc]'}`}>
       {/* Map Container */}
       <div ref={mapContainerRef} className="w-full h-full absolute inset-0" />
 
       {/* Loading Overlay */}
       {!isLoaded && !mapError && (
-        <div className="absolute inset-0 flex items-center justify-center bg-[#0b0f17]/90 z-20 backdrop-blur-sm">
+        <div className={`absolute inset-0 flex items-center justify-center z-20 backdrop-blur-sm ${theme === 'dark' ? 'bg-[#0b0f17]/90 text-cyan-400' : 'bg-[#f8fafc]/90 text-cyan-600'}`}>
           <div className="flex flex-col items-center gap-3">
             <div className="w-10 h-10 border-2 border-cyan-500/20 border-t-cyan-400 rounded-full animate-spin" />
-            <p className="text-xs tracking-widest uppercase font-mono text-cyan-400">Initializing WebGL Engine...</p>
+            <p className="text-xs tracking-widest uppercase font-mono font-bold">Initializing WebGL Engine...</p>
           </div>
         </div>
       )}
@@ -385,19 +440,19 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
             <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
           </div>
           <div>
-            <div className="text-[10px] font-mono tracking-wider text-slate-400 uppercase flex items-center gap-1.5">
+            <div className="text-[10px] font-mono tracking-wider uppercase flex items-center gap-1.5 opacity-70">
               <span>WebGL Fleet Canvas</span>
-              <span className="text-cyan-400 text-[9px] px-1.5 py-0.2 rounded bg-cyan-500/20 border border-cyan-500/30">
+              <span className="text-cyan-500 text-[9px] px-1.5 py-0.2 rounded bg-cyan-500/10 border border-cyan-500/20">
                 {locationStatusText}
               </span>
             </div>
-            <div className="text-xs font-mono font-bold text-slate-100 flex items-center gap-3">
+            <div className="text-xs font-mono font-bold flex items-center gap-3">
               <div className="flex items-center gap-1.5">
                 <span>{activeCount}</span>
-                <span className="text-[10px] text-slate-400 font-normal">Vehicles Rendered</span>
+                <span className="text-[10px] opacity-70 font-normal">Vehicles Rendered</span>
               </div>
-              <div className="flex items-center gap-1.5 text-[10px] px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 tabular-nums font-mono">
-                <span className={`w-1.5 h-1.5 rounded-full ${streamStatus === 'CONNECTED' ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
+              <div className="flex items-center gap-1.5 text-[10px] px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 tabular-nums font-mono">
+                <span className={`w-1.5 h-1.5 rounded-full ${streamStatus === 'CONNECTED' ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
                 <span>{streamStatus === 'CONNECTED' ? `LIVE ${latencyMs ?? 16}ms` : streamStatus}</span>
               </div>
             </div>
@@ -412,10 +467,10 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
           title="Center on My Location (Student GPS)"
           className={`glass-panel p-2.5 rounded-lg transition-all cursor-pointer shadow-lg ${
             isLocating
-              ? 'text-cyan-400 animate-spin border-cyan-500/50'
+              ? 'text-cyan-500 animate-spin border-cyan-500/50'
               : userLocation
-              ? 'text-cyan-400 border-cyan-500/30 hover:bg-cyan-500/10'
-              : 'text-slate-300 hover:text-cyan-400 hover:border-cyan-500/30'
+              ? 'text-cyan-500 border-cyan-500/30 hover:bg-cyan-500/10'
+              : 'opacity-80 hover:opacity-100 hover:text-cyan-500'
           }`}
         >
           <Locate className="w-4 h-4" />
@@ -424,7 +479,7 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
         <button
           onClick={handleResetView}
           title="Reset Map Camera View"
-          className="glass-panel p-2.5 rounded-lg text-slate-300 hover:text-cyan-400 hover:border-cyan-500/30 transition-all cursor-pointer shadow-lg"
+          className="glass-panel p-2.5 rounded-lg opacity-80 hover:opacity-100 hover:text-cyan-500 transition-all cursor-pointer shadow-lg"
         >
           <Compass className="w-4 h-4" />
         </button>
