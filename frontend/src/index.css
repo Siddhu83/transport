@@ -6,11 +6,13 @@
     --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
     --font-mono: 'JetBrains Mono', monospace;
 
-    /* FIDS Color Palette System */
+    /* Dark Mode Defaults */
     --color-canvas: #0b0f17;
     --color-surface-card: #121824;
     --color-surface-hover: #1b2333;
     --color-border: #1e293b;
+    --color-text-main: #f8fafc;
+    --color-text-muted: #94a3b8;
     
     /* Status Tokens */
     --color-active: #10b981;    /* Emerald-500 */
@@ -20,10 +22,20 @@
     --color-cyan-glow: #00f0ff; /* Neon Cyan */
   }
 
+  [data-theme="light"] {
+    --color-canvas: #f8fafc;
+    --color-surface-card: #ffffff;
+    --color-surface-hover: #f1f5f9;
+    --color-border: #e2e8f0;
+    --color-text-main: #0f172a;
+    --color-text-muted: #475569;
+  }
+
   body {
     font-family: var(--font-sans);
     background-color: var(--color-canvas);
-    color: #f8fafc;
+    color: var(--color-text-main);
+    transition: background-color 0.3s ease, color 0.3s ease;
   }
 
   .font-mono {
@@ -35,12 +47,14 @@
   }
 }
 
-/* Glassmorphism & Panel Utilities */
+/* Glassmorphism & Panel Utilities - Dark Theme Default */
 .glass-panel {
   background: rgba(18, 24, 36, 0.85);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #f8fafc;
+  transition: background 0.3s ease, border-color 0.3s ease, color 0.3s ease;
 }
 
 .glass-panel-glow {
@@ -49,9 +63,26 @@
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(0, 240, 255, 0.2);
   box-shadow: 0 0 20px rgba(0, 240, 255, 0.08);
+  color: #f8fafc;
+  transition: background 0.3s ease, border-color 0.3s ease, color 0.3s ease;
 }
 
-/* MapLibre Controls Override for FIDS Dark Aesthetic */
+/* Light Theme Glassmorphism Overrides */
+[data-theme="light"] .glass-panel {
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  color: #0f172a;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="light"] .glass-panel-glow {
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(0, 180, 216, 0.3);
+  color: #0f172a;
+  box-shadow: 0 4px 20px rgba(0, 180, 216, 0.12);
+}
+
+/* MapLibre Controls Override for Dark Aesthetic */
 .maplibregl-ctrl-group {
   background: rgba(18, 24, 36, 0.9) !important;
   border: 1px solid rgba(255, 255, 255, 0.1) !important;
@@ -60,8 +91,18 @@
   overflow: hidden;
 }
 
+[data-theme="light"] .maplibregl-ctrl-group {
+  background: rgba(255, 255, 255, 0.95) !important;
+  border: 1px solid rgba(0, 0, 0, 0.12) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1) !important;
+}
+
 .maplibregl-ctrl-group button {
   border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+}
+
+[data-theme="light"] .maplibregl-ctrl-group button {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06) !important;
 }
 
 .maplibregl-ctrl-group button:last-child {
@@ -72,6 +113,10 @@
   filter: invert(1) brightness(1.5) !important;
 }
 
+[data-theme="light"] .maplibregl-ctrl-icon {
+  filter: none !important;
+}
+
 .maplibregl-popup-content {
   background: rgba(18, 24, 36, 0.95) !important;
   color: #f8fafc !important;
@@ -80,6 +125,13 @@
   padding: 12px 16px !important;
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.7), 0 0 15px rgba(0, 240, 255, 0.15) !important;
   font-family: var(--font-sans) !important;
+}
+
+[data-theme="light"] .maplibregl-popup-content {
+  background: rgba(255, 255, 255, 0.98) !important;
+  color: #0f172a !important;
+  border: 1px solid rgba(0, 180, 216, 0.4) !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1) !important;
 }
 
 .maplibregl-popup-anchor-top .maplibregl-popup-tip {
