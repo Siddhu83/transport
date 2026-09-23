@@ -1,0 +1,13 @@
+{
+  "appId": "com.transitsystem.driver",
+  "appName": "ANITS Driver Kiosk",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "Geolocation": {
+      "locationWhenInUsePermissionDescription": "ANITS Transport requires location access to emit vehicle telemetry to campus control tower."
+    }
+  }
+}
