@@ -8,7 +8,7 @@ export interface TrackingDaemonConfig {
   routeId: string;
   driverId: string;
   authToken: string;
-  pingIntervalMs?: number; // Default 2000ms (2s)
+  pingIntervalMs?: number; // Default 5000ms (5s)
   apiEndpoint?: string;
 }
 
@@ -42,7 +42,7 @@ export class ForegroundTrackingDaemon {
     );
 
     // Setup periodic location sensor polling
-    const interval = config.pingIntervalMs || 2000;
+    const interval = config.pingIntervalMs || 5000;
     this.timerId = setInterval(() => {
       this.pollAndEmitLocation();
     }, interval);
