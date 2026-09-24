@@ -2,11 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { FleetCanvas, VehicleFeatureProperties } from './components/map/FleetCanvas';
 import { useTelemetryStream } from './hooks/useTelemetryStream';
 import { useFleetInterpolation } from './hooks/useFleetInterpolation';
-import { Activity, Bus, ShieldAlert, Radio, Clock, ChevronRight, Zap, Sun, Moon } from 'lucide-react';
+import { Activity, Bus, ShieldAlert, Radio, Clock, ChevronRight, Zap, Sun, Moon, Maximize2, Minimize2 } from 'lucide-react';
 
 export const App: React.FC = () => {
   const [selectedVehicle, setSelectedVehicle] = useState<VehicleFeatureProperties | null>(null);
   const [currentTime, setCurrentTime] = useState<string>('');
+  const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   
   // Theme Management (Dark Mode default, persists in localStorage)
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
@@ -18,6 +19,16 @@ export const App: React.FC = () => {
     const nextTheme = theme === 'dark' ? 'light' : 'dark';
     setTheme(nextTheme);
     localStorage.setItem('ats_theme', nextTheme);
+  };
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().then(() => setIsFullscreen(true)).catch(() => {});
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen().then(() => setIsFullscreen(false)).catch(() => {});
+      }
+    }
   };
 
   useEffect(() => {
@@ -63,7 +74,7 @@ export const App: React.FC = () => {
         </div>
 
         {/* Live System Status HUD & Theme Controls */}
-        <div className="flex items-center gap-4 md:gap-6">
+        <div className="flex items-center gap-3 md:gap-5">
           {/* 60 FPS LERP Engine Status Pill */}
           <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-500/10 border border-slate-500/20 font-mono text-xs">
             <Zap className="w-3.5 h-3.5 text-cyan-500 animate-pulse" />
@@ -81,10 +92,20 @@ export const App: React.FC = () => {
           </div>
 
           {/* Clock */}
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-500/10 border border-slate-500/20 font-mono text-xs text-slate-400">
+          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-500/10 border border-slate-500/20 font-mono text-xs text-slate-400">
             <Clock className="w-3.5 h-3.5 text-cyan-500" />
             <span className="text-current">{currentTime || '00:00:00'} IST</span>
           </div>
+
+          {/* Fullscreen Button */}
+          <button
+            onClick={toggleFullscreen}
+            title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen App Mode'}
+            className="p-2 rounded-lg bg-slate-500/10 hover:bg-slate-500/20 border border-slate-500/20 text-cyan-500 transition-all cursor-pointer flex items-center gap-1.5 text-xs font-mono"
+          >
+            {isFullscreen ? <Minimize2 className="w-4 h-4 text-cyan-400" /> : <Maximize2 className="w-4 h-4 text-cyan-400" />}
+            <span className="hidden md:inline text-current">{isFullscreen ? 'Exit' : 'Fullscreen'}</span>
+          </button>
 
           {/* Theme Toggle Button */}
           <button
