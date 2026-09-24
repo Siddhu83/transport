@@ -16,25 +16,70 @@ import {
   WifiOff,
   MapPin,
   Bus,
+  LogOut,
+  Lock,
+  Mail,
+  KeyRound,
+  ShieldCheck,
+  UserCheck,
 } from 'lucide-react';
 import { requestBatteryExemption } from './services/batteryOptimization';
 import { trackingDaemon, TrackingDaemonState } from './services/trackingDaemon';
+import { AuthService, AuthSession } from './services/auth';
 
 export const App: React.FC = () => {
+  // Session State
+  const [session, setSession] = useState<AuthSession | null>(() => AuthService.getSession());
+
+  // Login Form State
+  const [loginEmail, setLoginEmail] = useState<string>('driver1@transport.college.edu');
+  const [loginPassword, setLoginPassword] = useState<string>('Password123!');
+  const [loginError, setLoginError] = useState<string | null>(null);
+  const [isLoggingIn, setIsLoggingIn] = useState<boolean>(false);
+
+  // Tracking Daemon State
   const [daemonState, setDaemonState] = useState<TrackingDaemonState>(trackingDaemon.getState());
   const [batteryStatus, setBatteryStatus] = useState<string>('Exemption Ready');
-  const [passengerCount, setPassengerCount] = useState<number>(42);
-  const maxCapacity = 55;
+  const [passengerCount, setPassengerCount] = useState<number>(38);
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   const [simulatedMode, setSimulatedMode] = useState<boolean>(false);
 
   // Poll daemon status every second to update UI
   useEffect(() => {
+    if (!session) return;
     const interval = setInterval(() => {
       setDaemonState(trackingDaemon.getState());
     }, 1000);
     return () => clearInterval(interval);
-  }, []);
+  }, [session]);
+
+  const handleLoginSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoginError(null);
+    setIsLoggingIn(true);
+
+    try {
+      const authSession = await AuthService.login(loginEmail, loginPassword);
+      setSession(authSession);
+    } catch (err: any) {
+      setLoginError(err.message || 'Login failed');
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
+
+  const handleQuickLogin = (email: string) => {
+    setLoginEmail(email);
+    setLoginPassword('Password123!');
+  };
+
+  const handleLogout = () => {
+    if (daemonState.isRunning) {
+      trackingDaemon.stopTracking();
+    }
+    AuthService.clearSession();
+    setSession(null);
+  };
 
   const handleRequestExemption = async () => {
     const status = await requestBatteryExemption();
@@ -42,14 +87,16 @@ export const App: React.FC = () => {
   };
 
   const handleToggleTracking = async () => {
+    if (!session) return;
+
     if (daemonState.isRunning) {
       trackingDaemon.stopTracking();
     } else {
       await trackingDaemon.startTracking({
-        busId: '11111111-1111-4111-8111-111111111111',
-        routeId: 'a1111111-1111-4111-8111-111111111111',
-        driverId: 'captain-ramesh-1',
-        authToken: 'demo-driver-token',
+        busId: session.user.assignedBusId || '11111111-1111-4111-8111-111111111111',
+        routeId: session.user.assignedRouteId || 'a1111111-1111-4111-8111-111111111111',
+        driverId: session.user.id,
+        authToken: session.token,
         forceSimulatedGps: simulatedMode,
       });
     }
@@ -96,6 +143,123 @@ export const App: React.FC = () => {
     );
   };
 
+  // ---------------------------------------------------------------------------
+  // LOGIN SCREEN (If Not Authenticated)
+  // ---------------------------------------------------------------------------
+  if (!session) {
+    return (
+      <div className="min-h-screen bg-[#0b0f17] text-slate-100 font-sans flex items-center justify-center p-4 selection:bg-emerald-500/30 selection:text-emerald-200">
+        <div className="w-full max-w-md space-y-6">
+          {/* App Branding Header */}
+          <div className="text-center space-y-3">
+            <div className="inline-flex p-4 rounded-3xl bg-gradient-to-tr from-emerald-600 to-teal-400 p-0.5 shadow-2xl shadow-emerald-500/30">
+              <div className="bg-slate-950 p-4 rounded-[22px]">
+                <Bus className="w-10 h-10 text-emerald-400" />
+              </div>
+            </div>
+            <div>
+              <h1 className="text-2xl font-black tracking-tight text-white">ANITS CAPTAIN CONSOLE</h1>
+              <p className="text-xs text-slate-400 mt-1">Driver Kiosk Telemetry & Dispatch Portal</p>
+            </div>
+          </div>
+
+          {/* Login Glass Card */}
+          <div className="glass-card rounded-3xl p-6 space-y-5 border border-slate-800">
+            <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
+              <Lock className="w-4 h-4 text-emerald-400" />
+              <h2 className="text-sm font-bold text-white uppercase tracking-wider">Captain Authentication</h2>
+            </div>
+
+            {loginError && (
+              <div className="bg-rose-500/10 border border-rose-500/30 rounded-2xl p-3 text-xs text-rose-300 flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+                <span>{loginError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleLoginSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">Driver Email</label>
+                <div className="relative">
+                  <Mail className="w-4 h-4 text-slate-500 absolute left-3.5 top-3.5" />
+                  <input
+                    type="email"
+                    required
+                    value={loginEmail}
+                    onChange={(e) => setLoginEmail(e.target.value)}
+                    placeholder="driver1@transport.college.edu"
+                    className="w-full bg-slate-950/80 border border-slate-800 rounded-xl pl-10 pr-4 py-3 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500 transition-colors"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">Captain Password</label>
+                <div className="relative">
+                  <KeyRound className="w-4 h-4 text-slate-500 absolute left-3.5 top-3.5" />
+                  <input
+                    type="password"
+                    required
+                    value={loginPassword}
+                    onChange={(e) => setLoginPassword(e.target.value)}
+                    placeholder="••••••••••••"
+                    className="w-full bg-slate-950/80 border border-slate-800 rounded-xl pl-10 pr-4 py-3 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500 transition-colors"
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isLoggingIn}
+                className="w-full py-3.5 px-4 rounded-xl font-bold text-xs tracking-wider uppercase bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 shadow-lg shadow-emerald-950/50 transition-all transform active:scale-98 disabled:opacity-50"
+              >
+                {isLoggingIn ? 'Authenticating...' : 'Sign In To Captain Console'}
+              </button>
+            </form>
+
+            {/* Local Testing Quick Credentials Pill Box */}
+            <div className="pt-2 border-t border-slate-800/80 space-y-2.5">
+              <p className="text-[11px] font-semibold text-slate-400 flex items-center gap-1.5">
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                Local Test Credentials (1-Tap Fill):
+              </p>
+              <div className="grid grid-cols-2 gap-2 text-[11px]">
+                <button
+                  type="button"
+                  onClick={() => handleQuickLogin('driver1@transport.college.edu')}
+                  className="glass-button p-2.5 rounded-xl text-left hover:border-emerald-500/50 transition-colors"
+                >
+                  <span className="font-bold text-emerald-400 block">Driver #1</span>
+                  <span className="text-slate-400 text-[10px] truncate block">driver1@transport...</span>
+                  <span className="text-slate-500 text-[9px] font-mono">Pass: Password123!</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickLogin('driver2@transport.college.edu')}
+                  className="glass-button p-2.5 rounded-xl text-left hover:border-emerald-500/50 transition-colors"
+                >
+                  <span className="font-bold text-teal-400 block">Driver #2</span>
+                  <span className="text-slate-400 text-[10px] truncate block">driver2@transport...</span>
+                  <span className="text-slate-500 text-[9px] font-mono">Pass: Password123!</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <p className="text-center text-[11px] text-slate-500">
+            🔒 Captain accounts are provisioned by College Transport Authority.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // AUTHENTICATED CAPTAIN CONSOLE (Dynamic State)
+  // ---------------------------------------------------------------------------
+  const user = session.user;
+  const maxCapacity = user.capacity || 55;
+
   return (
     <div className="min-h-screen bg-[#0b0f17] text-slate-100 font-sans pb-12 selection:bg-emerald-500/30 selection:text-emerald-200">
       {/* Top Header Bar */}
@@ -111,27 +275,39 @@ export const App: React.FC = () => {
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="font-bold text-base tracking-tight text-white">Captain Ramesh Kumar</h1>
-              <span className="bg-emerald-500/20 text-emerald-300 text-[10px] font-bold px-1.5 py-0.5 rounded border border-emerald-500/30">
+              <h1 className="font-bold text-base tracking-tight text-white">{user.name}</h1>
+              <span className="bg-emerald-500/20 text-emerald-300 text-[10px] font-bold px-1.5 py-0.5 rounded border border-emerald-500/30 flex items-center gap-1">
+                <UserCheck className="w-3 h-3 text-emerald-400" />
                 VERIFIED
               </span>
             </div>
             <p className="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
-              <span>KA-01-EQ-4589</span>
+              <span>{user.licensePlate || user.busNumber}</span>
               <span>•</span>
-              <span className="text-emerald-400 font-medium">Route #12 (Whitefield Express)</span>
+              <span className="text-emerald-400 font-medium">{user.routeName}</span>
             </p>
           </div>
         </div>
 
-        <button
-          onClick={toggleFullscreen}
-          className="glass-button p-2.5 rounded-xl text-slate-300 hover:text-white flex items-center gap-1.5 text-xs font-medium active:scale-95"
-          title="Toggle Fullscreen Mode"
-        >
-          {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
-          <span className="hidden sm:inline">{isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={toggleFullscreen}
+            className="glass-button p-2.5 rounded-xl text-slate-300 hover:text-white flex items-center gap-1.5 text-xs font-medium active:scale-95"
+            title="Toggle Fullscreen Mode"
+          >
+            {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+            <span className="hidden sm:inline">{isFullscreen ? 'Exit' : 'Fullscreen'}</span>
+          </button>
+
+          <button
+            onClick={handleLogout}
+            className="glass-button p-2.5 rounded-xl text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 border border-rose-500/20 flex items-center gap-1.5 text-xs font-medium active:scale-95"
+            title="Sign Out"
+          >
+            <LogOut className="w-4 h-4" />
+            <span className="hidden sm:inline">Logout</span>
+          </button>
+        </div>
       </header>
 
       {/* Main Content Area */}
@@ -145,7 +321,7 @@ export const App: React.FC = () => {
           </span>
         </div>
 
-        {/* Insecure HTTP Security Warning Banner (Addressing User Feedback #2) */}
+        {/* Insecure HTTP Security Warning Banner */}
         {daemonState.locationProvider === 'INSECURE_ORIGIN_SIMULATED' && (
           <div className="glass-card-rose rounded-2xl p-4 flex items-start gap-3 border border-rose-500/30">
             <AlertTriangle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5 animate-bounce" />
@@ -161,7 +337,7 @@ export const App: React.FC = () => {
           </div>
         )}
 
-        {/* Hero Duty Switch (Uber / Rapido Style Large Tactile Action Button) */}
+        {/* Hero Duty Switch */}
         <div
           className={`rounded-3xl p-6 transition-all duration-300 border ${
             daemonState.isRunning ? 'glass-card-rose glow-rose' : 'glass-card-emerald glow-emerald'
@@ -182,7 +358,7 @@ export const App: React.FC = () => {
               </h2>
               <p className="text-xs text-slate-300 mt-1">
                 {daemonState.isRunning
-                  ? 'Transmitting sub-second telemetry to college student map'
+                  ? `Transmitting telemetry for ${user.busNumber || 'Bus'}`
                   : 'Tap below to initiate Android foreground location daemon'}
               </p>
             </div>
@@ -278,7 +454,7 @@ export const App: React.FC = () => {
           </div>
         </div>
 
-        {/* Interactive Passenger Occupancy Counter (Uber Captain Style) */}
+        {/* Interactive Passenger Occupancy Counter */}
         <div className="glass-card rounded-2xl p-4 space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -336,14 +512,14 @@ export const App: React.FC = () => {
           </button>
         </div>
 
-        {/* Route Progress Timeline (Uber/Rapido Captain Navigation Sequence) */}
+        {/* Route Progress Timeline */}
         <div className="glass-card rounded-2xl p-4 space-y-3">
           <div className="flex items-center justify-between text-xs border-b border-slate-800 pb-2">
             <span className="font-bold text-slate-200 flex items-center gap-1.5">
               <MapPin className="w-4 h-4 text-emerald-400" />
-              Route #12 Timeline
+              {user.routeName} Timeline
             </span>
-            <span className="text-slate-400">Next: Tech Park Stop</span>
+            <span className="text-slate-400">Next: Stop 2</span>
           </div>
 
           <div className="space-y-2.5 text-xs">
@@ -355,7 +531,7 @@ export const App: React.FC = () => {
 
             <div className="flex items-center gap-3 font-semibold text-emerald-300">
               <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></div>
-              <span>Tech Park Junction (En Route)</span>
+              <span>Transit Stop #2 (En Route)</span>
               <span className="ml-auto text-[10px] bg-emerald-500/20 px-1.5 py-0.5 rounded text-emerald-300">
                 2 mins away
               </span>
@@ -363,17 +539,10 @@ export const App: React.FC = () => {
 
             <div className="flex items-center gap-3 text-slate-400 opacity-60">
               <div className="w-2.5 h-2.5 rounded-full border border-slate-500"></div>
-              <span>Central Student Hostels</span>
-              <span className="ml-auto text-[10px]">08:20 AM</span>
+              <span>Central Hostels Terminal</span>
+              <span className="ml-auto text-[10px]">08:25 AM</span>
             </div>
           </div>
-        </div>
-
-        {/* PWA Fullscreen Launcher Advice */}
-        <div className="text-center pt-2">
-          <p className="text-[11px] text-slate-500">
-            💡 Tap <strong className="text-slate-400">"Add to Home Screen"</strong> in your mobile browser to run as a full-screen native app without address bars!
-          </p>
         </div>
       </main>
     </div>
