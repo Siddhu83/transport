@@ -25,28 +25,21 @@ export interface AuthSession {
 
 const SESSION_KEY = 'ats_captain_session';
 
-// Demo fallback profile for immediate local testing if server database is not seeded
-export const DEMO_CAPTAIN: DriverProfile = {
-  id: 'driver-id-1',
-  email: 'driver1@transport.college.edu',
-  name: 'Captain Ramesh Kumar',
-  role: 'DRIVER',
-  assignedBusId: '11111111-1111-4111-8111-111111111111',
-  assignedRouteId: 'a1111111-1111-4111-8111-111111111111',
-  busNumber: 'BUS-101',
-  licensePlate: 'KA-01-EQ-1001',
-  routeName: 'Sector 1 Express Corridor',
-  capacity: 55,
-};
-
 export class AuthService {
   public static getSession(): AuthSession | null {
     if (typeof window === 'undefined') return null;
     const raw = localStorage.getItem(SESSION_KEY);
     if (!raw) return null;
     try {
-      return JSON.parse(raw);
+      const session = JSON.parse(raw);
+      // Evict any legacy fake demo tokens to prevent 401 Fastify JWT errors!
+      if (!session || !session.token || session.token === 'demo-jwt-driver-token') {
+        this.clearSession();
+        return null;
+      }
+      return session;
     } catch {
+      this.clearSession();
       return null;
     }
   }
@@ -60,47 +53,45 @@ export class AuthService {
   }
 
   public static async login(email: string, password: string): Promise<AuthSession> {
+    // Clear any previous stale session
+    this.clearSession();
+
+    let res: Response;
     try {
-      const res = await fetch(ENDPOINTS.AUTH_LOGIN, {
+      res = await fetch(ENDPOINTS.AUTH_LOGIN, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       });
-
-      if (res.ok) {
-        const data = await res.json();
-        const session: AuthSession = {
-          token: data.token,
-          user: {
-            id: data.user.id,
-            email: data.user.email,
-            name: data.user.name,
-            role: data.user.role,
-            assignedBusId: data.user.assignedBusId || '11111111-1111-4111-8111-111111111111',
-            assignedRouteId: data.user.assignedRouteId || 'a1111111-1111-4111-8111-111111111111',
-            busNumber: `BUS-${data.user.assignedBusId ? data.user.assignedBusId.slice(0, 4) : '101'}`,
-            licensePlate: 'KA-01-EQ-1001',
-            routeName: 'Campus Route Corridor',
-            capacity: 55,
-          },
-        };
-        this.saveSession(session);
-        return session;
-      }
     } catch (err) {
-      console.warn('Network login failed. Falling back to demo session:', err);
+      console.error('API Gateway connection error:', err);
+      throw new Error('Unable to connect to backend server gateway. Please ensure backend server is running on port 8000.');
     }
 
-    // Fallback: If credentials match default demo login, generate local demo session
-    if (email === 'driver1@transport.college.edu' && password === 'Password123!') {
-      const demoSession: AuthSession = {
-        token: 'demo-jwt-driver-token',
-        user: DEMO_CAPTAIN,
-      };
-      this.saveSession(demoSession);
-      return demoSession;
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.message || 'Invalid email or password');
     }
 
-    throw new Error('Invalid email or password. Use test account: driver1@transport.college.edu / Password123!');
+    // Successfully authenticated with Fastify API Gateway
+    const session: AuthSession = {
+      token: data.token,
+      user: {
+        id: data.user.id,
+        email: data.user.email,
+        name: data.user.name,
+        role: data.user.role,
+        assignedBusId: data.user.assignedBusId,
+        assignedRouteId: data.user.assignedRouteId,
+        busNumber: data.user.assignedBusId ? `BUS-${data.user.assignedBusId.slice(0, 4).toUpperCase()}` : 'BUS-101',
+        licensePlate: 'KA-01-EQ-1001',
+        routeName: 'Campus Route Corridor',
+        capacity: 55,
+      },
+    };
+
+    this.saveSession(session);
+    return session;
   }
 }

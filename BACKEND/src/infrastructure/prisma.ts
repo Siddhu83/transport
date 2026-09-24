@@ -1,7 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import { env } from '../config/env.js';
 
-const connectionUrl = env.DATABASE_URL_POOLED || env.DATABASE_URL;
+const connectionUrl = env.DATABASE_URL || env.DATABASE_URL_POOLED;
 
 export const prisma = new PrismaClient({
   datasources: {
@@ -11,5 +11,3 @@ export const prisma = new PrismaClient({
   },
   log: env.NODE_ENV === 'development' ? ['query', 'warn', 'error'] : ['error'],
 });
-
-

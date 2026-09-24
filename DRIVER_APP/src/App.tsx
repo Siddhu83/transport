@@ -92,9 +92,12 @@ export const App: React.FC = () => {
     if (daemonState.isRunning) {
       trackingDaemon.stopTracking();
     } else {
+      const busId = session.user.assignedBusId || '11111111-1111-4111-8111-111111111111';
+      const routeId = session.user.assignedRouteId || 'a1111111-1111-4111-8111-111111111111';
+
       await trackingDaemon.startTracking({
-        busId: session.user.assignedBusId || '11111111-1111-4111-8111-111111111111',
-        routeId: session.user.assignedRouteId || 'a1111111-1111-4111-8111-111111111111',
+        busId,
+        routeId,
         driverId: session.user.id,
         authToken: session.token,
         forceSimulatedGps: simulatedMode,
