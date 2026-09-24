@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { VehicleFeatureProperties } from '../components/map/FleetCanvas';
+import { ENDPOINTS } from '../config/api.js';
 
 export type StreamConnectionStatus = 'CONNECTING' | 'CONNECTED' | 'RECONNECTING' | 'OFFLINE';
 
@@ -53,7 +54,7 @@ export const useTelemetryStream = (
     cleanup();
 
     const query = routeId ? `?routeId=${encodeURIComponent(routeId)}` : '';
-    const url = `/api/v1/telemetry/stream${query}`;
+    const url = `${ENDPOINTS.TELEMETRY_STREAM}${query}`;
 
     setStatus(reconnectAttemptRef.current > 0 ? 'RECONNECTING' : 'CONNECTING');
 
