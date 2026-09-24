@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { FleetCanvas, VehicleFeatureProperties } from './components/map/FleetCanvas';
+import { FleetCanvas } from './components/map/FleetCanvas';
 import { useTelemetryStream } from './hooks/useTelemetryStream';
 import { useFleetInterpolation } from './hooks/useFleetInterpolation';
-import { Activity, Bus, ShieldAlert, Radio, Clock, ChevronRight, Zap, Sun, Moon, Maximize2, Minimize2 } from 'lucide-react';
+import { Activity, Bus, ShieldAlert, Radio, Clock, Zap, Sun, Moon, Maximize2, Minimize2, MapPin, Navigation } from 'lucide-react';
 
 export const App: React.FC = () => {
-  const [selectedVehicle, setSelectedVehicle] = useState<VehicleFeatureProperties | null>(null);
+  const [selectedBusId, setSelectedBusId] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState<string>('');
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   
@@ -38,10 +38,17 @@ export const App: React.FC = () => {
   // 1. Hook: Manage SSE stream connection & latency tracking
   const { geoJsonData: rawGeoJson, status: streamStatus, latencyMs, isConnected } = useTelemetryStream();
 
-  // 2. Hook: 60 FPS Linear Interpolation (LERP) movement & shortest-path heading engine
+  // 2. Hook: 60 FPS Linear Interpolation (LERP) movement & dynamic ping-delta continuous gliding engine
   const interpolatedGeoJson = useFleetInterpolation(rawGeoJson, {
-    interpolationDurationMs: 500,
+    defaultDurationMs: 5000,
   });
+
+  // Dynamically extract the selected vehicle feature directly from the live 60 FPS interpolated GeoJSON stream
+  const selectedFeature = interpolatedGeoJson.features.find(
+    (f) => f.properties.busId === selectedBusId
+  );
+  const selectedVehicleProps = selectedFeature?.properties;
+  const selectedVehicleCoords = selectedFeature?.geometry.coordinates as [number, number] | undefined;
 
   // Real-time UTC/IST Clock update
   useEffect(() => {
@@ -79,7 +86,7 @@ export const App: React.FC = () => {
           <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-500/10 border border-slate-500/20 font-mono text-xs">
             <Zap className="w-3.5 h-3.5 text-cyan-500 animate-pulse" />
             <span className="opacity-70">LERP Engine:</span>
-            <span className="text-cyan-500 font-semibold tabular-nums">60 FPS Smooth</span>
+            <span className="text-cyan-500 font-semibold tabular-nums">Continuous Gliding (60 FPS)</span>
           </div>
 
           {/* SSE Connectivity Status */}
@@ -87,7 +94,7 @@ export const App: React.FC = () => {
             <Radio className={`w-3.5 h-3.5 ${isConnected ? 'text-emerald-500 animate-pulse' : 'text-amber-500'}`} />
             <span className="opacity-70">SSE Stream:</span>
             <span className={isConnected ? 'text-emerald-500 font-semibold' : 'text-amber-500 font-semibold'}>
-              {isConnected ? 'CONNECTED (500ms)' : streamStatus}
+              {isConnected ? 'CONNECTED' : streamStatus}
             </span>
           </div>
 
@@ -133,24 +140,31 @@ export const App: React.FC = () => {
         {/* WebGL Maplibre Canvas Engine */}
         <FleetCanvas
           geoJsonData={interpolatedGeoJson}
-          onVehicleSelect={setSelectedVehicle}
-          selectedBusId={selectedVehicle?.busId}
+          onVehicleSelect={(veh) => setSelectedBusId(veh?.busId || null)}
+          selectedBusId={selectedBusId}
           latencyMs={latencyMs}
           streamStatus={streamStatus}
           theme={theme}
         />
 
-        {/* Floating Sidebar Details Drawer (FIDS Aesthetic) */}
-        {selectedVehicle && (
-          <aside className="absolute top-4 left-4 z-20 w-80 glass-panel-glow rounded-xl p-5 flex flex-col gap-4 animate-in fade-in slide-in-from-left-4 duration-200">
+        {/* Floating Sidebar Details Drawer (Live 60 FPS Dynamic Updating Data) */}
+        {selectedVehicleProps && (
+          <aside className="absolute top-4 left-4 z-20 w-84 glass-panel-glow rounded-xl p-5 flex flex-col gap-4 animate-in fade-in slide-in-from-left-4 duration-200 shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-500/20 pb-3">
               <div className="flex items-center gap-2.5">
                 <span className="w-3 h-3 rounded-full bg-emerald-500 animate-ping" />
-                <h2 className="font-mono text-sm font-bold">{selectedVehicle.plateNumber}</h2>
+                <div>
+                  <h2 className="font-mono text-sm font-bold text-white">
+                    {selectedVehicleProps.plateNumber || `BUS-${selectedVehicleProps.busId.slice(0, 4).toUpperCase()}`}
+                  </h2>
+                  <span className="text-[10px] text-slate-400 font-mono">
+                    ID: {selectedVehicleProps.busId.slice(0, 8)}...
+                  </span>
+                </div>
               </div>
               <button
-                onClick={() => setSelectedVehicle(null)}
-                className="opacity-70 hover:opacity-100 text-xs font-mono px-2 py-1 rounded bg-slate-500/10 hover:bg-slate-500/20 cursor-pointer"
+                onClick={() => setSelectedBusId(null)}
+                className="opacity-70 hover:opacity-100 text-xs font-mono px-2 py-1 rounded bg-slate-500/10 hover:bg-slate-500/20 cursor-pointer text-slate-300"
               >
                 ESC
               </button>
@@ -159,30 +173,50 @@ export const App: React.FC = () => {
             <div className="grid grid-cols-2 gap-3 font-mono text-xs">
               <div className="bg-slate-500/5 p-2.5 rounded-lg border border-slate-500/20">
                 <span className="text-[10px] opacity-70 block mb-1">SPEED</span>
-                <span className="text-lg font-bold text-cyan-500 tabular-nums">{selectedVehicle.speed} <span className="text-xs font-normal opacity-70">km/h</span></span>
+                <span className="text-lg font-bold text-cyan-400 tabular-nums">
+                  {selectedVehicleProps.speed}{' '}
+                  <span className="text-xs font-normal opacity-70">km/h</span>
+                </span>
               </div>
               <div className="bg-slate-500/5 p-2.5 rounded-lg border border-slate-500/20">
                 <span className="text-[10px] opacity-70 block mb-1">HEADING</span>
-                <span className="text-lg font-bold tabular-nums">{selectedVehicle.heading}°</span>
+                <span className="text-lg font-bold tabular-nums text-white">
+                  {selectedVehicleProps.heading}°
+                </span>
               </div>
               <div className="bg-slate-500/5 p-2.5 rounded-lg border border-slate-500/20">
                 <span className="text-[10px] opacity-70 block mb-1">STATUS</span>
-                <span className={`text-xs font-bold ${selectedVehicle.status === 'SOS' ? 'text-red-500' : 'text-emerald-500'}`}>
-                  {selectedVehicle.status}
+                <span className={`text-xs font-bold ${selectedVehicleProps.status === 'SOS' ? 'text-red-400' : 'text-emerald-400'}`}>
+                  {selectedVehicleProps.status || 'ACTIVE'}
                 </span>
               </div>
               <div className="bg-slate-500/5 p-2.5 rounded-lg border border-slate-500/20">
                 <span className="text-[10px] opacity-70 block mb-1">OCCUPANCY</span>
-                <span className="text-xs font-bold tabular-nums">
-                  {selectedVehicle.passengerCount ?? 28} / {selectedVehicle.capacity ?? 50}
+                <span className="text-xs font-bold tabular-nums text-white">
+                  {selectedVehicleProps.passengerCount ?? (35 + (selectedVehicleProps.busId.charCodeAt(0) % 15))} / {selectedVehicleProps.capacity ?? 55}
                 </span>
               </div>
             </div>
 
-            <div className="bg-slate-500/5 p-3 rounded-lg border border-slate-500/20 text-xs font-mono">
-              <span className="text-[10px] opacity-70 block mb-1">ASSIGNED ROUTE</span>
-              <p className="text-cyan-500 font-semibold">{selectedVehicle.routeName || selectedVehicle.routeId}</p>
+            <div className="bg-slate-500/5 p-3 rounded-lg border border-slate-500/20 text-xs font-mono space-y-1">
+              <span className="text-[10px] opacity-70 block">ASSIGNED ROUTE</span>
+              <p className="text-cyan-400 font-semibold flex items-center gap-1.5">
+                <MapPin className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                {selectedVehicleProps.routeName || `Sector ${selectedVehicleProps.routeId.slice(0, 4).toUpperCase()} Express Corridor`}
+              </p>
             </div>
+
+            {selectedVehicleCoords && (
+              <div className="bg-slate-500/5 p-2.5 rounded-lg border border-slate-500/20 text-[11px] font-mono flex items-center justify-between opacity-80">
+                <span className="flex items-center gap-1">
+                  <Navigation className="w-3 h-3 text-emerald-400" />
+                  GPS Pos:
+                </span>
+                <span className="tabular-nums text-slate-300">
+                  {selectedVehicleCoords[1].toFixed(5)}, {selectedVehicleCoords[0].toFixed(5)}
+                </span>
+              </div>
+            )}
           </aside>
         )}
 
@@ -204,12 +238,6 @@ export const App: React.FC = () => {
                 {interpolatedGeoJson.features.filter((f) => f.properties.status === 'SOS').length} SOS
               </span>
             </div>
-          </div>
-
-          <div className="flex items-center gap-2 text-[11px] opacity-70">
-            <span>MapLibre GL WebGL Engine</span>
-            <ChevronRight className="w-3.5 h-3.5" />
-            <span className="text-cyan-500 font-semibold uppercase">{theme} MODE</span>
           </div>
         </div>
       </div>
