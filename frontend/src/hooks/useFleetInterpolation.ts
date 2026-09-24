@@ -12,10 +12,11 @@ export interface InterpolatedVehicleState {
   properties: VehicleFeatureProperties;
   startTime: number;
   durationMs: number;
+  lastArrivalTime: number;
 }
 
 export interface UseFleetInterpolationOptions {
-  interpolationDurationMs?: number; // Default 500ms to match SSE broadcast interval
+  defaultDurationMs?: number; // Initial default duration before ping delta is measured (e.g., 5000ms or 500ms)
 }
 
 // Shortest path angular difference calculation (prevents 360° spin wrap-around)
@@ -34,7 +35,7 @@ export const useFleetInterpolation = (
   incomingGeoJson: GeoJSON.FeatureCollection<GeoJSON.Point, VehicleFeatureProperties>,
   options: UseFleetInterpolationOptions = {}
 ): GeoJSON.FeatureCollection<GeoJSON.Point, VehicleFeatureProperties> => {
-  const { interpolationDurationMs = 500 } = options;
+  const { defaultDurationMs = 5000 } = options;
 
   const [interpolatedGeoJson, setInterpolatedGeoJson] = useState<
     GeoJSON.FeatureCollection<GeoJSON.Point, VehicleFeatureProperties>
@@ -59,7 +60,11 @@ export const useFleetInterpolation = (
       const existingState = stateMapRef.current.get(busId);
 
       if (existingState) {
-        // Smooth transition from current interpolated position to new target
+        // Calculate dynamic duration span as the exact difference between ping arrivals!
+        const pingDeltaMs = now - existingState.lastArrivalTime;
+        // Clamp duration to reasonable boundaries (300ms min, 10000ms max)
+        const dynamicDuration = Math.max(300, Math.min(pingDeltaMs, 10000));
+
         nextMap.set(busId, {
           busId,
           startCoords: existingState.currentCoords,
@@ -70,7 +75,8 @@ export const useFleetInterpolation = (
           currentHeading: existingState.currentHeading,
           properties: feature.properties,
           startTime: now,
-          durationMs: interpolationDurationMs,
+          durationMs: dynamicDuration,
+          lastArrivalTime: now,
         });
       } else {
         // Initial spawn of vehicle
@@ -84,15 +90,16 @@ export const useFleetInterpolation = (
           currentHeading: targetHeading,
           properties: feature.properties,
           startTime: now,
-          durationMs: interpolationDurationMs,
+          durationMs: defaultDurationMs,
+          lastArrivalTime: now,
         });
       }
     }
 
     stateMapRef.current = nextMap;
-  }, [incomingGeoJson, interpolationDurationMs]);
+  }, [incomingGeoJson, defaultDurationMs]);
 
-  // 60 FPS requestAnimationFrame continuous interpolation loop
+  // 60 FPS requestAnimationFrame continuous smooth interpolation loop
   useEffect(() => {
     const animate = () => {
       const now = performance.now();
@@ -100,18 +107,36 @@ export const useFleetInterpolation = (
 
       stateMapRef.current.forEach((vehicle, busId) => {
         const elapsed = now - vehicle.startTime;
-        const t = Math.min(1, Math.max(0, elapsed / vehicle.durationMs));
+        const duration = vehicle.durationMs || 5000;
+        const t = elapsed / duration;
 
-        // Smooth cubic ease-out calculation
-        const easeT = 1 - Math.pow(1 - t, 2);
+        let lng: number;
+        let lat: number;
 
-        // Interpolate coordinates
-        const lng = lerp(vehicle.startCoords[0], vehicle.targetCoords[0], easeT);
-        const lat = lerp(vehicle.startCoords[1], vehicle.targetCoords[1], easeT);
+        if (t <= 1.0) {
+          // Standard LERP between start coordinates and target coordinates across ping span
+          // Quadratic ease-in-out for smooth acceleration/deceleration
+          const smoothT = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+          lng = lerp(vehicle.startCoords[0], vehicle.targetCoords[0], smoothT);
+          lat = lerp(vehicle.startCoords[1], vehicle.targetCoords[1], smoothT);
+          vehicle.currentHeading = lerpAngle(vehicle.startHeading, vehicle.targetHeading, smoothT);
+        } else {
+          // Smooth Extrapolation / Dead-Reckoning if next ping is slightly delayed
+          // Keeps marker moving smoothly along current heading vector instead of freezing!
+          const extraSec = Math.min((elapsed - duration) / 1000, 3.0); // max 3s extrapolation
+          const speedKmH = vehicle.properties.speed || 35;
+          const distKm = (speedKmH * extraSec) / 3600;
+
+          const headingRad = (vehicle.targetHeading * Math.PI) / 180;
+          const deltaLat = (distKm / 111.0) * Math.cos(headingRad);
+          const deltaLng = (distKm / (111.0 * Math.cos((vehicle.targetCoords[1] * Math.PI) / 180))) * Math.sin(headingRad);
+
+          lng = vehicle.targetCoords[0] + deltaLng;
+          lat = vehicle.targetCoords[1] + deltaLat;
+          vehicle.currentHeading = vehicle.targetHeading;
+        }
+
         vehicle.currentCoords = [lng, lat];
-
-        // Interpolate heading rotation
-        vehicle.currentHeading = lerpAngle(vehicle.startHeading, vehicle.targetHeading, easeT);
 
         updatedFeatures.push({
           type: 'Feature',
