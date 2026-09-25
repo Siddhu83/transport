@@ -326,17 +326,29 @@ export const App: React.FC = () => {
 
         {/* Insecure HTTP Security Warning Banner */}
         {daemonState.locationProvider === 'INSECURE_ORIGIN_SIMULATED' && (
-          <div className="glass-card-rose rounded-2xl p-4 flex items-start gap-3 border border-rose-500/30">
-            <AlertTriangle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5 animate-bounce" />
-            <div className="space-y-1 text-xs">
-              <p className="font-bold text-rose-200">HTTP Wi-Fi Geolocation Notice</p>
-              <p className="text-rose-300/90 leading-relaxed">
-                Browser security blocks raw GPS over unencrypted <code className="bg-slate-950/60 px-1 py-0.5 rounded font-mono text-rose-200">http://</code> LAN Wi-Fi IPs.
+          <div className="glass-card-rose rounded-2xl p-4 space-y-2 border border-rose-500/30">
+            <div className="flex items-start gap-2.5">
+              <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5 animate-pulse" />
+              <div>
+                <p className="font-bold text-rose-200 text-xs">HTTP Wi-Fi Geolocation Notice</p>
+                <p className="text-slate-300 text-[11px] leading-relaxed mt-0.5">
+                  Mobile browsers block raw hardware GPS over unencrypted <code className="bg-slate-950/80 px-1 py-0.5 rounded text-amber-300 font-mono">http://</code> LAN Wi-Fi IPs.
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-slate-950/80 rounded-xl p-2.5 text-[11px] space-y-1 border border-slate-800 font-mono">
+              <p className="font-bold text-emerald-400 flex items-center gap-1">
+                <span>🔒 For 100% Real Phone GPS:</span>
               </p>
-              <p className="text-emerald-300 font-semibold pt-1">
-                ✅ Auto-activated Route GPS Simulator so your backend pings and student map updates work seamlessly!
+              <p className="text-slate-300">
+                Open <code className="text-emerald-300 underline font-semibold">https://{window.location.hostname}:3001</code> on your phone (accept SSL certificate prompt).
               </p>
             </div>
+
+            <p className="text-[10px] text-emerald-400 font-medium pt-0.5">
+              ⚡ Currently running Route GPS Simulator so pings stream to server seamlessly over HTTP!
+            </p>
           </div>
         )}
 
