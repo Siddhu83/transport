@@ -8,6 +8,8 @@ export const TelemetryPingSchema = z.object({
   speed: z.number().min(0).max(140),          // Speed in km/h
   heading: z.number().min(0).max(359),        // Degrees relative to true north (0-359)
   accuracy: z.number().min(0).max(100).optional().default(5),       // GPS accuracy radius in meters
+  passengerCount: z.number().min(0).max(55).optional().default(0), // On-board passenger count
+  status: z.enum(['ACTIVE', 'OFF_DUTY', 'SOS', 'DELAYED']).optional().default('ACTIVE'),
   timestamp: z.union([z.number(), z.string()]), // Epoch milliseconds or ISO String
 });
 
@@ -21,6 +23,7 @@ export type BatchDrain = z.infer<typeof BatchDrainSchema>;
 
 export enum IngestionStatus {
   SUCCESS = 'SUCCESS',
+  OFF_DUTY_CLEANED = 'OFF_DUTY_CLEANED',
   LOW_ACCURACY_DROPPED = 'LOW_ACCURACY_DROPPED',
   SPEED_SPIKE_DROPPED = 'SPEED_SPIKE_DROPPED',
   CLOCK_DRIFT_REJECTED = 'CLOCK_DRIFT_REJECTED',
