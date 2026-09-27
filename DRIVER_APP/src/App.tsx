@@ -86,11 +86,19 @@ export const App: React.FC = () => {
     setBatteryStatus(status.message);
   };
 
+  const handlePassengerChange = (delta: number) => {
+    setPassengerCount((prev) => {
+      const next = Math.max(0, Math.min(maxCapacity, prev + delta));
+      trackingDaemon.updatePassengerCount(next);
+      return next;
+    });
+  };
+
   const handleToggleTracking = async () => {
     if (!session) return;
 
     if (daemonState.isRunning) {
-      trackingDaemon.stopTracking();
+      await trackingDaemon.stopTracking();
     } else {
       const busId = session.user.assignedBusId || '11111111-1111-4111-8111-111111111111';
       const routeId = session.user.assignedRouteId || 'a1111111-1111-4111-8111-111111111111';
@@ -101,6 +109,7 @@ export const App: React.FC = () => {
         driverId: session.user.id,
         authToken: session.token,
         forceSimulatedGps: simulatedMode,
+        passengerCount,
       });
     }
     setDaemonState(trackingDaemon.getState());
@@ -485,7 +494,7 @@ export const App: React.FC = () => {
 
           <div className="flex items-center justify-between gap-4">
             <button
-              onClick={() => setPassengerCount((prev) => Math.max(0, prev - 1))}
+              onClick={() => handlePassengerChange(-1)}
               className="w-12 h-12 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xl flex items-center justify-center active:scale-90 border border-slate-700"
             >
               -
@@ -497,7 +506,7 @@ export const App: React.FC = () => {
             </div>
 
             <button
-              onClick={() => setPassengerCount((prev) => Math.min(maxCapacity, prev + 1))}
+              onClick={() => handlePassengerChange(1)}
               className="w-12 h-12 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xl flex items-center justify-center active:scale-90 shadow-lg shadow-emerald-950/40"
             >
               +
