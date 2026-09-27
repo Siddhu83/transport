@@ -419,13 +419,6 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
     }
   };
 
-  const handleResetView = () => {
-    if (mapRef.current) {
-      const targetCenter = userLocation || DEFAULT_CENTER;
-      mapRef.current.flyTo({ center: targetCenter, zoom: DEFAULT_ZOOM, pitch: 30, bearing: 0 });
-    }
-  };
-
   const handleLocateClick = () => {
     detectUserLocation(mapRef.current, true);
   };
@@ -455,31 +448,6 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
 
       {/* Map Top Status HUD & Target Bus Selector */}
       <div className="absolute top-4 left-4 z-10 flex flex-wrap items-center gap-3 pointer-events-auto">
-        <div className="glass-panel-glow px-4 py-2 rounded-lg flex items-center gap-3">
-          <div className="relative flex h-2.5 w-2.5">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-          </div>
-          <div>
-            <div className="text-[10px] font-mono tracking-wider uppercase flex items-center gap-1.5 opacity-70">
-              <span>WebGL Fleet Canvas</span>
-              <span className="text-cyan-500 text-[9px] px-1.5 py-0.2 rounded bg-cyan-500/10 border border-cyan-500/20">
-                {locationStatusText}
-              </span>
-            </div>
-            <div className="text-xs font-mono font-bold flex items-center gap-3">
-              <div className="flex items-center gap-1.5">
-                <span>{activeCount}</span>
-                <span className="text-[10px] opacity-70 font-normal">Vehicles Rendered</span>
-              </div>
-              <div className="flex items-center gap-1.5 text-[10px] px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 tabular-nums font-mono">
-                <span className={`w-1.5 h-1.5 rounded-full ${streamStatus === 'CONNECTED' ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
-                <span>{streamStatus === 'CONNECTED' ? `LIVE ${latencyMs ?? 16}ms` : streamStatus}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
         {/* Target Bus Fleet Selector Dropdown */}
         <div className="glass-panel px-3 py-1.5 rounded-lg flex items-center gap-2 border border-cyan-500/20 shadow-lg">
           <span className="text-[11px] font-mono font-semibold text-cyan-400 uppercase tracking-wider">Fleet:</span>
@@ -519,14 +487,6 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
           }`}
         >
           <Locate className="w-4 h-4" />
-        </button>
-
-        <button
-          onClick={handleResetView}
-          title="Reset Map Camera View"
-          className="glass-panel p-2.5 rounded-lg opacity-80 hover:opacity-100 hover:text-cyan-500 transition-all cursor-pointer shadow-lg"
-        >
-          <Compass className="w-4 h-4" />
         </button>
       </div>
     </div>
