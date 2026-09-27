@@ -1,9 +1,12 @@
 export interface TelemetryPingData {
   busId: string;
+  routeId?: string;
   latitude: number;
   longitude: number;
   speed: number; // km/h
   heading: number; // degrees 0-360
+  passengerCount?: number;
+  status?: 'ACTIVE' | 'OFF_DUTY' | 'SOS';
   timestamp: string; // ISO 8601 string
 }
 

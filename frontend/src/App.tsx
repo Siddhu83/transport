@@ -193,7 +193,7 @@ export const App: React.FC = () => {
               <div className="bg-slate-500/5 p-2.5 rounded-lg border border-slate-500/20">
                 <span className="text-[10px] opacity-70 block mb-1">OCCUPANCY</span>
                 <span className="text-xs font-bold tabular-nums text-white">
-                  {selectedVehicleProps.passengerCount ?? (35 + (selectedVehicleProps.busId.charCodeAt(0) % 15))} / {selectedVehicleProps.capacity ?? 55}
+                  {selectedVehicleProps.passengerCount ?? 0} / {selectedVehicleProps.capacity ?? 55}
                 </span>
               </div>
             </div>

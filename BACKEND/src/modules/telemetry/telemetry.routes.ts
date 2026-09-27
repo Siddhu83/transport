@@ -154,6 +154,8 @@ export async function telemetryRoutes(fastify: FastifyInstance) {
         speed: latest.speed,
         heading: latest.heading,
         accuracy: latest.accuracy ?? 5,
+        passengerCount: latest.passengerCount ?? 0,
+        status: latest.status || 'ACTIVE',
         timestamp: typeof latest.timestamp === 'number' ? latest.timestamp : new Date(latest.timestamp).getTime(),
         routeId: latest.routeId || '00000000-0000-0000-0000-000000000000',
       };
