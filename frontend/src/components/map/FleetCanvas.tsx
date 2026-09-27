@@ -46,10 +46,8 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
   const mapRef = useRef<maplibregl.Map | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
-  const [activeCount, setActiveCount] = useState<number>(0);
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
   const [isLocating, setIsLocating] = useState<boolean>(false);
-  const [locationStatusText, setLocationStatusText] = useState<string>('Campus Default');
 
   // Helper to attach WebGL sources & layers onto map style load
   const attachMapLayers = (map: maplibregl.Map, currentTheme: 'dark' | 'light') => {
@@ -316,7 +314,6 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
   const detectUserLocation = (mapInstance?: maplibregl.Map | null, flyTo = true) => {
     const targetMap = mapInstance || mapRef.current;
     if (!navigator.geolocation) {
-      setLocationStatusText('GPS Unsupported');
       return;
     }
 
@@ -326,7 +323,6 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
         const { longitude, latitude } = position.coords;
         const coords: [number, number] = [longitude, latitude];
         setUserLocation(coords);
-        setLocationStatusText('Live Location Active');
         setIsLocating(false);
 
         // Update User Location GeoJSON Source on Map
@@ -354,13 +350,13 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
               zoom: 14.5,
               pitch: 25,
               speed: 1.2,
+              curve: 1.2,
             });
           }
         }
       },
       (error) => {
         console.info('HTML5 Geolocation info/fallback:', error.message);
-        setLocationStatusText('Campus Center');
         setIsLocating(false);
       },
       { enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 }
@@ -373,7 +369,6 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
     const source = mapRef.current.getSource('buses-source') as maplibregl.GeoJSONSource;
     if (source && geoJsonData) {
       source.setData(geoJsonData);
-      setActiveCount(geoJsonData.features.length);
     }
   }, [geoJsonData, isLoaded]);
 
@@ -460,13 +455,12 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
         <button
           onClick={handleLocateClick}
           title="Center on My Location (Student GPS)"
-          className={`glass-panel p-2.5 rounded-lg transition-all cursor-pointer shadow-lg ${
-            isLocating
-              ? 'text-cyan-500 animate-spin border-cyan-500/50'
-              : userLocation
+          className={`glass-panel p-2.5 rounded-lg transition-all cursor-pointer shadow-lg ${isLocating
+            ? 'text-cyan-500 animate-spin border-cyan-500/50'
+            : userLocation
               ? 'text-cyan-500 border-cyan-500/30 hover:bg-cyan-500/10'
               : 'opacity-80 hover:opacity-100 hover:text-cyan-500'
-          }`}
+            }`}
         >
           <Locate className="w-4 h-4" />
         </button>

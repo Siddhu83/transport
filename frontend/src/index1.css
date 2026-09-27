@@ -1,0 +1,142 @@
+@import "tailwindcss";
+@import "maplibre-gl/dist/maplibre-gl.css";
+
+/* 
+  UBER / RAPIDO ENTERPRISE MOBILITY THEME (index1.css)
+  - No radiant/neon lasers or vibe-coded glows.
+  - Inspired by Uber Captain & Rapido Rider Pro Consoles.
+  - High-contrast typography, warm yellow accent (#facc15), zinc graphite dark surfaces.
+*/
+
+@theme {
+  /* Uber & Rapido Mobility Brand Tokens */
+  --color-brand-primary: #facc15;      /* Rapido Yellow / Uber Fleet Accent */
+  --color-brand-accent: #eab308;       /* Deep Gold Accent */
+  --color-brand-glow: rgba(250, 204, 21, 0.12); /* Subtle warm shadow */
+
+  /* Enterprise Telemetry Status Tokens */
+  --color-status-active: #16a34a;      /* Uber Online Green (600) */
+  --color-status-delayed: #d97706;     /* Uber Warning Amber (600) */
+  --color-status-sos: #dc2626;         /* Emergency Alert Red (600) */
+  --color-status-offduty: #64748b;     /* Off Duty Neutral Slate (500) */
+
+  /* Dynamic Dynamic Theme Surface & Text Tokens */
+  --color-theme-canvas: var(--color-canvas);
+  --color-theme-card: var(--color-surface-card);
+  --color-theme-hover: var(--color-surface-hover);
+  --color-theme-border: var(--color-border);
+  --color-theme-main: var(--color-text-main);
+  --color-theme-muted: var(--color-text-muted);
+}
+
+@layer base {
+  :root {
+    --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-mono: 'JetBrains Mono', 'Roboto Mono', monospace;
+
+    /* Dark Mode Defaults (Uber Dark Pitch Graphite) */
+    --color-canvas: #09090b;
+    --color-surface-card: #18181b;
+    --color-surface-hover: #27272a;
+    --color-border: #27272a;
+    --color-text-main: #f4f4f5;
+    --color-text-muted: #a1a1aa;
+  }
+
+  [data-theme="light"] {
+    /* Light Mode Defaults (Clean Uber Rider Light) */
+    --color-canvas: #f4f4f5;
+    --color-surface-card: #ffffff;
+    --color-surface-hover: #f4f4f5;
+    --color-border: #e4e4e7;
+    --color-text-main: #09090b;
+    --color-text-muted: #71717a;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    background-color: var(--color-canvas);
+    color: var(--color-text-main);
+    transition: background-color 0.25s ease, color 0.25s ease;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .font-mono {
+    font-family: var(--font-mono);
+  }
+
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* Uber / Rapido Enterprise Panel Utilities */
+.glass-panel {
+  background: rgba(24, 24, 27, 0.90);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #f4f4f5;
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.5);
+  transition: background 0.25s ease, border-color 0.25s ease, color 0.25s ease;
+}
+
+.glass-panel-glow {
+  background: rgba(24, 24, 27, 0.94);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(250, 204, 21, 0.25);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6), 0 0 15px rgba(250, 204, 21, 0.06);
+  color: #f4f4f5;
+  transition: background 0.25s ease, border-color 0.25s ease, color 0.25s ease;
+}
+
+/* Light Theme Overrides */
+[data-theme="light"] .glass-panel {
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(0, 0, 0, 0.10);
+  color: #09090b;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+}
+
+[data-theme="light"] .glass-panel-glow {
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(234, 179, 8, 0.35);
+  color: #09090b;
+  box-shadow: 0 6px 20px rgba(234, 179, 8, 0.10);
+}
+
+/* MapLibre Controls Override for Uber Mobility Minimalist Style */
+.maplibregl-ctrl-group {
+  background: rgba(24, 24, 27, 0.92) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4) !important;
+  overflow: hidden;
+}
+
+[data-theme="light"] .maplibregl-ctrl-group {
+  background: rgba(255, 255, 255, 0.96) !important;
+  border: 1px solid rgba(0, 0, 0, 0.12) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+}
+
+.maplibregl-ctrl-group button {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+}
+
+[data-theme="light"] .maplibregl-ctrl-group button {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06) !important;
+}
+
+.maplibregl-ctrl-group button:last-child {
+  border-bottom: none !important;
+}
+
+.maplibregl-ctrl-icon {
+  filter: invert(1) brightness(1.2) !important;
+}
+
+[data-theme="light"] .maplibregl-ctrl-icon {
+  filter: none !important;
+}

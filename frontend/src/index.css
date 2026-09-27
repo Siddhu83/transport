@@ -1,28 +1,43 @@
 @import "tailwindcss";
 @import "maplibre-gl/dist/maplibre-gl.css";
 
+@theme {
+  /* Brand Tokens */
+  --color-brand-primary: #00f0ff;
+  --color-brand-accent: #00b4d8;
+  --color-brand-glow: rgba(0, 240, 255, 0.25);
+
+  /* Status Tokens */
+  --color-status-active: #10b981;
+  --color-status-delayed: #f59e0b;
+  --color-status-sos: #ef4444;
+  --color-status-offduty: #64748b;
+
+  /* Dynamic Dynamic Theme Tokens */
+  --color-theme-canvas: var(--color-canvas);
+  --color-theme-card: var(--color-surface-card);
+  --color-theme-hover: var(--color-surface-hover);
+  --color-theme-border: var(--color-border);
+  --color-theme-main: var(--color-text-main);
+  --color-theme-muted: var(--color-text-muted);
+}
+
 @layer base {
   :root {
     --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
     --font-mono: 'JetBrains Mono', monospace;
 
-    /* Dark Mode Defaults */
+    /* Dark Mode Defaults (Obsidian Neon) */
     --color-canvas: #0b0f17;
     --color-surface-card: #121824;
     --color-surface-hover: #1b2333;
     --color-border: #1e293b;
     --color-text-main: #f8fafc;
     --color-text-muted: #94a3b8;
-    
-    /* Status Tokens */
-    --color-active: #10b981;    /* Emerald-500 */
-    --color-delayed: #f59e0b;   /* Amber-500 */
-    --color-sos: #ef4444;       /* Red-500 */
-    --color-offduty: #64748b;   /* Slate-500 */
-    --color-cyan-glow: #00f0ff; /* Neon Cyan */
   }
 
   [data-theme="light"] {
+    /* Light Mode Defaults (Voyager) */
     --color-canvas: #f8fafc;
     --color-surface-card: #ffffff;
     --color-surface-hover: #f1f5f9;
