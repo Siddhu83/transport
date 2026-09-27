@@ -398,6 +398,27 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
     }
   }, [selectedBusId, isLoaded]);
 
+  const handleBusDropdownSelect = (busId: string) => {
+    if (!busId) {
+      if (onVehicleSelect) onVehicleSelect(null);
+      return;
+    }
+    const feature = geoJsonData?.features.find((f) => f.properties.busId === busId);
+    if (feature) {
+      if (onVehicleSelect) onVehicleSelect(feature.properties);
+      if (mapRef.current) {
+        const coords = feature.geometry.coordinates as [number, number];
+        mapRef.current.flyTo({
+          center: coords,
+          zoom: 15.5,
+          pitch: 35,
+          speed: 1.3,
+          curve: 1.2,
+        });
+      }
+    }
+  };
+
   const handleResetView = () => {
     if (mapRef.current) {
       const targetCenter = userLocation || DEFAULT_CENTER;
@@ -432,8 +453,8 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
         </div>
       )}
 
-      {/* Map Top Status HUD Overlay */}
-      <div className="absolute top-4 left-4 z-10 flex items-center gap-3 pointer-events-auto">
+      {/* Map Top Status HUD & Target Bus Selector */}
+      <div className="absolute top-4 left-4 z-10 flex flex-wrap items-center gap-3 pointer-events-auto">
         <div className="glass-panel-glow px-4 py-2 rounded-lg flex items-center gap-3">
           <div className="relative flex h-2.5 w-2.5">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
@@ -457,6 +478,30 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Target Bus Fleet Selector Dropdown */}
+        <div className="glass-panel px-3 py-1.5 rounded-lg flex items-center gap-2 border border-cyan-500/20 shadow-lg">
+          <span className="text-[11px] font-mono font-semibold text-cyan-400 uppercase tracking-wider">Fleet:</span>
+          <select
+            value={selectedBusId || ''}
+            onChange={(e) => handleBusDropdownSelect(e.target.value)}
+            className="bg-transparent text-xs font-mono font-bold text-slate-100 focus:outline-none cursor-pointer border-none py-1 pr-2"
+          >
+            <option value="" className="bg-[#0b0f17] text-slate-300">
+              -- Select Target Bus ({geoJsonData?.features.length || 0}) --
+            </option>
+            {geoJsonData?.features.map((feature) => (
+              <option
+                key={feature.properties.busId}
+                value={feature.properties.busId}
+                className="bg-[#0b0f17] text-slate-100 font-mono"
+              >
+                {feature.properties.plateNumber || `BUS-${feature.properties.busId.slice(0, 4).toUpperCase()}`}
+                {feature.properties.routeName ? ` (${feature.properties.routeName})` : ''} — {feature.properties.speed} km/h
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 
