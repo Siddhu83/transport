@@ -1,13 +1,12 @@
 /**
  * Native Android Foreground Tracking Daemon Service
  * Maintains continuous GPS location updates when screen is locked or app is minimized.
- * Includes Cellular Dead-Zone FIFO Ring Buffering & Batch Flush Protocol (Sprint 8).
- * Features Automatic Insecure HTTP Origin Fallback & Route Simulator Mode (Sprint 8.1).
- * Configurable API Endpoints from Config Infrastructure (Sprint 8.2).
+ * Features Web Worker Timer, Screen Wake Lock API, Passenger Count Sync, and Off-Duty Cleanup.
  */
 
 import { TelemetryBuffer, TelemetryPingData } from './telemetryBuffer.js';
 import { ENDPOINTS } from '../config/api.js';
+import { backgroundTimer } from './timerWorker.js';
 
 export interface TrackingDaemonConfig {
   busId: string;
@@ -18,6 +17,7 @@ export interface TrackingDaemonConfig {
   apiEndpoint?: string;
   batchDrainEndpoint?: string;
   forceSimulatedGps?: boolean;
+  passengerCount?: number;
 }
 
 export interface TrackingDaemonState {
@@ -32,13 +32,14 @@ export interface TrackingDaemonState {
   lastKnownLongitude: number | null;
   currentSpeed: number;
   currentHeading: number;
+  passengerCount: number;
   notificationChannel: string;
   status: 'IDLE' | 'ACTIVE_FOREGROUND' | 'PAUSED' | 'ERROR';
 }
 
 const NOTIFICATION_CHANNEL_ID = 'transit_driver_tracking_channel';
 
-// Realistic College Bus Route Waypoints (Bangalore Metro Corridor demo coordinates)
+// Realistic College Bus Route Waypoints
 const ROUTE_WAYPOINTS = [
   { lat: 12.971598, lng: 77.594566, heading: 45, speed: 38 },
   { lat: 12.975200, lng: 77.598900, heading: 60, speed: 42 },
@@ -53,7 +54,6 @@ const ROUTE_WAYPOINTS = [
 export class ForegroundTrackingDaemon {
   private config: TrackingDaemonConfig | null = null;
   private isRunning = false;
-  private timerId: NodeJS.Timeout | null = null;
   private totalPings = 0;
   private lastPingTime: number | null = null;
   private currentStatus: 'IDLE' | 'ACTIVE_FOREGROUND' | 'PAUSED' | 'ERROR' = 'IDLE';
@@ -66,6 +66,8 @@ export class ForegroundTrackingDaemon {
   private lastLng: number | null = null;
   private currentSpeed = 0;
   private currentHeading = 0;
+  private currentPassengerCount = 38;
+  private wakeLockSentinel: any = null;
 
   constructor() {
     if (typeof window !== 'undefined') {
@@ -74,6 +76,14 @@ export class ForegroundTrackingDaemon {
         this.isOnline = false;
         console.warn('📶 Cellular network disconnected. Telemetry switching to FIFO buffer.');
       });
+
+      // Handle Page Visibility changes to re-acquire wake lock & trigger immediate ping upon wake-up
+      document.addEventListener('visibilitychange', async () => {
+        if (document.visibilityState === 'visible' && this.isRunning) {
+          await this.requestScreenWakeLock();
+          await this.pollAndEmitLocation();
+        }
+      });
     }
   }
 
@@ -81,38 +91,86 @@ export class ForegroundTrackingDaemon {
     this.config = config;
     this.isRunning = true;
     this.currentStatus = 'ACTIVE_FOREGROUND';
+    if (config.passengerCount !== undefined) {
+      this.currentPassengerCount = config.passengerCount;
+    }
 
     if (config.forceSimulatedGps) {
       this.locationProvider = 'SIMULATED_ROUTE';
     }
 
     console.info(
-      `🚀 Starting Android Foreground Service [${NOTIFICATION_CHANNEL_ID}] for Bus: ${config.busId} (Endpoint: ${config.apiEndpoint || ENDPOINTS.TELEMETRY_PING})`
+      `🚀 Starting Android Foreground Service [${NOTIFICATION_CHANNEL_ID}] for Bus: ${config.busId}`
     );
 
-    // Setup periodic location sensor polling
+    // Re-acquire Screen Wake Lock to prevent display sleep
+    await this.requestScreenWakeLock();
+
+    // Start Web Worker timer to maintain background execution
     const interval = config.pingIntervalMs || 5000;
-    this.timerId = setInterval(() => {
+    backgroundTimer.start(interval, () => {
       this.pollAndEmitLocation();
-    }, interval);
+    });
 
     // Immediately trigger initial ping
     await this.pollAndEmitLocation();
     return true;
   }
 
-  public stopTracking(): void {
-    if (this.timerId) {
-      clearInterval(this.timerId);
-      this.timerId = null;
+  public async stopTracking(): Promise<void> {
+    // Release Web Worker timer
+    backgroundTimer.stop();
+
+    // Release Screen Wake Lock
+    if (this.wakeLockSentinel) {
+      try {
+        await this.wakeLockSentinel.release();
+      } catch {}
+      this.wakeLockSentinel = null;
     }
+
+    // Send explicit OFF_DUTY telemetry signal to clean up bus pointer from student map & Redis
+    if (this.config && (this.lastLat !== null || this.simIndex > 0)) {
+      const offDutyPing: TelemetryPingData = {
+        busId: this.config.busId,
+        routeId: this.config.routeId,
+        latitude: this.lastLat || 12.971598,
+        longitude: this.lastLng || 77.594566,
+        speed: 0,
+        heading: this.currentHeading,
+        passengerCount: 0,
+        status: 'OFF_DUTY',
+        timestamp: new Date().toISOString(),
+      };
+      await this.sendOrBufferPing(offDutyPing);
+    }
+
     this.isRunning = false;
     this.currentStatus = 'IDLE';
-    console.info(`⏹️ Android Foreground Service [${NOTIFICATION_CHANNEL_ID}] Stopped`);
+    console.info(`⏹️ Android Foreground Service [${NOTIFICATION_CHANNEL_ID}] Stopped (Off-Duty Cleanup Sent)`);
+  }
+
+  public updatePassengerCount(count: number): void {
+    this.currentPassengerCount = count;
+    // Emit immediate ping when passenger count is modified
+    if (this.isRunning) {
+      this.pollAndEmitLocation();
+    }
   }
 
   public setSimulatedMode(enabled: boolean): void {
     this.locationProvider = enabled ? 'SIMULATED_ROUTE' : 'HARDWARE_GPS';
+  }
+
+  private async requestScreenWakeLock(): Promise<void> {
+    if ('wakeLock' in navigator) {
+      try {
+        this.wakeLockSentinel = await (navigator as any).wakeLock.request('screen');
+        console.info('💡 Screen Wake Lock acquired for active duty shift');
+      } catch (err) {
+        console.warn('Screen Wake Lock request failed:', err);
+      }
+    }
   }
 
   private async pollAndEmitLocation(): Promise<void> {
@@ -138,10 +196,13 @@ export class ForegroundTrackingDaemon {
 
           const ping: TelemetryPingData = {
             busId: this.config!.busId,
+            routeId: this.config!.routeId,
             latitude: this.lastLat,
             longitude: this.lastLng,
             speed: this.currentSpeed,
             heading: this.currentHeading,
+            passengerCount: this.currentPassengerCount,
+            status: 'ACTIVE',
             timestamp: nowIso,
           };
 
@@ -171,7 +232,6 @@ export class ForegroundTrackingDaemon {
     const waypoint = ROUTE_WAYPOINTS[this.simIndex % ROUTE_WAYPOINTS.length];
     this.simIndex++;
 
-    // Add tiny randomized jitter for ultra-realistic movement
     const jitterLat = (Math.random() - 0.5) * 0.0001;
     const jitterLng = (Math.random() - 0.5) * 0.0001;
 
@@ -182,10 +242,13 @@ export class ForegroundTrackingDaemon {
 
     const ping: TelemetryPingData = {
       busId: this.config.busId,
+      routeId: this.config.routeId,
       latitude: this.lastLat,
       longitude: this.lastLng,
       speed: this.currentSpeed,
       heading: this.currentHeading,
+      passengerCount: this.currentPassengerCount,
+      status: 'ACTIVE',
       timestamp: nowIso,
     };
 
@@ -220,7 +283,6 @@ export class ForegroundTrackingDaemon {
         this.lastPingTime = Date.now();
         this.isOnline = true;
 
-        // Check if there are buffered pings that need flushing after recovery
         if (!this.telemetryBuffer.isEmpty()) {
           await this.flushBufferedPings();
         }
@@ -284,6 +346,7 @@ export class ForegroundTrackingDaemon {
       lastKnownLongitude: this.lastLng,
       currentSpeed: this.currentSpeed,
       currentHeading: this.currentHeading,
+      passengerCount: this.currentPassengerCount,
       notificationChannel: NOTIFICATION_CHANNEL_ID,
       status: this.currentStatus,
     };
