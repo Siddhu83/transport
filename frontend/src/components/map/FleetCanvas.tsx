@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
-import { Compass, AlertCircle, Locate } from 'lucide-react';
+import { AlertCircle, Locate } from 'lucide-react';
+import { FleetDropdown } from './FleetDropdown';
 
 export interface VehicleFeatureProperties {
   busId: string;
@@ -39,8 +40,6 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
   selectedBusId,
   center = DEFAULT_CENTER,
   zoom = DEFAULT_ZOOM,
-  latencyMs,
-  streamStatus = 'CONNECTED',
   theme = 'dark',
 }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -398,7 +397,7 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
     }
   }, [selectedBusId, isLoaded]);
 
-  const handleBusDropdownSelect = (busId: string) => {
+  const handleBusDropdownSelect = (busId: string | null) => {
     if (!busId) {
       if (onVehicleSelect) onVehicleSelect(null);
       return;
@@ -448,29 +447,12 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
 
       {/* Map Top Status HUD & Target Bus Selector */}
       <div className="absolute top-4 left-4 z-10 flex flex-wrap items-center gap-3 pointer-events-auto">
-        {/* Target Bus Fleet Selector Dropdown */}
-        <div className="glass-panel px-3 py-1.5 rounded-lg flex items-center gap-2 border border-cyan-500/20 shadow-lg">
-          <span className="text-[11px] font-mono font-semibold text-cyan-400 uppercase tracking-wider">Fleet:</span>
-          <select
-            value={selectedBusId || ''}
-            onChange={(e) => handleBusDropdownSelect(e.target.value)}
-            className="bg-transparent text-xs font-mono font-bold text-slate-100 focus:outline-none cursor-pointer border-none py-1 pr-2"
-          >
-            <option value="" className="bg-[#0b0f17] text-slate-300">
-              -- Select Target Bus ({geoJsonData?.features.length || 0}) --
-            </option>
-            {geoJsonData?.features.map((feature) => (
-              <option
-                key={feature.properties.busId}
-                value={feature.properties.busId}
-                className="bg-[#0b0f17] text-slate-100 font-mono"
-              >
-                {feature.properties.plateNumber || `BUS-${feature.properties.busId.slice(0, 4).toUpperCase()}`}
-                {feature.properties.routeName ? ` (${feature.properties.routeName})` : ''} — {feature.properties.speed} km/h
-              </option>
-            ))}
-          </select>
-        </div>
+        <FleetDropdown
+          geoJsonData={geoJsonData}
+          selectedBusId={selectedBusId}
+          onSelectBus={handleBusDropdownSelect}
+          theme={theme}
+        />
       </div>
 
       {/* Map Quick Action Floating Controls */}
