@@ -27,6 +27,33 @@ export async function processTelemetryPing(ping: TelemetryPing): Promise<Ingesti
   const pingTimestampMs = typeof ping.timestamp === 'number' ? ping.timestamp : new Date(ping.timestamp).getTime();
   const pingAccuracy = ping.accuracy ?? 5;
   const routeIdStr = ping.routeId || '00000000-0000-0000-0000-000000000000';
+  const passengerCount = ping.passengerCount ?? 0;
+  const busStatus = ping.status || 'ACTIVE';
+
+  // Handle explicit OFF_DUTY signal when Captain taps "END DUTY"
+  if (busStatus === 'OFF_DUTY') {
+    const pipeline = redis.pipeline();
+    pipeline.zrem('buses:live', ping.busId);
+    pipeline.del(`bus:${ping.busId}:state`);
+    pipeline.publish('telemetry:broadcast', JSON.stringify({
+      busId: ping.busId,
+      routeId: routeIdStr,
+      latitude: ping.latitude,
+      longitude: ping.longitude,
+      speed: 0,
+      heading: ping.heading,
+      passengerCount: 0,
+      status: 'OFF_DUTY',
+      timestamp: pingTimestampMs,
+    }));
+    await pipeline.exec();
+
+    return {
+      status: IngestionStatus.OFF_DUTY_CLEANED,
+      message: `Bus '${ping.busId}' successfully marked OFF_DUTY and removed from live spatial index`,
+      busId: ping.busId,
+    };
+  }
 
   // Guard 1: Clock Drift Check (Reject timestamps drifting > 60s from server host clock)
   if (Math.abs(nowMs - pingTimestampMs) > 60000) {
@@ -83,7 +110,8 @@ export async function processTelemetryPing(ping: TelemetryPing): Promise<Ingesti
     routeId: routeIdStr,
     speed: ping.speed.toString(),
     heading: ping.heading.toString(),
-    status: 'ACTIVE',
+    passengerCount: passengerCount.toString(),
+    status: busStatus,
     lastSeen: pingTimestampMs.toString(),
   });
 
@@ -96,6 +124,8 @@ export async function processTelemetryPing(ping: TelemetryPing): Promise<Ingesti
     timestamp: pingTimestampMs,
     routeId: routeIdStr,
     accuracy: pingAccuracy,
+    passengerCount,
+    status: busStatus,
   }));
 
   await pipeline.exec();
