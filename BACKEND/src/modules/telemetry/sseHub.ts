@@ -14,6 +14,7 @@ export interface GeoJSONFeature {
     routeId: string;
     speed: number;
     heading: number;
+    passengerCount?: number;
     status: string;
     lastSeen: number;
   };
@@ -33,7 +34,7 @@ export interface SSEClient {
 export class SSEHub {
   private static instance: SSEHub;
   private clients: Map<string, SSEClient> = new Map();
-  private telemetryBuffer: Map<string, TelemetryPing> = new Map();
+  private activeBuses: Map<string, TelemetryPing> = new Map();
   private subscriberRedis: Redis;
   private batchTimer: NodeJS.Timeout | null = null;
   private heartbeatTimer: NodeJS.Timeout | null = null;
@@ -69,7 +70,11 @@ export class SSEHub {
       if (channel === 'telemetry:broadcast') {
         try {
           const ping: TelemetryPing = JSON.parse(message);
-          this.telemetryBuffer.set(ping.busId, ping);
+          if (ping.status === 'OFF_DUTY') {
+            this.activeBuses.delete(ping.busId);
+          } else {
+            this.activeBuses.set(ping.busId, ping);
+          }
         } catch (err) {
           console.error('Failed to parse telemetry Pub/Sub frame:', err);
         }
@@ -82,13 +87,22 @@ export class SSEHub {
    */
   private startMicroBatchFlusher() {
     this.batchTimer = setInterval(() => {
-      if (this.clients.size === 0 || this.telemetryBuffer.size === 0) return;
+      if (this.clients.size === 0) return;
 
       const now = Date.now();
+      
+      // Remove stale buses (> 35s without telemetry)
+      for (const [busId, ping] of this.activeBuses.entries()) {
+        const pingTime = typeof ping.timestamp === 'number' ? ping.timestamp : new Date(ping.timestamp).getTime();
+        if (now - pingTime > 35000) {
+          this.activeBuses.delete(busId);
+        }
+      }
+
       const allFeatures: GeoJSONFeature[] = [];
       const routeFeatureMap: Map<string, GeoJSONFeature[]> = new Map();
 
-      for (const [busId, ping] of this.telemetryBuffer.entries()) {
+      for (const [busId, ping] of this.activeBuses.entries()) {
         const routeId = ping.routeId || '';
         const timestampMs = typeof ping.timestamp === 'number' ? ping.timestamp : new Date(ping.timestamp).getTime();
 
@@ -103,7 +117,8 @@ export class SSEHub {
             routeId,
             speed: ping.speed,
             heading: ping.heading,
-            status: 'ACTIVE',
+            passengerCount: ping.passengerCount ?? 0,
+            status: ping.status || 'ACTIVE',
             lastSeen: timestampMs,
           },
         };
@@ -135,9 +150,6 @@ export class SSEHub {
         const frame = `event: fleet-snapshot\nid: ${now}\ndata: ${JSON.stringify(payload)}\n\n`;
         client.res.write(frame);
       }
-
-      // Clear buffer after flush
-      this.telemetryBuffer.clear();
     }, 500);
   }
 
