@@ -14,6 +14,7 @@ export interface VehicleFeatureProperties {
   passengerCount?: number;
   capacity?: number;
   lastPing: string;
+  lastSeen?: number | string;
 }
 
 export interface FleetCanvasProps {
