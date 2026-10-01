@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { FleetCanvas } from './components/map/FleetCanvas';
 import { useTelemetryStream } from './hooks/useTelemetryStream';
 import { useFleetInterpolation } from './hooks/useFleetInterpolation';
-import { Activity, Bus, ShieldAlert, Radio, Clock, Zap, Sun, Moon, Maximize2, Minimize2, MapPin, Navigation, Users, Gauge, Compass } from 'lucide-react';
+import { Activity, Bus, ShieldAlert, Radio, Clock, Sun, Moon, Maximize2, Minimize2, MapPin, Navigation, Users, Gauge, Compass } from 'lucide-react';
 
 export const App: React.FC = () => {
   const [selectedBusId, setSelectedBusId] = useState<string | null>(null);
