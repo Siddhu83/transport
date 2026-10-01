@@ -13,6 +13,7 @@ export interface InterpolatedVehicleState {
   startTime: number;
   durationMs: number;
   lastArrivalTime: number;
+  lastSeen?: number;
 }
 
 export interface UseFleetInterpolationOptions {
@@ -45,42 +46,61 @@ export const useFleetInterpolation = (
   const stateMapRef = useRef<Map<string, InterpolatedVehicleState>>(new Map());
   const animationFrameRef = useRef<number | null>(null);
 
-  // Update target states whenever a new GeoJSON snapshot arrives from SSE
+  // Update target states ONLY when actual coordinate/timestamp changes for a vehicle
   useEffect(() => {
     if (!incomingGeoJson || !incomingGeoJson.features) return;
 
     const now = performance.now();
-    const nextMap = new Map<string, InterpolatedVehicleState>();
+    const currentMap = stateMapRef.current;
+    const activeBusIds = new Set<string>();
 
     for (const feature of incomingGeoJson.features) {
       const busId = feature.properties.busId;
+      activeBusIds.add(busId);
+
       const targetCoords = feature.geometry.coordinates as [number, number];
       const targetHeading = feature.properties.heading ?? 0;
+      const lastSeen = feature.properties.lastSeen ? new Date(feature.properties.lastSeen).getTime() : 0;
 
-      const existingState = stateMapRef.current.get(busId);
+      const existingState = currentMap.get(busId);
 
       if (existingState) {
-        // Calculate dynamic duration span as the exact difference between ping arrivals!
-        const pingDeltaMs = now - existingState.lastArrivalTime;
-        // Clamp duration to reasonable boundaries (300ms min, 10000ms max)
-        const dynamicDuration = Math.max(300, Math.min(pingDeltaMs, 10000));
+        // Check if coordinates or timestamp actually moved/updated!
+        const coordsMoved =
+          existingState.targetCoords[0] !== targetCoords[0] ||
+          existingState.targetCoords[1] !== targetCoords[1] ||
+          (lastSeen > 0 && lastSeen !== existingState.lastSeen);
 
-        nextMap.set(busId, {
-          busId,
-          startCoords: existingState.currentCoords,
-          targetCoords,
-          currentCoords: existingState.currentCoords,
-          startHeading: existingState.currentHeading,
-          targetHeading,
-          currentHeading: existingState.currentHeading,
-          properties: feature.properties,
-          startTime: now,
-          durationMs: dynamicDuration,
-          lastArrivalTime: now,
-        });
+        if (coordsMoved) {
+          // New actual GPS ping arrived for this bus!
+          const pingDeltaMs = now - existingState.lastArrivalTime;
+          // Clamp duration to reasonable boundaries (1000ms min, 10000ms max)
+          const dynamicDuration = Math.max(1000, Math.min(pingDeltaMs, 10000));
+
+          currentMap.set(busId, {
+            busId,
+            startCoords: existingState.currentCoords, // Start LERP from current interpolated position!
+            targetCoords,
+            currentCoords: existingState.currentCoords,
+            startHeading: existingState.currentHeading,
+            targetHeading,
+            currentHeading: existingState.currentHeading,
+            properties: feature.properties,
+            startTime: now,
+            durationMs: dynamicDuration,
+            lastArrivalTime: now,
+            lastSeen,
+          });
+        } else {
+          // No new coordinate fix for this bus - preserve its ongoing LERP trajectory uninterrupted!
+          currentMap.set(busId, {
+            ...existingState,
+            properties: feature.properties, // update dynamic properties (speed, passengerCount, etc.)
+          });
+        }
       } else {
         // Initial spawn of vehicle
-        nextMap.set(busId, {
+        currentMap.set(busId, {
           busId,
           startCoords: targetCoords,
           targetCoords,
@@ -92,11 +112,17 @@ export const useFleetInterpolation = (
           startTime: now,
           durationMs: defaultDurationMs,
           lastArrivalTime: now,
+          lastSeen,
         });
       }
     }
 
-    stateMapRef.current = nextMap;
+    // Clean up any buses that are no longer in incomingGeoJson (Off Duty eviction)
+    for (const [busId] of currentMap.entries()) {
+      if (!activeBusIds.has(busId)) {
+        currentMap.delete(busId);
+      }
+    }
   }, [incomingGeoJson, defaultDurationMs]);
 
   // 60 FPS requestAnimationFrame continuous smooth interpolation loop
