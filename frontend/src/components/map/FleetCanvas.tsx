@@ -86,8 +86,8 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
         source: 'user-location-source',
         paint: {
           'circle-radius': 18,
-          'circle-color': '#00f0ff',
-          'circle-opacity': 0.35,
+          'circle-color': '#facc15',
+          'circle-opacity': 0.3,
           'circle-blur': 0.6,
         },
       });
@@ -101,7 +101,7 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
         source: 'user-location-source',
         paint: {
           'circle-radius': 7,
-          'circle-color': '#00f0ff',
+          'circle-color': '#facc15',
           'circle-stroke-width': 2.5,
           'circle-stroke-color': '#ffffff',
         },
@@ -122,8 +122,8 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
           'text-anchor': 'top',
         },
         paint: {
-          'text-color': '#00f0ff',
-          'text-halo-color': currentTheme === 'dark' ? '#0b0f17' : '#ffffff',
+          'text-color': '#facc15',
+          'text-halo-color': currentTheme === 'dark' ? '#09090b' : '#ffffff',
           'text-halo-width': 2,
         },
       });
@@ -146,11 +146,11 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
             'match',
             ['get', 'status'],
             'SOS',
-            '#ef4444',
+            '#dc2626',
             'DELAYED',
-            '#f59e0b',
+            '#d97706',
             'ACTIVE',
-            '#10b981',
+            '#16a34a',
             '#64748b',
           ],
           'circle-opacity': 0.25,
@@ -176,11 +176,11 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
             'match',
             ['get', 'status'],
             'SOS',
-            '#ef4444',
+            '#dc2626',
             'DELAYED',
-            '#f59e0b',
+            '#d97706',
             'ACTIVE',
-            '#10b981',
+            '#16a34a',
             '#64748b',
           ],
           'circle-stroke-width': [
@@ -189,7 +189,7 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
             3,
             1.5,
           ],
-          'circle-stroke-color': currentTheme === 'dark' ? '#0b0f17' : '#ffffff',
+          'circle-stroke-color': currentTheme === 'dark' ? '#09090b' : '#ffffff',
         },
       });
     }
@@ -210,8 +210,8 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
           'text-ignore-placement': false,
         },
         paint: {
-          'text-color': currentTheme === 'dark' ? '#f8fafc' : '#0f172a',
-          'text-halo-color': currentTheme === 'dark' ? '#0b0f17' : '#ffffff',
+          'text-color': currentTheme === 'dark' ? '#f4f4f5' : '#09090b',
+          'text-halo-color': currentTheme === 'dark' ? '#09090b' : '#ffffff',
           'text-halo-width': 2,
         },
       });
@@ -292,12 +292,10 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
     if (!mapRef.current || !isLoaded) return;
 
     const targetStyle = theme === 'dark' ? DARK_MATTER_STYLE : VOYAGER_STYLE;
-    
-    // Listen to style reload completion
+
     const handleStyleLoad = () => {
       if (mapRef.current) {
         attachMapLayers(mapRef.current, theme);
-        // Refresh GeoJSON Data
         const source = mapRef.current.getSource('buses-source') as maplibregl.GeoJSONSource;
         if (source && geoJsonData) {
           source.setData(geoJsonData);
@@ -310,7 +308,7 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
 
   }, [theme]);
 
-  // HTML5 Client-Side Geolocation Handler (Zero Backend Degradation)
+  // HTML5 Client-Side Geolocation Handler
   const detectUserLocation = (mapInstance?: maplibregl.Map | null, flyTo = true) => {
     const targetMap = mapInstance || mapRef.current;
     if (!navigator.geolocation) {
@@ -325,7 +323,6 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
         setUserLocation(coords);
         setIsLocating(false);
 
-        // Update User Location GeoJSON Source on Map
         if (targetMap) {
           const userSource = targetMap.getSource('user-location-source') as maplibregl.GeoJSONSource;
           if (userSource) {
@@ -418,25 +415,27 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
   };
 
   return (
-    <div className={`relative w-full h-full min-h-[500px] overflow-hidden ${theme === 'dark' ? 'bg-[#0b0f17]' : 'bg-[#f8fafc]'}`}>
+    <div className="relative w-full h-full min-h-[500px] overflow-hidden bg-theme-canvas">
       {/* Map Container */}
       <div ref={mapContainerRef} className="w-full h-full absolute inset-0" />
 
       {/* Loading Overlay */}
       {!isLoaded && !mapError && (
-        <div className={`absolute inset-0 flex items-center justify-center z-20 backdrop-blur-sm ${theme === 'dark' ? 'bg-[#0b0f17]/90 text-cyan-400' : 'bg-[#f8fafc]/90 text-cyan-600'}`}>
+        <div className="absolute inset-0 flex items-center justify-center z-20 backdrop-blur-sm bg-theme-canvas/90 text-brand-primary">
           <div className="flex flex-col items-center gap-3">
-            <div className="w-10 h-10 border-2 border-cyan-500/20 border-t-cyan-400 rounded-full animate-spin" />
-            <p className="text-xs tracking-widest uppercase font-mono font-bold">Initializing WebGL Engine...</p>
+            <div className="w-10 h-10 border-2 border-brand-primary/20 border-t-brand-primary rounded-full animate-spin" />
+            <p className="text-xs tracking-widest uppercase font-mono font-extrabold text-theme-main">
+              Initializing WebGL Engine...
+            </p>
           </div>
         </div>
       )}
 
       {/* Error Banner */}
       {mapError && (
-        <div className="absolute top-4 left-4 right-4 z-30 glass-panel p-4 rounded-lg border-red-500/30 flex items-center gap-3 text-red-400">
-          <AlertCircle className="w-5 h-5 shrink-0" />
-          <p className="text-xs font-mono">{mapError}</p>
+        <div className="absolute top-4 left-4 right-4 z-30 glass-panel p-4 rounded-xl border border-status-sos/40 flex items-center gap-3 text-status-sos">
+          <AlertCircle className="w-5 h-5 shrink-0 text-status-sos" />
+          <p className="text-xs font-mono font-bold">{mapError}</p>
         </div>
       )}
 
@@ -451,16 +450,17 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
       </div>
 
       {/* Map Quick Action Floating Controls */}
-      <div className="absolute top-4 right-4 z-10 flex flex-col gap-2 pointer-events-auto">
+      <div className="absolute top-4 right-4 z-10 flex flex-col gap-2 pointer-events-auto font-mono">
         <button
           onClick={handleLocateClick}
           title="Center on My Location (Student GPS)"
-          className={`glass-panel p-2.5 rounded-lg transition-all cursor-pointer shadow-lg ${isLocating
-            ? 'text-cyan-500 animate-spin border-cyan-500/50'
-            : userLocation
-              ? 'text-cyan-500 border-cyan-500/30 hover:bg-cyan-500/10'
-              : 'opacity-80 hover:opacity-100 hover:text-cyan-500'
-            }`}
+          className={`glass-panel p-3 rounded-xl transition-all cursor-pointer shadow-xl border border-theme-border ${
+            isLocating
+              ? 'text-brand-primary animate-spin border-brand-primary/50'
+              : userLocation
+              ? 'text-brand-primary border-brand-primary/40 bg-brand-primary/10'
+              : 'text-theme-muted hover:text-brand-primary hover:bg-theme-hover'
+          }`}
         >
           <Locate className="w-4 h-4" />
         </button>
