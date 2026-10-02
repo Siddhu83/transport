@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { FleetCanvas } from './components/map/FleetCanvas';
 import { useTelemetryStream } from './hooks/useTelemetryStream';
 import { useFleetInterpolation } from './hooks/useFleetInterpolation';
-import { Activity, Bus, ShieldAlert, Radio, Clock, Sun, Moon, Maximize2, Minimize2, MapPin, Navigation, Users, Gauge, Compass } from 'lucide-react';
+import { Activity, Bus, ShieldAlert, Radio, Clock, Sun, Moon, Maximize2, Minimize2, MapPin, Navigation, Users, Gauge, Compass, X } from 'lucide-react';
 
 export const App: React.FC = () => {
   const [selectedBusId, setSelectedBusId] = useState<string | null>(null);
@@ -23,10 +23,10 @@ export const App: React.FC = () => {
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().then(() => setIsFullscreen(true)).catch(() => {});
+      document.documentElement.requestFullscreen().then(() => setIsFullscreen(true)).catch(() => { });
     } else {
       if (document.exitFullscreen) {
-        document.exitFullscreen().then(() => setIsFullscreen(false)).catch(() => {});
+        document.exitFullscreen().then(() => setIsFullscreen(false)).catch(() => { });
       }
     }
   };
@@ -153,12 +153,10 @@ export const App: React.FC = () => {
             <div className="flex items-center justify-between border-b border-theme-border pb-3">
               <div className="flex items-center gap-3">
                 <div className="relative flex h-3 w-3 shrink-0">
-                  <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
-                    selectedVehicleProps.status === 'SOS' ? 'bg-status-sos' : 'bg-status-active'
-                  }`} />
-                  <span className={`relative inline-flex rounded-full h-3 w-3 ${
-                    selectedVehicleProps.status === 'SOS' ? 'bg-status-sos' : 'bg-status-active'
-                  }`} />
+                  <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${selectedVehicleProps.status === 'SOS' ? 'bg-status-sos' : 'bg-status-active'
+                    }`} />
+                  <span className={`relative inline-flex rounded-full h-3 w-3 ${selectedVehicleProps.status === 'SOS' ? 'bg-status-sos' : 'bg-status-active'
+                    }`} />
                 </div>
                 <div>
                   <h2 className="font-mono text-base font-extrabold text-theme-main">
@@ -173,7 +171,7 @@ export const App: React.FC = () => {
                 onClick={() => setSelectedBusId(null)}
                 className="opacity-80 hover:opacity-100 text-xs font-mono px-2.5 py-1 rounded-lg bg-theme-hover hover:bg-slate-700 text-theme-main cursor-pointer border border-theme-border"
               >
-                ESC
+              <X className="w-5 h-5" />
               </button>
             </div>
 
@@ -210,9 +208,8 @@ export const App: React.FC = () => {
                 {/* Visual Occupancy Progress Bar */}
                 <div className="w-full bg-theme-hover h-2 rounded-full overflow-hidden border border-theme-border">
                   <div
-                    className={`h-full transition-all duration-300 rounded-full ${
-                      occupancyPct >= 90 ? 'bg-status-sos' : occupancyPct >= 75 ? 'bg-status-delayed' : 'bg-brand-primary'
-                    }`}
+                    className={`h-full transition-all duration-300 rounded-full ${occupancyPct >= 90 ? 'bg-status-sos' : occupancyPct >= 75 ? 'bg-status-delayed' : 'bg-brand-primary'
+                      }`}
                     style={{ width: `${occupancyPct}%` }}
                   />
                 </div>
