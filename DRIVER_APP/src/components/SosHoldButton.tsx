@@ -74,23 +74,23 @@ export const SosHoldButton: React.FC<SosHoldButtonProps> = ({
         disabled={disabled}
         className={`w-full min-h-[72px] px-6 py-4 rounded-2xl font-mono text-xs font-bold uppercase tracking-wider flex items-center justify-between transition-all transform active:scale-98 select-none cursor-pointer border shadow-2xl ${
           isHolding
-            ? 'bg-rose-950/90 border-rose-500 text-rose-100 scale-[0.99] shadow-rose-900/50'
-            : 'bg-rose-900/30 hover:bg-rose-900/40 border-rose-500/40 text-rose-200 hover:border-rose-500'
+            ? 'bg-error border-error text-error-content scale-[0.99] shadow-lg shadow-error/40'
+            : 'bg-error-bg hover:bg-error-bg/80 border-error-border text-error hover:border-error'
         } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
       >
         <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-rose-500/20 border border-rose-500/40 text-rose-400 shrink-0">
+          <div className="p-2.5 rounded-xl bg-error-bg border border-error-border text-error shrink-0">
             {isHolding ? (
-              <AlertTriangle className="w-6 h-6 text-amber-400 animate-bounce" />
+              <AlertTriangle className="w-6 h-6 text-warning animate-bounce" />
             ) : (
-              <ShieldAlert className="w-6 h-6 text-rose-400" />
+              <ShieldAlert className="w-6 h-6 text-error" />
             )}
           </div>
           <div className="text-left font-mono">
-            <span className="block text-sm font-extrabold text-white">
+            <span className="block text-sm font-extrabold text-base-content">
               {isHolding ? 'HOLD FOR 2 SECONDS...' : 'TRIGGER SOS BREAKDOWN'}
             </span>
-            <span className="text-[10px] text-rose-300/80 font-normal">
+            <span className="text-[10px] text-base-content-muted font-normal">
               {isHolding ? `${Math.round(progress)}% Filled` : 'Press & Hold to Prevent Accidental Trigger'}
             </span>
           </div>
@@ -104,7 +104,7 @@ export const SosHoldButton: React.FC<SosHoldButtonProps> = ({
               cx="40"
               cy="40"
               r="34"
-              className="text-rose-950 stroke-current"
+              className="text-base-300 stroke-current"
               strokeWidth="6"
               fill="transparent"
             />
@@ -113,7 +113,7 @@ export const SosHoldButton: React.FC<SosHoldButtonProps> = ({
               cx="40"
               cy="40"
               r="34"
-              className="text-rose-500 stroke-current transition-all duration-75"
+              className="text-error stroke-current transition-all duration-75"
               strokeWidth="6"
               strokeDasharray={CIRCUMFERENCE}
               strokeDashoffset={strokeDashoffset}
@@ -121,7 +121,7 @@ export const SosHoldButton: React.FC<SosHoldButtonProps> = ({
               fill="transparent"
             />
           </svg>
-          <span className="absolute text-[10px] font-extrabold font-mono text-rose-200">
+          <span className="absolute text-[10px] font-extrabold font-mono text-base-content">
             {isHolding ? `${Math.round((progress / 100) * 2)}s` : 'SOS'}
           </span>
         </div>
