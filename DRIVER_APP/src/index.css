@@ -1,34 +1,171 @@
 @import "tailwindcss";
 
+/* 
+  DAISYUI STYLE MOBILITY THEME SYSTEM FOR DRIVER APP
+  - Semantic design tokens (primary, secondary, accent, neutral, base-100/200/300, success, warning, error, info).
+  - Eliminates hardcoded palette classes in favor of DaisyUI semantic tokens.
+*/
+
+:root, [data-theme="dark"] {
+  /* Base Surface Colors */
+  --b1: #090d16;          /* base-100: Main deep canvas background */
+  --b2: #0f172a;          /* base-200: Kiosk panel & card background */
+  --b3: #1e293b;          /* base-300: Elevated surface & hover state */
+  --bc: #f8fafc;          /* base-content: Primary text */
+  --bc-muted: #94a3b8;    /* base-content-muted: Muted secondary text */
+  --bc-subtle: #64748b;   /* base-content-subtle: Dimmed helper text */
+  --b-border: #334155;    /* base-border: Card borders and dividers */
+
+  /* Primary Brand Tokens (Duty Active / Captain Green) */
+  --p: #10b981;           /* primary: Emerald 500 */
+  --p-hover: #059669;     /* primary-hover: Emerald 600 */
+  --pc: #ffffff;          /* primary-content: Text on primary */
+  --p-bg: rgba(16, 185, 129, 0.15); /* primary-bg: Low opacity container */
+  --p-border: rgba(16, 185, 129, 0.35); /* primary-border */
+
+  /* Secondary Brand Tokens (Telemetry / GPS Info) */
+  --s: #0ea5e9;           /* secondary: Sky Blue */
+  --sc: #ffffff;          /* secondary-content */
+  --s-bg: rgba(14, 165, 233, 0.15);
+  --s-border: rgba(14, 165, 233, 0.35);
+
+  /* Accent Tokens (Fastify / Vite Teal) */
+  --a: #14b8a6;           /* accent: Teal */
+  --ac: #ffffff;
+  --a-bg: rgba(20, 184, 166, 0.15);
+
+  /* Neutral Surface Tokens */
+  --n: #1e293b;           /* neutral */
+  --nc: #f8fafc;          /* neutral-content */
+  --n-hover: #334155;
+
+  /* State Colors: Success, Warning, Error, Info */
+  --su: #22c55e;          /* success: Duty Online Green */
+  --suc: #ffffff;
+  --su-bg: rgba(34, 197, 94, 0.15);
+  --su-border: rgba(34, 197, 94, 0.35);
+
+  --wa: #f59e0b;          /* warning: Caution / Simulator Amber */
+  --wac: #ffffff;
+  --wa-bg: rgba(245, 158, 11, 0.15);
+  --wa-border: rgba(245, 158, 11, 0.35);
+
+  --er: #f43f5e;          /* error / SOS: Emergency Rose */
+  --erc: #ffffff;
+  --er-bg: rgba(244, 63, 94, 0.18);
+  --er-border: rgba(244, 63, 94, 0.40);
+
+  --in: #3b82f6;          /* info: Route Blue */
+  --inc: #ffffff;
+  --in-bg: rgba(59, 130, 246, 0.15);
+}
+
+[data-theme="light"] {
+  --b1: #f8fafc;
+  --b2: #ffffff;
+  --b3: #f1f5f9;
+  --bc: #0f172a;
+  --bc-muted: #475569;
+  --bc-subtle: #94a3b8;
+  --b-border: #cbd5e1;
+
+  --p: #059669;
+  --pc: #ffffff;
+  --p-bg: rgba(5, 150, 105, 0.1);
+  --p-border: rgba(5, 150, 105, 0.25);
+
+  --s: #0284c7;
+  --sc: #ffffff;
+  --s-bg: rgba(2, 132, 199, 0.1);
+
+  --n: #e2e8f0;
+  --nc: #0f172a;
+
+  --su: #16a34a;
+  --wa: #d97706;
+  --er: #e11d48;
+  --er-bg: rgba(225, 29, 72, 0.1);
+  --in: #2563eb;
+}
+
+@theme {
+  /* DaisyUI Theme Color Tokens mapped for Tailwind CSS v4 */
+  --color-base-100: var(--b1);
+  --color-base-200: var(--b2);
+  --color-base-300: var(--b3);
+  --color-base-content: var(--bc);
+  --color-base-content-muted: var(--bc-muted);
+  --color-base-content-subtle: var(--bc-subtle);
+  --color-base-border: var(--b-border);
+
+  --color-primary: var(--p);
+  --color-primary-hover: var(--p-hover);
+  --color-primary-content: var(--pc);
+  --color-primary-bg: var(--p-bg);
+  --color-primary-border: var(--p-border);
+
+  --color-secondary: var(--s);
+  --color-secondary-content: var(--sc);
+  --color-secondary-bg: var(--s-bg);
+  --color-secondary-border: var(--s-border);
+
+  --color-accent: var(--a);
+  --color-accent-content: var(--ac);
+  --color-accent-bg: var(--a-bg);
+
+  --color-neutral: var(--n);
+  --color-neutral-content: var(--nc);
+  --color-neutral-hover: var(--n-hover);
+
+  --color-success: var(--su);
+  --color-success-content: var(--suc);
+  --color-success-bg: var(--su-bg);
+  --color-success-border: var(--su-border);
+
+  --color-warning: var(--wa);
+  --color-warning-content: var(--wac);
+  --color-warning-bg: var(--wa-bg);
+  --color-warning-border: var(--wa-border);
+
+  --color-error: var(--er);
+  --color-error-content: var(--erc);
+  --color-error-bg: var(--er-bg);
+  --color-error-border: var(--er-border);
+
+  --color-info: var(--in);
+  --color-info-content: var(--inc);
+  --color-info-bg: var(--in-bg);
+}
+
 @layer utilities {
   .glass-card {
-    background: rgba(15, 23, 42, 0.75);
+    background: var(--b2);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--b-border);
     box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
   }
 
-  .glass-card-emerald {
-    background: rgba(6, 78, 59, 0.35);
+  .glass-card-primary {
+    background: var(--p-bg);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(16, 185, 129, 0.3);
-    box-shadow: 0 8px 32px 0 rgba(16, 185, 129, 0.2);
+    border: 1px solid var(--p-border);
+    box-shadow: 0 8px 32px 0 var(--p-bg);
   }
 
-  .glass-card-rose {
-    background: rgba(136, 19, 55, 0.35);
+  .glass-card-error {
+    background: var(--er-bg);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(244, 63, 94, 0.3);
-    box-shadow: 0 8px 32px 0 rgba(244, 63, 94, 0.2);
+    border: 1px solid var(--er-border);
+    box-shadow: 0 8px 32px 0 var(--er-bg);
   }
 
   .glass-button {
-    background: rgba(30, 41, 59, 0.8);
+    background: var(--b3);
     backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    border: 1px solid var(--b-border);
     transition: all 0.2s ease-in-out;
   }
 
@@ -36,16 +173,16 @@
     transform: scale(0.97);
   }
 
-  .glow-emerald {
-    box-shadow: 0 0 25px rgba(16, 185, 129, 0.4);
+  .glow-primary {
+    box-shadow: 0 0 25px var(--p-bg);
   }
 
-  .glow-rose {
-    box-shadow: 0 0 25px rgba(244, 63, 94, 0.4);
+  .glow-error {
+    box-shadow: 0 0 25px var(--er-bg);
   }
 
-  .glow-amber {
-    box-shadow: 0 0 25px rgba(245, 158, 11, 0.4);
+  .glow-warning {
+    box-shadow: 0 0 25px var(--wa-bg);
   }
 }
 
