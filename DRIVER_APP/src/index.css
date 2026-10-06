@@ -1,63 +1,56 @@
 @import "tailwindcss";
 
 /* 
-  DAISYUI STYLE MOBILITY THEME SYSTEM FOR DRIVER APP
-  - Semantic design tokens (primary, secondary, accent, neutral, base-100/200/300, success, warning, error, info).
-  - Eliminates hardcoded palette classes in favor of DaisyUI semantic tokens.
+  GOVERNMENT & PUBLIC TRANSIT UTILITY DESIGN SYSTEM
+  - Authoritative, high-visibility, distraction-free kiosk interface.
+  - Zero neon cyan gradients or vibe-coded glows.
+  - Sharp 1px borders, solid high-contrast backgrounds, tabular figures for telemetry.
 */
 
 :root, [data-theme="dark"] {
-  /* Base Surface Colors */
-  --b1: #090d16;          /* base-100: Main deep canvas background */
-  --b2: #0f172a;          /* base-200: Kiosk panel & card background */
-  --b3: #1e293b;          /* base-300: Elevated surface & hover state */
-  --bc: #f8fafc;          /* base-content: Primary text */
-  --bc-muted: #94a3b8;    /* base-content-muted: Muted secondary text */
-  --bc-subtle: #64748b;   /* base-content-subtle: Dimmed helper text */
-  --b-border: #334155;    /* base-border: Card borders and dividers */
+  /* Typography Tokens */
+  --font-sans: 'Poppins', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
 
-  /* Primary Brand Tokens (Duty Active / Captain Green) */
-  --p: #10b981;           /* primary: Emerald 500 */
-  --p-hover: #059669;     /* primary-hover: Emerald 600 */
-  --pc: #ffffff;          /* primary-content: Text on primary */
-  --p-bg: rgba(16, 185, 129, 0.15); /* primary-bg: Low opacity container */
-  --p-border: rgba(16, 185, 129, 0.35); /* primary-border */
+  /* Base Surfaces (Solid Deep Slate & Charcoal) */
+  --b1: #0b0f17;          /* base-100: Kiosk background canvas */
+  --b2: #151d2a;          /* base-200: Kiosk panel container */
+  --b3: #1e293b;          /* base-300: Elevated card surface & hover */
+  --bc: #ffffff;          /* base-content: Primary text (Crisp White) */
+  --bc-muted: #cbd5e1;    /* base-content-muted: High contrast secondary text */
+  --bc-subtle: #94a3b8;   /* base-content-subtle: Helper label text */
+  --b-border: #334155;    /* base-border: Crisp 1px panel borders */
 
-  /* Secondary Brand Tokens (Telemetry / GPS Info) */
-  --s: #0ea5e9;           /* secondary: Sky Blue */
-  --sc: #ffffff;          /* secondary-content */
-  --s-bg: rgba(14, 165, 233, 0.15);
-  --s-border: rgba(14, 165, 233, 0.35);
+  /* Transport Primary Tokens (Deep Royal Navy Blue) */
+  --p: #1d4ed8;           /* primary: Transport Blue (600) */
+  --p-hover: #1e40af;     /* primary-hover: Deep Blue (700) */
+  --pc: #ffffff;          /* primary-content: White text */
+  --p-bg: #1e293b;        /* primary-bg container */
+  --p-border: #3b82f6;    /* primary-border */
 
-  /* Accent Tokens (Fastify / Vite Teal) */
-  --a: #14b8a6;           /* accent: Teal */
-  --ac: #ffffff;
-  --a-bg: rgba(20, 184, 166, 0.15);
-
-  /* Neutral Surface Tokens */
-  --n: #1e293b;           /* neutral */
-  --nc: #f8fafc;          /* neutral-content */
-  --n-hover: #334155;
-
-  /* State Colors: Success, Warning, Error, Info */
-  --su: #22c55e;          /* success: Duty Online Green */
+  /* Transit Safety Green (Duty Online / Active) */
+  --su: #15803d;          /* success: Transit Green (700) */
   --suc: #ffffff;
-  --su-bg: rgba(34, 197, 94, 0.15);
-  --su-border: rgba(34, 197, 94, 0.35);
+  --su-bg: #14532d;       /* success-bg */
+  --su-border: #22c55e;   /* success-border */
 
-  --wa: #f59e0b;          /* warning: Caution / Simulator Amber */
+  /* Caution Amber (Simulator / Buffered Status) */
+  --wa: #d97706;          /* warning: Caution Amber (600) */
   --wac: #ffffff;
-  --wa-bg: rgba(245, 158, 11, 0.15);
-  --wa-border: rgba(245, 158, 11, 0.35);
+  --wa-bg: #78350f;
+  --wa-border: #f59e0b;
 
-  --er: #f43f5e;          /* error / SOS: Emergency Rose */
+  /* Emergency SOS Crimson (Breakdown / Hazard) */
+  --er: #b91c1c;          /* error: Alert Crimson (700) */
   --erc: #ffffff;
-  --er-bg: rgba(244, 63, 94, 0.18);
-  --er-border: rgba(244, 63, 94, 0.40);
+  --er-bg: #7f1d1d;
+  --er-border: #ef4444;
 
-  --in: #3b82f6;          /* info: Route Blue */
-  --inc: #ffffff;
-  --in-bg: rgba(59, 130, 246, 0.15);
+  /* Secondary Info Tokens */
+  --s: #475569;           /* secondary: Slate Grey */
+  --sc: #ffffff;
+  --s-bg: #1e293b;
+  --s-border: #64748b;
 }
 
 [data-theme="light"] {
@@ -65,31 +58,38 @@
   --b2: #ffffff;
   --b3: #f1f5f9;
   --bc: #0f172a;
-  --bc-muted: #475569;
-  --bc-subtle: #94a3b8;
+  --bc-muted: #334155;
+  --bc-subtle: #64748b;
   --b-border: #cbd5e1;
 
-  --p: #059669;
+  --p: #1d4ed8;
   --pc: #ffffff;
-  --p-bg: rgba(5, 150, 105, 0.1);
-  --p-border: rgba(5, 150, 105, 0.25);
+  --p-bg: #eff6ff;
+  --p-border: #93c5fd;
 
-  --s: #0284c7;
-  --sc: #ffffff;
-  --s-bg: rgba(2, 132, 199, 0.1);
+  --su: #15803d;
+  --su-bg: #f0fdf4;
+  --su-border: #86efac;
 
-  --n: #e2e8f0;
-  --nc: #0f172a;
+  --wa: #b45309;
+  --wa-bg: #fffbeb;
+  --wa-border: #fde68a;
 
-  --su: #16a34a;
-  --wa: #d97706;
-  --er: #e11d48;
-  --er-bg: rgba(225, 29, 72, 0.1);
-  --in: #2563eb;
+  --er: #b91c1c;
+  --er-bg: #fef2f2;
+  --er-border: #fca5a5;
+
+  --s: #475569;
+  --s-bg: #f8fafc;
+  --s-border: #cbd5e1;
 }
 
 @theme {
-  /* DaisyUI Theme Color Tokens mapped for Tailwind CSS v4 */
+  /* Font Family Definitions for Tailwind CSS v4 */
+  --font-sans: 'Poppins', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  /* Transit Utility Theme Tokens mapped for Tailwind CSS v4 */
   --color-base-100: var(--b1);
   --color-base-200: var(--b2);
   --color-base-300: var(--b3);
@@ -109,14 +109,6 @@
   --color-secondary-bg: var(--s-bg);
   --color-secondary-border: var(--s-border);
 
-  --color-accent: var(--a);
-  --color-accent-content: var(--ac);
-  --color-accent-bg: var(--a-bg);
-
-  --color-neutral: var(--n);
-  --color-neutral-content: var(--nc);
-  --color-neutral-hover: var(--n-hover);
-
   --color-success: var(--su);
   --color-success-content: var(--suc);
   --color-success-bg: var(--su-bg);
@@ -131,66 +123,117 @@
   --color-error-content: var(--erc);
   --color-error-bg: var(--er-bg);
   --color-error-border: var(--er-border);
-
-  --color-info: var(--in);
-  --color-info-content: var(--inc);
-  --color-info-bg: var(--in-bg);
 }
 
-@layer utilities {
-  .glass-card {
-    background: var(--b2);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid var(--b-border);
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+@layer base {
+  body {
+    font-family: 'Poppins', system-ui, -apple-system, sans-serif;
+    background-color: var(--b1);
+    color: var(--bc);
+    -webkit-font-smoothing: antialiased;
   }
 
-  .glass-card-primary {
-    background: var(--p-bg);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+  .font-sans {
+    font-family: 'Poppins', system-ui, -apple-system, sans-serif;
+  }
+}
+
+/* Transit Utility Component Layouts */
+@layer components {
+  /* Crisp Sharp-Bordered Containers (No Glass Glow / Blur) */
+  .kiosk-card {
+    background-color: var(--b2);
+    border: 1px solid var(--b-border);
+    color: var(--bc);
+    border-radius: 0.75rem; /* Crisp 12px corners */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  }
+
+  .kiosk-card-primary {
+    background-color: var(--b2);
+    border: 2px solid var(--p-border);
+    color: var(--bc);
+    border-radius: 0.75rem;
+  }
+
+  .kiosk-card-error {
+    background-color: var(--er-bg);
+    border: 2px solid var(--er-border);
+    color: var(--bc);
+    border-radius: 0.75rem;
+  }
+
+  /* Utility Buttons */
+  .btn-utility {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-radius: 0.75rem;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+    cursor: pointer;
+    user-select: none;
+  }
+  .btn-utility:active {
+    transform: scale(0.98);
+  }
+
+  .btn-primary-utility {
+    background-color: var(--p);
+    color: var(--pc);
     border: 1px solid var(--p-border);
-    box-shadow: 0 8px 32px 0 var(--p-bg);
+  }
+  .btn-primary-utility:hover {
+    background-color: var(--p-hover);
   }
 
-  .glass-card-error {
-    background: var(--er-bg);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+  .btn-success-utility {
+    background-color: var(--su);
+    color: var(--suc);
+    border: 1px solid var(--su-border);
+  }
+
+  .btn-error-utility {
+    background-color: var(--er);
+    color: var(--erc);
     border: 1px solid var(--er-border);
-    box-shadow: 0 8px 32px 0 var(--er-bg);
   }
 
-  .glass-button {
-    background: var(--b3);
-    backdrop-filter: blur(12px);
+  .btn-neutral-utility {
+    background-color: var(--b3);
+    color: var(--bc);
     border: 1px solid var(--b-border);
-    transition: all 0.2s ease-in-out;
+  }
+  .btn-neutral-utility:hover {
+    background-color: #334155;
   }
 
-  .glass-button:active {
-    transform: scale(0.97);
+  /* Status Badges */
+  .badge-utility {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.25rem 0.75rem;
+    border-radius: 0.5rem;
+    font-weight: 700;
+    font-size: 0.75rem;
+    text-transform: uppercase;
   }
-
-  .glow-primary {
-    box-shadow: 0 0 25px var(--p-bg);
+  .badge-success-utility {
+    background-color: var(--su-bg);
+    color: #4ade80;
+    border: 1px solid var(--su-border);
   }
-
-  .glow-error {
-    box-shadow: 0 0 25px var(--er-bg);
+  .badge-warning-utility {
+    background-color: var(--wa-bg);
+    color: #fbbf24;
+    border: 1px solid var(--wa-border);
   }
-
-  .glow-warning {
-    box-shadow: 0 0 25px var(--wa-bg);
+  .badge-error-utility {
+    background-color: var(--er-bg);
+    color: #f87171;
+    border: 1px solid var(--er-border);
   }
-}
-
-@keyframes pulse-slow {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.75; transform: scale(1.05); }
-}
-
-.animate-pulse-slow {
-  animation: pulse-slow 3s infinite ease-in-out;
 }

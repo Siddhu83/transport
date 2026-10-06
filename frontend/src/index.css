@@ -2,6 +2,9 @@
 @import "maplibre-gl/dist/maplibre-gl.css";
 
 @theme {
+  --font-sans: 'Poppins', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
   /* Brand Tokens */
   --color-brand-primary: #00f0ff;
   --color-brand-accent: #00b4d8;
@@ -24,7 +27,7 @@
 
 @layer base {
   :root {
-    --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+    --font-sans: 'Poppins', system-ui, -apple-system, sans-serif;
     --font-mono: 'JetBrains Mono', monospace;
 
     /* Dark Mode Defaults (Obsidian Neon) */

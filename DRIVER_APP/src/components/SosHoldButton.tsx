@@ -63,7 +63,7 @@ export const SosHoldButton: React.FC<SosHoldButtonProps> = ({
   const strokeDashoffset = CIRCUMFERENCE - (progress / 100) * CIRCUMFERENCE;
 
   return (
-    <div className="relative w-full">
+    <div className="relative w-full font-sans">
       <button
         type="button"
         onMouseDown={startHold}
@@ -72,40 +72,40 @@ export const SosHoldButton: React.FC<SosHoldButtonProps> = ({
         onTouchStart={startHold}
         onTouchEnd={cancelHold}
         disabled={disabled}
-        className={`w-full min-h-[72px] px-6 py-4 rounded-2xl font-mono text-xs font-bold uppercase tracking-wider flex items-center justify-between transition-all transform active:scale-98 select-none cursor-pointer border shadow-2xl ${
+        className={`w-full min-h-[72px] px-5 py-4 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center justify-between transition-colors select-none cursor-pointer border-2 font-sans ${
           isHolding
-            ? 'bg-error border-error text-error-content scale-[0.99] shadow-lg shadow-error/40'
-            : 'bg-error-bg hover:bg-error-bg/80 border-error-border text-error hover:border-error'
+            ? 'bg-error text-error-content border-error-border scale-[0.99]'
+            : 'bg-error-bg text-base-content border-error-border hover:bg-error/80 hover:text-error-content'
         } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
       >
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-error-bg border border-error-border text-error shrink-0">
+        <div className="flex items-center gap-3 font-sans">
+          <div className="p-2.5 rounded-lg bg-base-100 border border-error-border text-error shrink-0">
             {isHolding ? (
               <AlertTriangle className="w-6 h-6 text-warning animate-bounce" />
             ) : (
               <ShieldAlert className="w-6 h-6 text-error" />
             )}
           </div>
-          <div className="text-left font-mono">
-            <span className="block text-sm font-extrabold text-base-content">
+          <div className="text-left font-sans">
+            <span className="block text-sm font-black text-base-content font-sans">
               {isHolding ? 'HOLD FOR 2 SECONDS...' : 'TRIGGER SOS BREAKDOWN'}
             </span>
-            <span className="text-[10px] text-base-content-muted font-normal">
-              {isHolding ? `${Math.round(progress)}% Filled` : 'Press & Hold to Prevent Accidental Trigger'}
+            <span className="text-[11px] text-base-content-muted font-normal block mt-0.5 font-sans">
+              {isHolding ? `${Math.round(progress)}% Progress` : 'Press & Hold to Prevent Accidental Trigger'}
             </span>
           </div>
         </div>
 
         {/* SVG Radial Progress Ring */}
-        <div className="relative w-14 h-14 flex items-center justify-center shrink-0">
-          <svg className="w-14 h-14 -rotate-90 transform" viewBox="0 0 80 80">
+        <div className="relative w-12 h-12 flex items-center justify-center shrink-0 font-sans">
+          <svg className="w-12 h-12 -rotate-90 transform" viewBox="0 0 80 80">
             {/* Background Track Circle */}
             <circle
               cx="40"
               cy="40"
               r="34"
               className="text-base-300 stroke-current"
-              strokeWidth="6"
+              strokeWidth="7"
               fill="transparent"
             />
             {/* Animated Progress Ring Circle */}
@@ -114,14 +114,14 @@ export const SosHoldButton: React.FC<SosHoldButtonProps> = ({
               cy="40"
               r="34"
               className="text-error stroke-current transition-all duration-75"
-              strokeWidth="6"
+              strokeWidth="7"
               strokeDasharray={CIRCUMFERENCE}
               strokeDashoffset={strokeDashoffset}
-              strokeLinecap="round"
+              strokeLinecap="square"
               fill="transparent"
             />
           </svg>
-          <span className="absolute text-[10px] font-extrabold font-mono text-base-content">
+          <span className="absolute text-[10px] font-black font-mono text-base-content tabular-nums">
             {isHolding ? `${Math.round((progress / 100) * 2)}s` : 'SOS'}
           </span>
         </div>

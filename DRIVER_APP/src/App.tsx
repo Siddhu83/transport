@@ -179,15 +179,15 @@ export const App: React.FC = () => {
   const getStatusBadge = () => {
     if (activeSosIncident) {
       return (
-        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-error-bg text-error border border-error-border animate-pulse">
-          <ShieldAlert className="w-3.5 h-3.5 text-error" />
+        <span className="badge-utility badge-error-utility animate-pulse font-sans">
+          <ShieldAlert className="w-3.5 h-3.5" />
           EMERGENCY SOS BREAKDOWN ACTIVE
         </span>
       );
     }
     if (!daemonState.isRunning) {
       return (
-        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-error-bg text-error border border-error-border">
+        <span className="badge-utility badge-error-utility font-sans">
           <span className="w-2 h-2 rounded-full bg-error"></span>
           OFF DUTY
         </span>
@@ -195,14 +195,14 @@ export const App: React.FC = () => {
     }
     if (!daemonState.isOnline) {
       return (
-        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-warning-bg text-warning border border-warning-border animate-pulse">
+        <span className="badge-utility badge-warning-utility animate-pulse font-sans">
           <WifiOff className="w-3.5 h-3.5" />
           CELLULAR DISCONNECT ({daemonState.bufferedPingsCount} BUFFERED)
         </span>
       );
     }
     return (
-      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-success-bg text-success border border-success-border glow-primary">
+      <span className="badge-utility badge-success-utility font-sans">
         <span className="w-2 h-2 rounded-full bg-success animate-ping"></span>
         ON DUTY (LIVE TELEMETRY)
       </span>
@@ -210,42 +210,44 @@ export const App: React.FC = () => {
   };
 
   // ---------------------------------------------------------------------------
-  // LOGIN SCREEN (If Not Authenticated)
+  // LOGIN SCREEN (Poppins Typography + Official Transit Portal Aesthetic)
   // ---------------------------------------------------------------------------
   if (!session) {
     return (
-      <div className="min-h-screen bg-base-100 text-base-content font-sans flex items-center justify-center p-4 selection:bg-primary-bg selection:text-primary">
-        <div className="w-full max-w-md space-y-6">
+      <div className="min-h-screen bg-base-100 text-base-content font-sans flex items-center justify-center p-4">
+        <div className="w-full max-w-md space-y-6 font-sans">
           {/* App Branding Header */}
-          <div className="text-center space-y-3">
-            <div className="inline-flex p-4 rounded-3xl bg-gradient-to-tr from-primary to-accent p-0.5 shadow-2xl shadow-primary/30">
-              <div className="bg-base-100 p-4 rounded-[22px]">
-                <Bus className="w-10 h-10 text-primary" />
-              </div>
+          <div className="text-center space-y-3 font-sans">
+            <div className="inline-flex p-3 rounded-xl bg-primary text-primary-content border border-primary-border shadow-md">
+              <Bus className="w-10 h-10" />
             </div>
             <div>
-              <h1 className="text-2xl font-black tracking-tight text-base-content">ANITS CAPTAIN CONSOLE</h1>
-              <p className="text-xs text-base-content-muted mt-1">Driver Kiosk Telemetry & Dispatch Portal</p>
+              <h1 className="text-2xl font-black tracking-tight text-base-content uppercase font-sans">
+                COLLEGE TRANSPORT AUTHORITY
+              </h1>
+              <p className="text-xs text-base-content-muted mt-1 font-sans font-medium">
+                Official Captain Telemetry & Dispatch Portal
+              </p>
             </div>
           </div>
 
-          {/* Login Glass Card */}
-          <div className="glass-card rounded-3xl p-6 space-y-5 border border-base-border">
-            <div className="flex items-center gap-2 border-b border-base-border pb-3">
+          {/* Login Kiosk Card */}
+          <div className="kiosk-card p-6 space-y-5 font-sans">
+            <div className="flex items-center gap-2 border-b border-base-border pb-3 font-sans">
               <Lock className="w-4 h-4 text-primary" />
-              <h2 className="text-sm font-bold text-base-content uppercase tracking-wider">Captain Authentication</h2>
+              <h2 className="text-sm font-bold text-base-content uppercase tracking-wider font-sans">Captain Authentication</h2>
             </div>
 
             {loginError && (
-              <div className="bg-error-bg border border-error-border rounded-2xl p-3 text-xs text-error flex items-center gap-2">
+              <div className="bg-error-bg border border-error-border rounded-lg p-3 text-xs text-error flex items-center gap-2 font-sans">
                 <AlertTriangle className="w-4 h-4 text-error shrink-0" />
                 <span>{loginError}</span>
               </div>
             )}
 
-            <form onSubmit={handleLoginSubmit} className="space-y-4">
+            <form onSubmit={handleLoginSubmit} className="space-y-4 font-sans">
               <div>
-                <label className="block text-xs font-semibold text-base-content-muted mb-1.5">Driver Email</label>
+                <label className="block text-xs font-semibold text-base-content-muted mb-1.5 uppercase font-sans">Driver Email ID</label>
                 <div className="relative">
                   <Mail className="w-4 h-4 text-base-content-subtle absolute left-3.5 top-3.5" />
                   <input
@@ -254,13 +256,13 @@ export const App: React.FC = () => {
                     value={loginEmail}
                     onChange={(e) => setLoginEmail(e.target.value)}
                     placeholder="driver1@transport.college.edu"
-                    className="w-full bg-base-100 border border-base-border rounded-xl pl-10 pr-4 py-3 text-xs text-base-content placeholder-base-content-subtle focus:outline-none focus:border-primary transition-colors"
+                    className="w-full bg-base-100 border border-base-border rounded-lg pl-10 pr-4 py-3 text-xs text-base-content placeholder-base-content-subtle focus:outline-none focus:border-primary transition-colors font-sans"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-base-content-muted mb-1.5">Captain Password</label>
+                <label className="block text-xs font-semibold text-base-content-muted mb-1.5 uppercase font-sans">Captain Password</label>
                 <div className="relative">
                   <KeyRound className="w-4 h-4 text-base-content-subtle absolute left-3.5 top-3.5" />
                   <input
@@ -269,7 +271,7 @@ export const App: React.FC = () => {
                     value={loginPassword}
                     onChange={(e) => setLoginPassword(e.target.value)}
                     placeholder="••••••••••••"
-                    className="w-full bg-base-100 border border-base-border rounded-xl pl-10 pr-4 py-3 text-xs text-base-content placeholder-base-content-subtle focus:outline-none focus:border-primary transition-colors"
+                    className="w-full bg-base-100 border border-base-border rounded-lg pl-10 pr-4 py-3 text-xs text-base-content placeholder-base-content-subtle focus:outline-none focus:border-primary transition-colors font-sans"
                   />
                 </div>
               </div>
@@ -277,43 +279,43 @@ export const App: React.FC = () => {
               <button
                 type="submit"
                 disabled={isLoggingIn}
-                className="w-full py-4 px-4 rounded-2xl font-bold text-xs tracking-wider uppercase bg-primary hover:bg-primary-hover text-primary-content shadow-lg shadow-primary/30 transition-all transform active:scale-98 min-h-[56px] cursor-pointer"
+                className="w-full py-4 px-4 rounded-lg font-bold text-xs tracking-wider uppercase bg-primary hover:bg-primary-hover text-primary-content border border-primary-border transition-colors active:scale-98 min-h-[56px] cursor-pointer font-sans"
               >
-                {isLoggingIn ? 'Authenticating...' : 'Sign In To Captain Console'}
+                {isLoggingIn ? 'AUTHENTICATING...' : 'SIGN IN TO CAPTAIN CONSOLE'}
               </button>
             </form>
 
-            {/* Local Testing Quick Credentials Pill Box */}
-            <div className="pt-2 border-t border-base-border space-y-2.5">
-              <p className="text-[11px] font-semibold text-base-content-muted flex items-center gap-1.5">
+            {/* Quick Testing Credentials Box */}
+            <div className="pt-3 border-t border-base-border space-y-2 font-sans">
+              <p className="text-[11px] font-semibold text-base-content-muted flex items-center gap-1.5 uppercase font-sans">
                 <ShieldCheck className="w-3.5 h-3.5 text-primary" />
-                Local Test Credentials (1-Tap Fill):
+                Local Test Accounts (1-Tap):
               </p>
               <div className="grid grid-cols-2 gap-2 text-[11px]">
                 <button
                   type="button"
                   onClick={() => handleQuickLogin('driver1@transport.college.edu')}
-                  className="glass-button p-2.5 rounded-xl text-left hover:border-primary-border transition-colors cursor-pointer"
+                  className="bg-base-300 hover:bg-base-100 p-2.5 rounded-lg border border-base-border text-left transition-colors cursor-pointer font-sans"
                 >
-                  <span className="font-bold text-primary block">Driver #1</span>
-                  <span className="text-base-content-muted text-[10px] truncate block">driver1@transport...</span>
-                  <span className="text-base-content-subtle text-[9px] font-mono">Pass: Password123!</span>
+                  <span className="font-bold text-base-content block font-sans">Driver #1</span>
+                  <span className="text-base-content-subtle text-[10px] truncate block font-sans">driver1@transport...</span>
+                  <span className="text-base-content-subtle text-[9px] font-sans">Pass: Password123!</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => handleQuickLogin('driver2@transport.college.edu')}
-                  className="glass-button p-2.5 rounded-xl text-left hover:border-secondary-border transition-colors cursor-pointer"
+                  className="bg-base-300 hover:bg-base-100 p-2.5 rounded-lg border border-base-border text-left transition-colors cursor-pointer font-sans"
                 >
-                  <span className="font-bold text-secondary block">Driver #2</span>
-                  <span className="text-base-content-muted text-[10px] truncate block">driver2@transport...</span>
-                  <span className="text-base-content-subtle text-[9px] font-mono">Pass: Password123!</span>
+                  <span className="font-bold text-base-content block font-sans">Driver #2</span>
+                  <span className="text-base-content-subtle text-[10px] truncate block font-sans">driver2@transport...</span>
+                  <span className="text-base-content-subtle text-[9px] font-sans">Pass: Password123!</span>
                 </button>
               </div>
             </div>
           </div>
 
-          <p className="text-center text-[11px] text-base-content-subtle">
-            🔒 Captain accounts are provisioned by College Transport Authority.
+          <p className="text-center text-[11px] text-base-content-subtle font-sans font-medium">
+            🔒 Official Driver Portal • College Transport Operations
           </p>
         </div>
       </div>
@@ -321,7 +323,7 @@ export const App: React.FC = () => {
   }
 
   // ---------------------------------------------------------------------------
-  // AUTHENTICATED CAPTAIN CONSOLE (72x72px Touch Target Kiosk)
+  // AUTHENTICATED CAPTAIN CONSOLE (Poppins Typography Transit Kiosk)
   // ---------------------------------------------------------------------------
   const user = session.user;
   const maxCapacity = user.capacity || 55;
@@ -329,7 +331,7 @@ export const App: React.FC = () => {
     MOCK_AVAILABLE_ROUTES.find((r) => r.id === assignedRouteId)?.name || user.routeName;
 
   return (
-    <div className="min-h-screen bg-base-100 text-base-content font-sans pb-12 selection:bg-primary-bg selection:text-primary">
+    <div className="min-h-screen bg-base-100 text-base-content font-sans pb-12">
       {/* Stranded Passenger & Failure Reason Emergency Modal */}
       <SosBreakdownModal
         isOpen={isSosModalOpen}
@@ -339,96 +341,93 @@ export const App: React.FC = () => {
       />
 
       {/* Top Header Bar */}
-      <header className="sticky top-0 z-40 glass-card px-4 py-3.5 flex items-center justify-between border-b border-base-border">
+      <header className="sticky top-0 z-40 bg-base-200 px-4 py-3 flex items-center justify-between border-b-2 border-base-border font-sans">
         <div className="flex items-center gap-3">
           <div className="relative">
-            <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-primary to-accent p-0.5 shadow-lg shadow-primary/20">
-              <div className="w-full h-full bg-base-100 rounded-[14px] flex items-center justify-center">
-                <Bus className="w-6 h-6 text-primary" />
-              </div>
+            <div className="w-10 h-10 rounded-lg bg-primary text-primary-content flex items-center justify-center border border-primary-border">
+              <Bus className="w-5 h-5" />
             </div>
-            <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-success border-2 border-base-100 rounded-full"></span>
+            <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-success border-2 border-base-200 rounded-full"></span>
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="font-bold text-base tracking-tight text-base-content">{user.name}</h1>
-              <span className="bg-primary-bg text-primary text-[10px] font-bold px-1.5 py-0.5 rounded border border-primary-border flex items-center gap-1">
-                <UserCheck className="w-3 h-3 text-primary" />
+              <h1 className="font-extrabold text-sm tracking-tight text-base-content font-sans">{user.name}</h1>
+              <span className="bg-success-bg text-success text-[10px] font-bold px-1.5 py-0.5 rounded border border-success-border flex items-center gap-1 font-sans">
+                <UserCheck className="w-3 h-3" />
                 VERIFIED
               </span>
             </div>
-            <p className="text-xs text-base-content-muted flex items-center gap-1 mt-0.5">
+            <p className="text-xs text-base-content-muted flex items-center gap-1.5 mt-0.5 font-sans">
               <span>{user.licensePlate || user.busNumber}</span>
               <span>•</span>
-              <span className="text-primary font-medium">{currentRouteName}</span>
+              <span className="text-base-content font-semibold">{currentRouteName}</span>
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 font-sans">
           <button
             onClick={toggleFullscreen}
-            className="glass-button p-2.5 rounded-xl text-base-content-muted hover:text-base-content flex items-center gap-1.5 text-xs font-medium active:scale-95 cursor-pointer"
+            className="p-2 rounded-lg bg-base-300 hover:bg-neutral text-base-content-muted hover:text-base-content border border-base-border text-xs font-bold transition-colors cursor-pointer font-sans"
             title="Toggle Fullscreen Mode"
           >
             {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
-            <span className="hidden sm:inline">{isFullscreen ? 'Exit' : 'Fullscreen'}</span>
           </button>
 
           <button
             onClick={handleLogout}
-            className="glass-button p-2.5 rounded-xl text-error hover:text-error hover:bg-error-bg border border-error-border flex items-center gap-1.5 text-xs font-medium active:scale-95 cursor-pointer"
+            className="p-2 rounded-lg bg-error-bg hover:bg-error text-error hover:text-error-content border border-error-border text-xs font-bold transition-colors cursor-pointer flex items-center gap-1 font-sans"
             title="Sign Out"
           >
             <LogOut className="w-4 h-4" />
-            <span className="hidden sm:inline">Logout</span>
+            <span className="hidden sm:inline font-sans">Logout</span>
           </button>
         </div>
       </header>
 
       {/* Main Content Area */}
-      <main className="max-w-md mx-auto px-4 pt-4 space-y-4">
+      <main className="max-w-md mx-auto px-4 pt-4 space-y-4 font-sans">
         {/* Status Bar */}
-        <div className="flex items-center justify-between px-1">
+        <div className="flex items-center justify-between px-1 font-sans">
           {getStatusBadge()}
-          <span className="text-xs text-base-content-muted flex items-center gap-1 font-mono">
-            <Wifi className="w-3.5 h-3.5 text-primary" />
-            Ping: 5s
+          <span className="text-xs text-base-content-muted flex items-center gap-1 font-bold font-sans">
+            <Wifi className="w-3.5 h-3.5 text-success" />
+            PING: <span className="font-mono tabular-nums">5s</span>
           </span>
         </div>
 
         {/* Active Emergency SOS Incident Alert Control Banner */}
         {activeSosIncident && (
-          <div className="glass-card-error rounded-3xl p-5 border border-error-border space-y-3 shadow-2xl shadow-error/30 animate-in fade-in duration-200">
+          <div className="kiosk-card-error p-4 space-y-3 font-sans animate-in fade-in duration-150">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
                 <ShieldAlert className="w-6 h-6 text-error animate-pulse" />
                 <div>
-                  <h3 className="text-sm font-extrabold text-base-content uppercase font-mono">
-                    SOS Incident Active
+                  <h3 className="text-sm font-black text-base-content uppercase font-sans">
+                    SOS INCIDENT ACTIVE
                   </h3>
-                  <p className="text-[11px] text-error font-mono">
-                    Reported at {activeSosIncident.timestamp}
+                  <p className="text-[11px] text-error font-bold font-sans">
+                    Reported at <span className="font-mono tabular-nums">{activeSosIncident.timestamp}</span>
                   </p>
                 </div>
               </div>
               <button
                 onClick={handleResolveSos}
-                className="px-3 py-1.5 rounded-xl bg-base-300 border border-base-border text-xs text-success font-bold hover:bg-neutral flex items-center gap-1 cursor-pointer font-mono"
+                className="px-3 py-1.5 rounded-lg bg-base-100 border border-base-border text-xs text-success font-bold hover:bg-base-300 flex items-center gap-1 cursor-pointer font-sans"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
                 Resolve
               </button>
             </div>
 
-            <div className="grid grid-cols-2 gap-2 text-xs font-mono">
-              <div className="bg-base-100/90 p-2.5 rounded-xl border border-base-border">
-                <span className="text-[10px] text-base-content-subtle block">REASON</span>
-                <span className="font-bold text-warning">{activeSosIncident.failureReason}</span>
+            <div className="grid grid-cols-2 gap-2 text-xs font-sans">
+              <div className="bg-base-100 p-2.5 rounded-lg border border-base-border">
+                <span className="text-[10px] text-base-content-subtle block uppercase font-sans">FAILURE REASON</span>
+                <span className="font-bold text-warning font-sans">{activeSosIncident.failureReason}</span>
               </div>
-              <div className="bg-base-100/90 p-2.5 rounded-xl border border-base-border">
-                <span className="text-[10px] text-base-content-subtle block">STRANDED BAND</span>
-                <span className="font-bold text-error">{activeSosIncident.passengerBand}</span>
+              <div className="bg-base-100 p-2.5 rounded-lg border border-base-border">
+                <span className="text-[10px] text-base-content-subtle block uppercase font-sans">STRANDED BAND</span>
+                <span className="font-bold text-error font-sans">{activeSosIncident.passengerBand}</span>
               </div>
             </div>
           </div>
@@ -436,26 +435,26 @@ export const App: React.FC = () => {
 
         {/* Pre-Shift Bus & Route Binding Selector (Only available when off duty) */}
         {!daemonState.isRunning && (
-          <div className="glass-card rounded-3xl p-4 space-y-3 border border-base-border font-mono text-xs">
-            <div className="flex items-center justify-between border-b border-base-border pb-2">
-              <span className="font-bold text-base-content flex items-center gap-1.5">
+          <div className="kiosk-card p-4 space-y-3 font-sans text-xs">
+            <div className="flex items-center justify-between border-b border-base-border pb-2 font-sans">
+              <span className="font-bold text-base-content flex items-center gap-1.5 uppercase font-sans">
                 <MapPin className="w-4 h-4 text-primary" />
-                Pre-Shift Route & Vehicle Assignment:
+                Pre-Shift Assignment:
               </span>
-              <span className="text-[10px] text-primary bg-primary-bg px-2 py-0.5 rounded border border-primary-border">
+              <span className="badge-utility badge-success-utility text-[10px] font-sans">
                 Shift Ready
               </span>
             </div>
 
-            <div className="space-y-2">
-              <label className="block text-[11px] text-base-content-muted font-semibold">Assigned Route Corridor:</label>
+            <div className="space-y-2 font-sans">
+              <label className="block text-[11px] text-base-content-muted font-bold uppercase font-sans">Assigned Route Corridor:</label>
               <select
                 value={assignedRouteId}
                 onChange={(e) => setAssignedRouteId(e.target.value)}
-                className="w-full bg-base-100 border border-base-border rounded-xl px-3 py-2.5 text-xs text-base-content focus:outline-none focus:border-primary cursor-pointer"
+                className="w-full bg-base-100 border border-base-border rounded-lg px-3 py-2.5 text-xs text-base-content focus:outline-none focus:border-primary cursor-pointer font-bold font-sans"
               >
                 {MOCK_AVAILABLE_ROUTES.map((route) => (
-                  <option key={route.id} value={route.id} className="bg-base-100 text-base-content">
+                  <option key={route.id} value={route.id} className="bg-base-100 text-base-content font-sans">
                     {route.name}
                   </option>
                 ))}
@@ -466,26 +465,26 @@ export const App: React.FC = () => {
 
         {/* Hero Duty Switch (72px Minimum Touch Target Compliance) */}
         <div
-          className={`rounded-3xl p-6 transition-all duration-300 border ${
-            daemonState.isRunning ? 'glass-card-error glow-error' : 'glass-card-primary glow-primary'
+          className={`kiosk-card p-5 transition-colors duration-200 ${
+            daemonState.isRunning ? 'border-2 border-error-border' : 'border-2 border-primary-border'
           }`}
         >
-          <div className="text-center space-y-4">
-            <div className="inline-flex p-3 rounded-2xl bg-base-300/80 border border-base-border">
+          <div className="text-center space-y-4 font-sans">
+            <div className="inline-flex p-3 rounded-lg bg-base-100 border border-base-border">
               {daemonState.isRunning ? (
-                <Radio className="w-10 h-10 text-error animate-pulse" />
+                <Radio className="w-9 h-9 text-error animate-pulse" />
               ) : (
-                <Zap className="w-10 h-10 text-primary animate-pulse-slow" />
+                <Zap className="w-9 h-9 text-primary" />
               )}
             </div>
 
             <div>
-              <h2 className="text-xl font-extrabold tracking-tight text-base-content">
+              <h2 className="text-xl font-black tracking-tight text-base-content uppercase font-sans">
                 {daemonState.isRunning ? 'SHIFT IN PROGRESS' : 'READY TO START DUTY?'}
               </h2>
-              <p className="text-xs text-base-content-muted mt-1">
+              <p className="text-xs text-base-content-muted mt-1 font-sans font-medium">
                 {daemonState.isRunning
-                  ? `Transmitting telemetry for ${user.busNumber || 'Bus'}`
+                  ? `Transmitting location for ${user.busNumber || 'Bus'}`
                   : 'Tap below to initiate Android foreground location daemon'}
               </p>
             </div>
@@ -493,10 +492,10 @@ export const App: React.FC = () => {
             {/* 72x72px Minimum Touch Target Duty Button */}
             <button
               onClick={handleToggleTracking}
-              className={`w-full min-h-[72px] px-6 py-4 rounded-2xl font-bold text-base tracking-wide flex items-center justify-center gap-3 transition-all transform active:scale-95 shadow-xl cursor-pointer ${
+              className={`w-full min-h-[72px] px-6 py-4 rounded-xl font-black text-base tracking-wider flex items-center justify-center gap-3 transition-colors active:scale-98 shadow-md cursor-pointer border font-sans ${
                 daemonState.isRunning
-                  ? 'bg-error hover:bg-error/90 text-error-content shadow-error/40'
-                  : 'bg-primary hover:bg-primary-hover text-primary-content shadow-primary/30'
+                  ? 'bg-error hover:bg-error/90 text-error-content border-error-border'
+                  : 'bg-primary hover:bg-primary-hover text-primary-content border-primary-border'
               }`}
             >
               {daemonState.isRunning ? (
@@ -520,12 +519,12 @@ export const App: React.FC = () => {
         )}
 
         {/* GPS Source / Simulator Toggle */}
-        <div className="glass-card rounded-2xl p-3.5 flex items-center justify-between">
+        <div className="kiosk-card p-3.5 flex items-center justify-between font-sans">
           <div className="flex items-center gap-2.5">
             <Navigation className="w-4 h-4 text-primary" />
             <div>
-              <p className="text-xs font-semibold text-base-content">GPS Mode Override</p>
-              <p className="text-[11px] text-base-content-muted">
+              <p className="text-xs font-bold text-base-content uppercase font-sans">GPS Provider</p>
+              <p className="text-[11px] text-base-content-muted font-sans">
                 {daemonState.locationProvider === 'HARDWARE_GPS'
                   ? 'Native Device Hardware GPS'
                   : daemonState.locationProvider === 'INSECURE_ORIGIN_SIMULATED'
@@ -536,10 +535,10 @@ export const App: React.FC = () => {
           </div>
           <button
             onClick={() => toggleSimulatedMode(!simulatedMode)}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer border font-sans ${
               simulatedMode
-                ? 'bg-warning-bg text-warning border border-warning-border'
-                : 'bg-base-300 text-base-content hover:bg-neutral'
+                ? 'bg-warning-bg text-warning border-warning-border'
+                : 'bg-base-300 text-base-content border-base-border hover:bg-neutral'
             }`}
           >
             {simulatedMode ? 'Simulator Active' : 'Force Simulator'}
@@ -547,39 +546,39 @@ export const App: React.FC = () => {
         </div>
 
         {/* Live Metrics Grid */}
-        <div className="grid grid-cols-2 gap-3 font-mono">
+        <div className="grid grid-cols-2 gap-3 font-sans">
           {/* Card 1: Speedometer */}
-          <div className="glass-card rounded-2xl p-4 flex flex-col justify-between space-y-2">
+          <div className="kiosk-card p-4 flex flex-col justify-between space-y-2 font-sans">
             <div className="flex items-center justify-between text-base-content-muted">
-              <span className="text-xs font-semibold tracking-wider uppercase">Speedometer</span>
+              <span className="text-xs font-bold tracking-wider uppercase font-sans">Speedometer</span>
               <Gauge className="w-4 h-4 text-primary" />
             </div>
             <div>
               <div className="flex items-baseline gap-1">
-                <span className="text-3xl font-black tracking-tight text-base-content tabular-nums">
+                <span className="text-3xl font-black tracking-tight text-base-content font-mono tabular-nums">
                   {daemonState.currentSpeed}
                 </span>
-                <span className="text-xs font-bold text-primary">km/h</span>
+                <span className="text-xs font-bold text-primary font-sans">km/h</span>
               </div>
-              <p className="text-[11px] text-base-content-subtle mt-0.5">
-                Heading: <span className="text-base-content font-semibold tabular-nums">{daemonState.currentHeading}°</span>
+              <p className="text-[11px] text-base-content-subtle mt-0.5 font-sans">
+                Heading: <span className="text-base-content font-bold font-mono tabular-nums">{daemonState.currentHeading}°</span>
               </p>
             </div>
           </div>
 
           {/* Card 2: Telemetry Stream Stats */}
-          <div className="glass-card rounded-2xl p-4 flex flex-col justify-between space-y-2">
+          <div className="kiosk-card p-4 flex flex-col justify-between space-y-2 font-sans">
             <div className="flex items-center justify-between text-base-content-muted">
-              <span className="text-xs font-semibold tracking-wider uppercase">Pings Sent</span>
+              <span className="text-xs font-bold tracking-wider uppercase font-sans">Pings Transmitted</span>
               <Radio className="w-4 h-4 text-secondary" />
             </div>
             <div>
-              <div className="text-3xl font-black tracking-tight text-base-content tabular-nums">
+              <div className="text-3xl font-black tracking-tight text-base-content font-mono tabular-nums">
                 {daemonState.totalPingsEmitted}
               </div>
-              <p className="text-[11px] text-base-content-subtle mt-0.5 flex items-center gap-1">
+              <p className="text-[11px] text-base-content-subtle mt-0.5 flex items-center gap-1 font-sans">
                 <span>Buffer:</span>
-                <span className={`font-bold tabular-nums ${daemonState.bufferedPingsCount > 0 ? 'text-warning' : 'text-base-content-muted'}`}>
+                <span className={`font-bold font-mono tabular-nums ${daemonState.bufferedPingsCount > 0 ? 'text-warning' : 'text-base-content-muted'}`}>
                   {daemonState.bufferedPingsCount}/20
                 </span>
               </p>
@@ -588,37 +587,37 @@ export const App: React.FC = () => {
         </div>
 
         {/* Interactive Passenger Occupancy Counter (72x72px Touch Targets) */}
-        <div className="glass-card rounded-2xl p-4 space-y-3 font-mono">
+        <div className="kiosk-card p-4 space-y-3 font-sans">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 font-sans">
               <Users className="w-4 h-4 text-primary" />
-              <span className="text-xs font-bold uppercase tracking-wider text-base-content">
+              <span className="text-xs font-bold uppercase tracking-wider text-base-content font-sans">
                 Passenger Load Count
               </span>
             </div>
-            <span className="text-xs font-semibold text-primary bg-primary-bg px-2 py-0.5 rounded border border-primary-border tabular-nums">
+            <span className="badge-utility badge-success-utility text-[11px] font-mono tabular-nums">
               {Math.round((passengerCount / maxCapacity) * 100)}% Full
             </span>
           </div>
 
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center justify-between gap-4 font-sans">
             {/* 72x72px Touch Button Decrement */}
             <button
               onClick={() => handlePassengerChange(-1)}
-              className="w-18 h-18 rounded-2xl bg-base-300 hover:bg-neutral text-base-content font-extrabold text-2xl flex items-center justify-center active:scale-90 border border-base-border cursor-pointer shadow-lg shrink-0"
+              className="w-18 h-18 rounded-xl bg-base-300 hover:bg-neutral text-base-content font-black text-2xl flex items-center justify-center active:scale-95 border border-base-border cursor-pointer shadow-md shrink-0 font-sans"
             >
               -
             </button>
 
             <div className="text-center">
-              <span className="text-3xl font-black text-base-content tabular-nums">{passengerCount}</span>
-              <span className="text-xs text-base-content-subtle font-medium block"> / {maxCapacity} Seats</span>
+              <span className="text-3xl font-black text-base-content font-mono tabular-nums">{passengerCount}</span>
+              <span className="text-xs text-base-content-subtle font-bold block font-sans"> / {maxCapacity} Seats</span>
             </div>
 
             {/* 72x72px Touch Button Increment */}
             <button
               onClick={() => handlePassengerChange(1)}
-              className="w-18 h-18 rounded-2xl bg-primary hover:bg-primary-hover text-primary-content font-extrabold text-2xl flex items-center justify-center active:scale-90 shadow-xl shadow-primary/30 cursor-pointer shrink-0"
+              className="w-18 h-18 rounded-xl bg-primary hover:bg-primary-hover text-primary-content font-black text-2xl flex items-center justify-center active:scale-95 border border-primary-border cursor-pointer shadow-md shrink-0 font-sans"
             >
               +
             </button>
@@ -626,55 +625,55 @@ export const App: React.FC = () => {
         </div>
 
         {/* Battery & Android Shield Module */}
-        <div className="glass-card rounded-2xl p-4 flex items-center justify-between font-mono">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-primary-bg text-primary border border-primary-border">
+        <div className="kiosk-card p-4 flex items-center justify-between font-sans">
+          <div className="flex items-center gap-3 font-sans">
+            <div className="p-2.5 rounded-lg bg-base-100 text-primary border border-base-border">
               <BatteryCharging className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-xs font-bold text-base-content flex items-center gap-1.5">
+              <p className="text-xs font-bold text-base-content flex items-center gap-1.5 uppercase font-sans">
                 Android Battery Shield
-                <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
+                <CheckCircle2 className="w-3.5 h-3.5 text-success" />
               </p>
-              <p className="text-[11px] text-base-content-muted">{batteryStatus}</p>
+              <p className="text-[11px] text-base-content-muted font-sans">{batteryStatus}</p>
             </div>
           </div>
           <button
             onClick={handleRequestExemption}
-            className="glass-button px-3 py-1.5 rounded-xl text-xs font-medium text-primary hover:text-primary-hover cursor-pointer"
+            className="px-3 py-1.5 rounded-lg bg-base-300 hover:bg-neutral border border-base-border text-xs font-bold text-base-content cursor-pointer transition-colors font-sans"
           >
             Re-check
           </button>
         </div>
 
         {/* Route Progress Timeline */}
-        <div className="glass-card rounded-2xl p-4 space-y-3 font-mono">
-          <div className="flex items-center justify-between text-xs border-b border-base-border pb-2">
-            <span className="font-bold text-base-content flex items-center gap-1.5">
+        <div className="kiosk-card p-4 space-y-3 font-sans">
+          <div className="flex items-center justify-between text-xs border-b border-base-border pb-2 font-sans">
+            <span className="font-bold text-base-content flex items-center gap-1.5 uppercase font-sans">
               <MapPin className="w-4 h-4 text-primary" />
-              {currentRouteName} Timeline
+              {currentRouteName} Schedule
             </span>
-            <span className="text-base-content-muted">Next: Stop 2</span>
+            <span className="text-base-content-muted font-sans">Next: Stop 2</span>
           </div>
 
-          <div className="space-y-2.5 text-xs">
-            <div className="flex items-center gap-3 text-base-content-subtle">
-              <div className="w-2.5 h-2.5 rounded-full bg-base-300"></div>
-              <span className="line-through">Campus Main Gate</span>
-              <span className="ml-auto text-[10px] text-base-content-subtle tabular-nums">08:00 AM</span>
+          <div className="space-y-2.5 text-xs font-sans">
+            <div className="flex items-center gap-3 text-base-content-subtle font-sans">
+              <div className="w-2.5 h-2.5 rounded-sm bg-base-300"></div>
+              <span className="line-through font-sans">Campus Main Gate</span>
+              <span className="ml-auto text-[10px] text-base-content-subtle font-mono tabular-nums">08:00 AM</span>
             </div>
 
-            <div className="flex items-center gap-3 font-semibold text-primary">
-              <div className="w-2.5 h-2.5 rounded-full bg-primary animate-ping"></div>
-              <span>Transit Stop #2 (En Route)</span>
-              <span className="ml-auto text-[10px] bg-primary-bg px-1.5 py-0.5 rounded text-primary">
+            <div className="flex items-center gap-3 font-bold text-primary font-sans">
+              <div className="w-2.5 h-2.5 rounded-sm bg-primary animate-ping"></div>
+              <span className="font-sans">Transit Stop #2 (En Route)</span>
+              <span className="ml-auto text-[10px] bg-primary-bg px-1.5 py-0.5 rounded text-primary border border-primary-border font-sans">
                 2 mins away
               </span>
             </div>
 
-            <div className="flex items-center gap-3 text-base-content-subtle opacity-60">
-              <div className="w-2.5 h-2.5 rounded-full border border-base-border"></div>
-              <span>Central Hostels Terminal</span>
+            <div className="flex items-center gap-3 text-base-content-subtle opacity-60 font-sans">
+              <div className="w-2.5 h-2.5 rounded-sm border border-base-border"></div>
+              <span className="font-sans">Central Hostels Terminal</span>
             </div>
           </div>
         </div>
