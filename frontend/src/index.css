@@ -24,7 +24,7 @@
 
 @layer base {
   :root {
-    --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+    --font-sans: 'Poppins', system-ui, -apple-system, sans-serif;
     --font-mono: 'JetBrains Mono', monospace;
 
     /* Dark Mode Defaults (Obsidian Neon) */
@@ -97,27 +97,48 @@
   box-shadow: 0 4px 20px rgba(0, 180, 216, 0.12);
 }
 
-/* MapLibre Controls Override for Dark Aesthetic */
+/* MapLibre Controls Override: Repositioned away from footer & styled in sleek glassmorphism */
+.maplibregl-ctrl-top-right {
+  top: 82px !important;
+  right: 14px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+}
+
 .maplibregl-ctrl-group {
-  background: rgba(18, 24, 36, 0.9) !important;
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
-  border-radius: 8px !important;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5) !important;
+  background: rgba(15, 23, 42, 0.9) !important;
+  backdrop-filter: blur(14px) !important;
+  -webkit-backdrop-filter: blur(14px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6) !important;
   overflow: hidden;
 }
 
 [data-theme="light"] .maplibregl-ctrl-group {
   background: rgba(255, 255, 255, 0.95) !important;
   border: 1px solid rgba(0, 0, 0, 0.12) !important;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1) !important;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08) !important;
 }
 
 .maplibregl-ctrl-group button {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+  width: 38px !important;
+  height: 38px !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  transition: background-color 0.15s ease !important;
+}
+
+.maplibregl-ctrl-group button:hover {
+  background-color: rgba(245, 158, 11, 0.2) !important;
 }
 
 [data-theme="light"] .maplibregl-ctrl-group button {
   border-bottom: 1px solid rgba(0, 0, 0, 0.06) !important;
+}
+
+[data-theme="light"] .maplibregl-ctrl-group button:hover {
+  background-color: rgba(0, 180, 216, 0.15) !important;
 }
 
 .maplibregl-ctrl-group button:last-child {
