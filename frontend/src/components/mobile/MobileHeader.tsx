@@ -6,6 +6,7 @@ interface MobileHeaderProps {
   onSearchChange: (query: string) => void;
   onBackToHome: () => void;
   selectedBusPlate?: string;
+  selectedBusName?: string;
   selectedRouteName?: string;
   latencyMs?: number | null;
   isConnected: boolean;
@@ -18,6 +19,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
   onSearchChange,
   onBackToHome,
   selectedBusPlate,
+  selectedBusName,
   selectedRouteName,
   latencyMs,
   isConnected,
@@ -30,6 +32,8 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
     if (hour < 17) return 'Good Afternoon 👋';
     return 'Good Evening 👋';
   };
+
+  const dynamicBusTitle = selectedBusName || selectedBusPlate || 'FLEET BUS';
 
   return (
     <header className="fixed top-0 left-0 right-0 z-30 pointer-events-none p-3 sm:p-4">
@@ -93,15 +97,18 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
               <span>Fleet Map</span>
             </button>
 
-            <div className="text-center">
-              <h2 className="text-xs font-black tracking-wider uppercase text-white flex items-center gap-1.5 justify-center">
-                <Bus className="w-3.5 h-3.5 text-amber-400" />
-                {selectedBusPlate || 'ANITS TRANSIT'}
+            {/* Dynamic Center Bus Name */}
+            <div className="text-center max-w-[200px]">
+              <h2 className="text-xs font-black tracking-wider uppercase text-white flex items-center gap-1.5 justify-center truncate">
+                <Bus className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                <span className="truncate">{dynamicBusTitle}</span>
               </h2>
-              {selectedRouteName && (
-                <p className="text-[10px] text-slate-400 font-mono truncate max-w-[180px]">
+              {selectedRouteName ? (
+                <p className="text-[10px] text-emerald-400 font-mono truncate max-w-[180px]">
                   {selectedRouteName}
                 </p>
+              ) : (
+                <p className="text-[10px] text-slate-400 font-mono">Live Tracking</p>
               )}
             </div>
 
