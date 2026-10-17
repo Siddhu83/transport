@@ -135,6 +135,13 @@ export const App: React.FC = () => {
         onSearchChange={setSearchQuery}
         onBackToHome={handleBackToHome}
         selectedBusPlate={selectedVehicleProps?.plateNumber}
+        selectedBusName={
+          selectedVehicleProps?.plateNumber
+            ? `${selectedVehicleProps.plateNumber}`
+            : selectedBusId
+            ? `BUS-${selectedBusId.slice(0, 4).toUpperCase()}`
+            : undefined
+        }
         selectedRouteName={selectedVehicleProps?.routeName}
         latencyMs={latencyMs}
         isConnected={isConnected}
