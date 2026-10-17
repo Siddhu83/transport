@@ -35,6 +35,7 @@ export interface TrackingDaemonState {
   passengerCount: number;
   notificationChannel: string;
   status: 'IDLE' | 'ACTIVE_FOREGROUND' | 'PAUSED' | 'ERROR';
+  isEmergency: boolean;
 }
 
 const NOTIFICATION_CHANNEL_ID = 'transit_driver_tracking_channel';
@@ -68,6 +69,7 @@ export class ForegroundTrackingDaemon {
   private currentHeading = 0;
   private currentPassengerCount = 38;
   private wakeLockSentinel: any = null;
+  private isEmergency = false;
 
   constructor() {
     if (typeof window !== 'undefined') {
@@ -202,7 +204,7 @@ export class ForegroundTrackingDaemon {
             speed: this.currentSpeed,
             heading: this.currentHeading,
             passengerCount: this.currentPassengerCount,
-            status: 'ACTIVE',
+            status: this.isEmergency ? 'SOS' : 'ACTIVE',
             timestamp: nowIso,
           };
 
@@ -248,7 +250,7 @@ export class ForegroundTrackingDaemon {
       speed: this.currentSpeed,
       heading: this.currentHeading,
       passengerCount: this.currentPassengerCount,
-      status: 'ACTIVE',
+      status: this.isEmergency ? 'SOS' : 'ACTIVE',
       timestamp: nowIso,
     };
 
@@ -333,6 +335,21 @@ export class ForegroundTrackingDaemon {
     }
   }
 
+  public setEmergencyStatus(isEmergency: boolean): void {
+    this.isEmergency = isEmergency;
+    if (this.isRunning) {
+      // Trigger immediate ping emission reflecting emergency status
+      this.pollAndEmitLocation();
+    }
+  }
+
+  public getCurrentCoordinates(): { latitude: number; longitude: number } {
+    return {
+      latitude: this.lastLat ?? (ROUTE_WAYPOINTS[0]?.lat || 17.9045),
+      longitude: this.lastLng ?? (ROUTE_WAYPOINTS[0]?.lng || 83.4215),
+    };
+  }
+
   public getState(): TrackingDaemonState {
     return {
       isRunning: this.isRunning,
@@ -349,6 +366,7 @@ export class ForegroundTrackingDaemon {
       passengerCount: this.currentPassengerCount,
       notificationChannel: NOTIFICATION_CHANNEL_ID,
       status: this.currentStatus,
+      isEmergency: this.isEmergency,
     };
   }
 }
