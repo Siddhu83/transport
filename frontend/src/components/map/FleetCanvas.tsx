@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
 import { AlertCircle, Locate } from 'lucide-react';
+import { ThinkingOrb } from 'thinking-orbs';
 import { FleetDropdown } from './FleetDropdown';
 
 export interface VehicleFeatureProperties {
@@ -258,8 +259,8 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
         attributionControl: false,
       });
 
-      // Add compact navigation controls
-      map.addControl(new maplibregl.NavigationControl({ showCompass: true }), 'bottom-right');
+      // Add compact navigation controls (positioned away from mobile bottom sheet & footer)
+      map.addControl(new maplibregl.NavigationControl({ showCompass: true }), 'top-right');
       map.addControl(
         new maplibregl.AttributionControl({
           compact: true,
@@ -442,14 +443,22 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
       {/* Map Container */}
       <div ref={mapContainerRef} className="w-full h-full absolute inset-0" />
 
-      {/* Loading Overlay */}
+      {/* Loading Overlay with ThinkingOrb (solving state) */}
       {!isLoaded && !mapError && (
-        <div className="absolute inset-0 flex items-center justify-center z-20 backdrop-blur-sm bg-theme-canvas/90 text-brand-primary">
+        <div className="absolute inset-0 flex items-center justify-center z-20 backdrop-blur-md bg-slate-950/85">
           <div className="flex flex-col items-center gap-3">
-            <div className="w-10 h-10 border-2 border-brand-primary/20 border-t-brand-primary rounded-full animate-spin" />
-            <p className="text-xs tracking-widest uppercase font-mono font-extrabold text-theme-main">
-              Initializing WebGL Engine...
+            <ThinkingOrb
+              state="solving"
+              size={64}
+              theme={theme === 'light' ? 'light' : 'dark'}
+              color="#f59e0b"
+            />
+            <p className="text-xs tracking-wider uppercase font-sans font-bold text-slate-200 mt-1">
+              Initializing WebGL Vector Canvas...
             </p>
+            <span className="text-[10px] text-slate-500 font-mono">
+              Connecting Real-Time Telemetry Engine
+            </span>
           </div>
         </div>
       )}
