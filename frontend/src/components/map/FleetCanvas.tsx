@@ -26,6 +26,8 @@ export interface FleetCanvasProps {
   latencyMs?: number | null;
   streamStatus?: string;
   theme?: 'dark' | 'light';
+  hideDropdown?: boolean;
+  recenterTrigger?: number;
 }
 
 // ANITS Campus Tagarapuvalasa / Visakhapatnam Default Center
@@ -42,6 +44,8 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
   center = DEFAULT_CENTER,
   zoom = DEFAULT_ZOOM,
   theme = 'dark',
+  hideDropdown = false,
+  recenterTrigger,
 }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
@@ -390,6 +394,34 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
     }
   }, [selectedBusId, isLoaded]);
 
+  // Smooth camera fly-to when selectedBusId or recenterTrigger updates
+  useEffect(() => {
+    if (!mapRef.current || !isLoaded) return;
+
+    if (selectedBusId) {
+      const feature = geoJsonData?.features.find((f) => f.properties.busId === selectedBusId);
+      if (feature) {
+        const coords = feature.geometry.coordinates as [number, number];
+        mapRef.current.flyTo({
+          center: coords,
+          zoom: 15.5,
+          pitch: 35,
+          speed: 1.2,
+          curve: 1.2,
+        });
+      }
+    } else {
+      // Global fleet overview
+      mapRef.current.flyTo({
+        center: center,
+        zoom: zoom,
+        pitch: 25,
+        speed: 1.0,
+        curve: 1.2,
+      });
+    }
+  }, [selectedBusId, recenterTrigger, isLoaded]);
+
   const handleBusDropdownSelect = (busId: string | null) => {
     if (!busId) {
       if (onVehicleSelect) onVehicleSelect(null);
@@ -398,16 +430,6 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
     const feature = geoJsonData?.features.find((f) => f.properties.busId === busId);
     if (feature) {
       if (onVehicleSelect) onVehicleSelect(feature.properties);
-      if (mapRef.current) {
-        const coords = feature.geometry.coordinates as [number, number];
-        mapRef.current.flyTo({
-          center: coords,
-          zoom: 15.5,
-          pitch: 35,
-          speed: 1.3,
-          curve: 1.2,
-        });
-      }
     }
   };
 
@@ -440,15 +462,17 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
         </div>
       )}
 
-      {/* Map Top Status HUD & Target Bus Selector */}
-      <div className="absolute top-4 left-4 z-10 flex flex-wrap items-center gap-3 pointer-events-auto">
-        <FleetDropdown
-          geoJsonData={geoJsonData}
-          selectedBusId={selectedBusId}
-          onSelectBus={handleBusDropdownSelect}
-          theme={theme}
-        />
-      </div>
+      {/* Map Top Status HUD & Target Bus Selector (Hidden in Mobile View) */}
+      {!hideDropdown && (
+        <div className="absolute top-4 left-4 z-10 flex flex-wrap items-center gap-3 pointer-events-auto">
+          <FleetDropdown
+            geoJsonData={geoJsonData}
+            selectedBusId={selectedBusId}
+            onSelectBus={handleBusDropdownSelect}
+            theme={theme}
+          />
+        </div>
+      )}
 
       {/* Map Quick Action Floating Controls */}
       <div className="absolute top-4 right-4 z-10 flex flex-col gap-2 pointer-events-auto font-mono">
