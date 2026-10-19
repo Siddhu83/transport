@@ -1,33 +1,26 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Bus,
-  Gauge,
-  Compass,
-  Users,
-  MapPin,
-  Navigation,
-  Activity,
-  Maximize2,
-  Minimize2,
-  X,
-  Radio,
-  Clock,
-  Sun,
-  Moon,
-} from 'lucide-react';
+import { FleetCanvas, VehicleFeatureProperties } from './components/map/FleetCanvas';
 import { useTelemetryStream } from './hooks/useTelemetryStream';
 import { useFleetInterpolation } from './hooks/useFleetInterpolation';
-import FleetCanvas from './components/map/FleetCanvas';
+import { MobileHeader } from './components/mobile/MobileHeader';
+import { RideStatusSheet } from './components/mobile/RideStatusSheet';
+import { MobileNavBar, NavTab } from './components/mobile/MobileNavBar';
+import { RoutesDirectoryView } from './components/mobile/RoutesDirectoryView';
+import { SettingsView } from './components/mobile/SettingsView';
+import { RotateCcw, Bus } from 'lucide-react';
 
 export const App: React.FC = () => {
-  const { geoJsonData, isConnected, status: streamStatus, latencyMs } = useTelemetryStream();
-  const interpolatedGeoJson = useFleetInterpolation(geoJsonData);
-
+  // Navigation & Screen Mode State
+  const [activeTab, setActiveTab] = useState<NavTab>('home');
   const [selectedBusId, setSelectedBusId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [recenterTrigger, setRecenterTrigger] = useState<number>(0);
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
-  const [currentTime, setCurrentTime] = useState<string>('');
+
+  // Theme Management (Default Dark Obsidian)
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
-    return (localStorage.getItem('ats_theme') as 'dark' | 'light') || 'dark';
+    const saved = localStorage.getItem('ats_theme');
+    return saved === 'light' || saved === 'dark' ? saved : 'dark';
   });
 
   // Keep live digital clock updating
@@ -58,205 +51,223 @@ export const App: React.FC = () => {
     }
   };
 
-  // Find currently selected vehicle feature & properties
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+  }, [theme]);
+
+  // 1. Hook: Manage Fastify Server-Sent Events (SSE) telemetry connection
+  const { geoJsonData: rawGeoJson, status: streamStatus, latencyMs, isConnected } = useTelemetryStream();
+
+  // 2. Hook: 60 FPS WebGL Linear Interpolation (LERP) movement smoothing
+  const interpolatedGeoJson = useFleetInterpolation(rawGeoJson, {
+    defaultDurationMs: 5000,
+  });
+
+  // Dynamically extract the selected vehicle feature
   const selectedFeature = interpolatedGeoJson.features.find(
     (f) => f.properties.busId === selectedBusId
   );
-  const selectedVehicleProps = selectedFeature?.properties;
-  const selectedVehicleCoords = selectedFeature?.geometry?.coordinates;
+  const selectedVehicleProps: VehicleFeatureProperties | null = selectedFeature
+    ? (selectedFeature.properties as VehicleFeatureProperties)
+    : null;
 
-  const capacity = selectedVehicleProps?.capacity || 55;
-  const passengerCount = selectedVehicleProps?.passengerCount || 38;
-  const occupancyPct = Math.round((passengerCount / capacity) * 100);
+  // Filtered vehicles for live search
+  const filteredVehicles = searchQuery.trim()
+    ? interpolatedGeoJson.features.filter((f) => {
+        const query = searchQuery.toLowerCase();
+        const plate = (f.properties.plateNumber || '').toLowerCase();
+        const busId = (f.properties.busId || '').toLowerCase();
+        const routeName = (f.properties.routeName || '').toLowerCase();
+        return plate.includes(query) || busId.includes(query) || routeName.includes(query);
+      })
+    : [];
+
+  // Handler: Selecting a bus (from map, search, or corridor directory)
+  const handleSelectBus = (vehicle: VehicleFeatureProperties | null) => {
+    if (!vehicle) {
+      setSelectedBusId(null);
+      setActiveTab('home');
+      return;
+    }
+    setSelectedBusId(vehicle.busId);
+    setSearchQuery('');
+    setActiveTab('mybus'); // Automatically highlights 'My Bus' tab in the footer!
+  };
+
+  // Handler: User clicks Back to global fleet
+  const handleBackToHome = () => {
+    setSelectedBusId(null);
+    setActiveTab('home'); // Footer returns to 'Home' as active tab!
+  };
+
+  // Handler: Tapping footer navigation tabs
+  const handleTabChange = (tab: NavTab) => {
+    setActiveTab(tab);
+
+    if (tab === 'home') {
+      // Removing focus returns to global fleet map overview
+      setSelectedBusId(null);
+    } else if (tab === 'mybus') {
+      // If no bus selected yet, pick the first active bus or preserve current selection
+      if (!selectedBusId && interpolatedGeoJson.features.length > 0) {
+        const firstBus = interpolatedGeoJson.features[0]?.properties as VehicleFeatureProperties;
+        if (firstBus) {
+          setSelectedBusId(firstBus.busId);
+        }
+      }
+    }
+  };
+
+  // Handler: Selecting a corridor from the Routes view
+  const handleSelectRouteBus = (routeId: string) => {
+    const matchingFeature = interpolatedGeoJson.features.find(
+      (f) => f.properties.routeId === routeId
+    );
+    if (matchingFeature) {
+      handleSelectBus(matchingFeature.properties as VehicleFeatureProperties);
+    } else if (interpolatedGeoJson.features.length > 0) {
+      handleSelectBus(interpolatedGeoJson.features[0]?.properties as VehicleFeatureProperties);
+    }
+  };
+
+  // Handler: Reset Preferences & State
+  const handleResetPreferences = () => {
+    setSelectedBusId(null);
+    setActiveTab('home');
+    setSearchQuery('');
+    setRecenterTrigger((prev) => prev + 1);
+  };
 
   return (
-    <div className="flex flex-col h-screen w-screen overflow-hidden bg-theme-canvas text-theme-main font-sans selection:bg-brand-primary/30 selection:text-brand-primary">
-      {/* Top Professional Navigation & Telemetry HUD Header */}
-      <header className="z-30 px-4 py-3 glass-panel border-b border-theme-border flex items-center justify-between shadow-xl font-sans">
-        <div className="flex items-center gap-3 font-sans">
-          <div className="p-2 rounded-xl bg-brand-primary/20 text-brand-primary border border-brand-primary/30">
-            <Bus className="w-5 h-5 stroke-[2.5]" />
-          </div>
-          <div>
-            <h1 className="text-sm font-extrabold tracking-wider uppercase flex items-center gap-2 text-theme-main font-sans">
-              ANITS TRANSPORT
-              <span className="text-[10px] px-2 py-0.5 rounded-md bg-brand-primary/20 text-brand-primary font-mono font-bold border border-brand-primary/30">
-                PRO DISPATCH
-              </span>
-            </h1>
-            <p className="text-[11px] text-theme-muted font-sans font-medium">Real-Time Fleet Intelligence Engine</p>
-          </div>
+    <div className="relative w-screen h-screen overflow-hidden select-none bg-[#090d16] text-slate-100 font-sans">
+      {/* 1. Mobile Header (Dynamic Search / Greeting / In-Ride Mode) */}
+      <MobileHeader
+        activeTab={activeTab}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        onBackToHome={handleBackToHome}
+        selectedBusPlate={selectedVehicleProps?.plateNumber}
+        selectedBusName={
+          selectedVehicleProps?.plateNumber
+            ? `${selectedVehicleProps.plateNumber}`
+            : selectedBusId
+            ? `BUS-${selectedBusId.slice(0, 4).toUpperCase()}`
+            : undefined
+        }
+        selectedRouteName={selectedVehicleProps?.routeName}
+        latencyMs={latencyMs}
+        isConnected={isConnected}
+        totalBusesCount={interpolatedGeoJson.features.length}
+      />
+
+      {/* Search Results Dropdown List (If search query active in Home mode) */}
+      {activeTab === 'home' && searchQuery.trim() && (
+        <div className="fixed top-28 left-4 right-4 z-40 max-w-md mx-auto bg-slate-900/95 border border-slate-800 rounded-2xl p-2 shadow-2xl backdrop-blur-xl space-y-1 max-h-60 overflow-y-auto animate-fade-in">
+          {filteredVehicles.length > 0 ? (
+            filteredVehicles.map((f) => {
+              const p = f.properties;
+              return (
+                <button
+                  key={p.busId}
+                  onClick={() => handleSelectBus(p as VehicleFeatureProperties)}
+                  className="w-full text-left p-2.5 rounded-xl hover:bg-slate-800 flex items-center justify-between text-xs transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                      <Bus className="w-3.5 h-3.5" />
+                    </div>
+                    <div>
+                      <span className="font-extrabold text-white block">
+                        {p.plateNumber || `BUS-${p.busId.slice(0, 4)}`}
+                      </span>
+                      <span className="text-[10px] text-slate-400">
+                        {p.routeName || 'Campus Corridor'}
+                      </span>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-mono text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded">
+                    {p.speed || 35} km/h
+                  </span>
+                </button>
+              );
+            })
+          ) : (
+            <div className="p-4 text-center text-xs text-slate-400 font-mono">
+              No active buses matching "{searchQuery}"
+            </div>
+          )}
         </div>
+      )}
 
-        {/* Live Status HUD & Navigation Controls */}
-        <div className="flex items-center gap-3 md:gap-4 text-xs font-sans">
-          {/* SSE Connectivity Status */}
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-theme-card border border-theme-border text-theme-main shadow-sm font-sans">
-            <Radio className={`w-3.5 h-3.5 ${isConnected ? 'text-status-active animate-pulse' : 'text-status-delayed'}`} />
-            <span className="text-theme-muted font-sans">SSE Link:</span>
-            <span className={`font-mono tabular-nums ${isConnected ? 'text-status-active font-bold' : 'text-status-delayed font-bold'}`}>
-              {isConnected ? `LIVE ${latencyMs ?? 16}ms` : streamStatus}
-            </span>
-          </div>
-
-          {/* Clock */}
-          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-theme-card border border-theme-border text-theme-muted font-sans">
-            <Clock className="w-3.5 h-3.5 text-brand-primary" />
-            <span className="text-theme-main font-semibold font-mono tabular-nums">{currentTime || '00:00:00'}</span>
-          </div>
-
-          {/* Fullscreen Button */}
-          <button
-            onClick={toggleFullscreen}
-            title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen App Mode'}
-            className="p-2.5 rounded-xl bg-theme-card hover:bg-theme-hover border border-theme-border text-theme-main transition-all cursor-pointer flex items-center gap-1.5 font-sans"
-          >
-            {isFullscreen ? <Minimize2 className="w-4 h-4 text-brand-primary" /> : <Maximize2 className="w-4 h-4 text-brand-primary" />}
-            <span className="hidden md:inline font-sans font-medium">{isFullscreen ? 'Exit' : 'Fullscreen'}</span>
-          </button>
-
-          {/* Theme Toggle Button */}
-          <button
-            onClick={toggleTheme}
-            title={`Switch to ${theme === 'dark' ? 'Rider Light Theme' : 'Captain Dark Theme'}`}
-            className="p-2.5 rounded-xl bg-theme-card hover:bg-theme-hover border border-theme-border text-theme-main transition-all cursor-pointer flex items-center gap-1.5 font-sans"
-          >
-            {theme === 'dark' ? (
-              <>
-                <Sun className="w-4 h-4 text-brand-primary" />
-                <span className="hidden sm:inline font-sans text-theme-main font-medium">Light</span>
-              </>
-            ) : (
-              <>
-                <Moon className="w-4 h-4 text-brand-primary" />
-                <span className="hidden sm:inline font-sans text-theme-main font-medium">Dark</span>
-              </>
-            )}
-          </button>
-        </div>
-      </header>
-
-      {/* Main Map Viewport */}
-      <div className="relative flex-1 w-full h-full overflow-hidden font-sans">
-        {/* WebGL Fleet Canvas Engine */}
+      {/* 2. Full-Bleed MapLibre WebGL Canvas (Underlying Base Layer) */}
+      <div className="absolute inset-0 w-full h-full z-0">
         <FleetCanvas
           geoJsonData={interpolatedGeoJson}
-          onVehicleSelect={(veh) => setSelectedBusId(veh?.busId || null)}
+          onVehicleSelect={handleSelectBus}
           selectedBusId={selectedBusId}
           latencyMs={latencyMs}
           streamStatus={streamStatus}
           theme={theme}
+          hideDropdown={true} // Clean mobile canvas without desktop dropdowns
+          recenterTrigger={recenterTrigger}
         />
-
-        {/* Selected Vehicle Rapido/Uber Style Details Drawer */}
-        {selectedVehicleProps && (
-          <aside className="absolute top-4 left-4 z-20 w-84 glass-panel-glow rounded-2xl p-5 flex flex-col gap-4 animate-in fade-in slide-in-from-left-4 duration-200 shadow-2xl border border-brand-primary/30 font-sans">
-            {/* Drawer Header */}
-            <div className="flex items-center justify-between border-b border-theme-border pb-3 font-sans">
-              <div className="flex items-center gap-3 font-sans">
-                <div className="relative flex h-3 w-3 shrink-0">
-                  <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${selectedVehicleProps.status === 'SOS' ? 'bg-status-sos' : 'bg-status-active'
-                    }`} />
-                  <span className={`relative inline-flex rounded-full h-3 w-3 ${selectedVehicleProps.status === 'SOS' ? 'bg-status-sos' : 'bg-status-active'
-                    }`} />
-                </div>
-                <div>
-                  <h2 className="font-sans text-base font-extrabold text-theme-main">
-                    {selectedVehicleProps.plateNumber || `BUS-${selectedVehicleProps.busId.slice(0, 4).toUpperCase()}`}
-                  </h2>
-                  <span className="text-[10px] text-theme-muted font-mono">
-                    ID: {selectedVehicleProps.busId.slice(0, 8)}...
-                  </span>
-                </div>
-              </div>
-              <button
-                onClick={() => setSelectedBusId(null)}
-                className="opacity-80 hover:opacity-100 text-xs font-sans px-2.5 py-1 rounded-lg bg-theme-hover hover:bg-slate-700 text-theme-main cursor-pointer border border-theme-border"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Grid Metrics */}
-            <div className="grid grid-cols-2 gap-2.5 font-sans text-xs">
-              <div className="bg-theme-card p-3 rounded-xl border border-theme-border">
-                <span className="text-[10px] text-theme-muted block mb-1 uppercase font-semibold flex items-center gap-1 font-sans">
-                  <Gauge className="w-3 h-3 text-brand-primary" /> Speed
-                </span>
-                <span className="text-lg font-extrabold text-brand-primary font-mono tabular-nums">
-                  {selectedVehicleProps.speed}{' '}
-                  <span className="text-xs font-normal text-theme-muted font-sans">km/h</span>
-                </span>
-              </div>
-
-              <div className="bg-theme-card p-3 rounded-xl border border-theme-border">
-                <span className="text-[10px] text-theme-muted block mb-1 uppercase font-semibold flex items-center gap-1 font-sans">
-                  <Compass className="w-3 h-3 text-brand-primary" /> Heading
-                </span>
-                <span className="text-lg font-extrabold font-mono tabular-nums text-theme-main">
-                  {selectedVehicleProps.heading}°
-                </span>
-              </div>
-
-              <div className="bg-theme-card p-3 rounded-xl border border-theme-border col-span-2">
-                <div className="flex items-center justify-between text-[10px] text-theme-muted mb-1.5 font-semibold uppercase font-sans">
-                  <span className="flex items-center gap-1 font-sans">
-                    <Users className="w-3 h-3 text-brand-primary" /> Passenger Occupancy
-                  </span>
-                  <span className="text-theme-main font-bold font-mono tabular-nums">
-                    {passengerCount} / {capacity} ({occupancyPct}%)
-                  </span>
-                </div>
-                {/* Visual Occupancy Progress Bar */}
-                <div className="w-full bg-theme-hover h-2 rounded-full overflow-hidden border border-theme-border">
-                  <div
-                    className={`h-full transition-all duration-300 rounded-full ${occupancyPct >= 90 ? 'bg-status-sos' : occupancyPct >= 75 ? 'bg-status-delayed' : 'bg-brand-primary'
-                      }`}
-                    style={{ width: `${occupancyPct}%` }}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Assigned Route */}
-            <div className="bg-theme-card p-3 rounded-xl border border-theme-border text-xs font-sans space-y-1">
-              <span className="text-[10px] text-theme-muted block uppercase font-semibold font-sans">Assigned Route</span>
-              <p className="text-brand-primary font-bold flex items-center gap-1.5 font-sans">
-                <MapPin className="w-3.5 h-3.5 text-brand-primary shrink-0" />
-                {selectedVehicleProps.routeName || `Sector ${selectedVehicleProps.routeId.slice(0, 4).toUpperCase()} Express`}
-              </p>
-            </div>
-
-            {/* GPS Position */}
-            {selectedVehicleCoords && (
-              <div className="bg-theme-card p-2.5 rounded-xl border border-theme-border text-[11px] font-sans flex items-center justify-between opacity-90">
-                <span className="flex items-center gap-1 text-theme-muted font-sans">
-                  <Navigation className="w-3 h-3 text-status-active" />
-                  GPS Coord:
-                </span>
-                <span className="font-mono tabular-nums font-bold text-theme-main">
-                  {selectedVehicleCoords[1].toFixed(5)}, {selectedVehicleCoords[0].toFixed(5)}
-                </span>
-              </div>
-            )}
-          </aside>
-        )}
-
-        {/* Bottom Fleet Status Metrics Bar */}
-        <div className="absolute bottom-4 left-4 right-16 z-20 glass-panel p-3 rounded-2xl flex items-center justify-between font-sans text-xs border border-theme-border shadow-xl">
-          <div className="flex items-center gap-6 font-sans">
-            <div className="flex items-center gap-2 font-sans">
-              <Activity className="w-4 h-4 text-brand-primary" />
-              <span className="text-theme-muted font-sans">Active Fleet:</span>
-              <span className="font-extrabold text-theme-main font-mono tabular-nums">{interpolatedGeoJson.features.length} Buses</span>
-            </div>
-            <div className="hidden sm:flex items-center gap-2 text-theme-muted font-sans">
-              <span>Map Mode:</span>
-              <span className="text-brand-primary font-bold font-sans">WebGL Canvas</span>
-            </div>
-          </div>
-        </div>
       </div>
+
+      {/* Floating Recenter Button (FlightRadar24 / Uber Style) */}
+      {activeTab !== 'routes' && activeTab !== 'settings' && (
+        <div
+          className={`fixed right-4 z-20 transition-all duration-300 ${
+            selectedVehicleProps && activeTab === 'mybus' ? 'bottom-52' : 'bottom-20'
+          }`}
+        >
+          <button
+            onClick={() => setRecenterTrigger((prev) => prev + 1)}
+            title="Recenter Camera on Bus"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-slate-900/90 hover:bg-slate-800 text-slate-200 hover:text-white border border-slate-700/80 shadow-xl backdrop-blur-md text-xs font-mono font-bold transition-all active:scale-95 cursor-pointer"
+          >
+            <RotateCcw className="w-3.5 h-3.5 text-amber-400" />
+            <span className="text-[11px]">Recenter</span>
+          </button>
+        </div>
+      )}
+
+      {/* 3. Multi-Snap Bottom Sheet (Active Ride Focus / My Bus Tab) */}
+      {selectedVehicleProps && activeTab === 'mybus' && (
+        <RideStatusSheet
+          vehicle={selectedVehicleProps}
+          onClose={handleBackToHome}
+          onRecenter={() => setRecenterTrigger((prev) => prev + 1)}
+        />
+      )}
+
+      {/* 4. Routes Directory View (When Routes Tab Active) */}
+      {activeTab === 'routes' && (
+        <RoutesDirectoryView
+          onSelectRouteBus={handleSelectRouteBus}
+          activeFeatures={interpolatedGeoJson.features}
+        />
+      )}
+
+      {/* 5. Settings & Preferences View (When Settings Tab Active) */}
+      {activeTab === 'settings' && (
+        <SettingsView
+          theme={theme}
+          onToggleTheme={toggleTheme}
+          isFullscreen={isFullscreen}
+          onToggleFullscreen={toggleFullscreen}
+          latencyMs={latencyMs}
+          isConnected={isConnected}
+          streamStatus={streamStatus}
+          onResetPreferences={handleResetPreferences}
+        />
+      )}
+
+      {/* 6. Fixed Mobile Bottom Navigation Bar (Home, My Bus, Routes, Settings) */}
+      <MobileNavBar
+        activeTab={activeTab}
+        onTabChange={handleTabChange}
+        hasActiveBus={Boolean(selectedBusId)}
+      />
     </div>
   );
 };

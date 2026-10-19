@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
 import { AlertCircle, Locate } from 'lucide-react';
+import { ThinkingOrb } from 'thinking-orbs';
 import { FleetDropdown } from './FleetDropdown';
 
 export interface VehicleFeatureProperties {
@@ -26,6 +27,8 @@ export interface FleetCanvasProps {
   latencyMs?: number | null;
   streamStatus?: string;
   theme?: 'dark' | 'light';
+  hideDropdown?: boolean;
+  recenterTrigger?: number;
 }
 
 // ANITS Campus Tagarapuvalasa / Visakhapatnam Default Center
@@ -42,6 +45,8 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
   center = DEFAULT_CENTER,
   zoom = DEFAULT_ZOOM,
   theme = 'dark',
+  hideDropdown = false,
+  recenterTrigger,
 }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
@@ -254,8 +259,8 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
         attributionControl: false,
       });
 
-      // Add compact navigation controls
-      map.addControl(new maplibregl.NavigationControl({ showCompass: true }), 'bottom-right');
+      // Add compact navigation controls (positioned away from mobile bottom sheet & footer)
+      map.addControl(new maplibregl.NavigationControl({ showCompass: true }), 'top-right');
       map.addControl(
         new maplibregl.AttributionControl({
           compact: true,
@@ -390,6 +395,34 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
     }
   }, [selectedBusId, isLoaded]);
 
+  // Smooth camera fly-to when selectedBusId or recenterTrigger updates
+  useEffect(() => {
+    if (!mapRef.current || !isLoaded) return;
+
+    if (selectedBusId) {
+      const feature = geoJsonData?.features.find((f) => f.properties.busId === selectedBusId);
+      if (feature) {
+        const coords = feature.geometry.coordinates as [number, number];
+        mapRef.current.flyTo({
+          center: coords,
+          zoom: 15.5,
+          pitch: 35,
+          speed: 1.2,
+          curve: 1.2,
+        });
+      }
+    } else {
+      // Global fleet overview
+      mapRef.current.flyTo({
+        center: center,
+        zoom: zoom,
+        pitch: 25,
+        speed: 1.0,
+        curve: 1.2,
+      });
+    }
+  }, [selectedBusId, recenterTrigger, isLoaded]);
+
   const handleBusDropdownSelect = (busId: string | null) => {
     if (!busId) {
       if (onVehicleSelect) onVehicleSelect(null);
@@ -398,16 +431,6 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
     const feature = geoJsonData?.features.find((f) => f.properties.busId === busId);
     if (feature) {
       if (onVehicleSelect) onVehicleSelect(feature.properties);
-      if (mapRef.current) {
-        const coords = feature.geometry.coordinates as [number, number];
-        mapRef.current.flyTo({
-          center: coords,
-          zoom: 15.5,
-          pitch: 35,
-          speed: 1.3,
-          curve: 1.2,
-        });
-      }
     }
   };
 
@@ -420,14 +443,22 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
       {/* Map Container */}
       <div ref={mapContainerRef} className="w-full h-full absolute inset-0" />
 
-      {/* Loading Overlay */}
+      {/* Loading Overlay with ThinkingOrb (solving state) */}
       {!isLoaded && !mapError && (
-        <div className="absolute inset-0 flex items-center justify-center z-20 backdrop-blur-sm bg-theme-canvas/90 text-brand-primary">
+        <div className="absolute inset-0 flex items-center justify-center z-20 backdrop-blur-md bg-slate-950/85">
           <div className="flex flex-col items-center gap-3">
-            <div className="w-10 h-10 border-2 border-brand-primary/20 border-t-brand-primary rounded-full animate-spin" />
-            <p className="text-xs tracking-widest uppercase font-mono font-extrabold text-theme-main">
-              Initializing WebGL Engine...
+            <ThinkingOrb
+              state="solving"
+              size={64}
+              theme={theme === 'light' ? 'light' : 'dark'}
+              color="#f59e0b"
+            />
+            <p className="text-xs tracking-wider uppercase font-sans font-bold text-slate-200 mt-1">
+              Initializing WebGL Vector Canvas...
             </p>
+            <span className="text-[10px] text-slate-500 font-mono">
+              Connecting Real-Time Telemetry Engine
+            </span>
           </div>
         </div>
       )}
@@ -440,14 +471,17 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
         </div>
       )}
 
-      {/* Map Top Status HUD & Target Bus Selector */}
-      <div className="absolute top-4 left-4 z-10 flex flex-wrap items-center gap-3 pointer-events-auto">
-        <FleetDropdown
-          geoJsonData={geoJsonData || { type: 'FeatureCollection', features: [] }}
-          selectedBusId={selectedBusId ?? null}
-          onSelectBus={handleBusDropdownSelect}
-        />
-      </div>
+      {/* Map Top Status HUD & Target Bus Selector (Hidden in Mobile View) */}
+      {!hideDropdown && (
+        <div className="absolute top-4 left-4 z-10 flex flex-wrap items-center gap-3 pointer-events-auto">
+          <FleetDropdown
+            geoJsonData={geoJsonData}
+            selectedBusId={selectedBusId}
+            onSelectBus={handleBusDropdownSelect}
+            theme={theme}
+          />
+        </div>
+      )}
 
       {/* Map Quick Action Floating Controls */}
       <div className="absolute top-4 right-4 z-10 flex flex-col gap-2 pointer-events-auto font-mono">
