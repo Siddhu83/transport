@@ -23,10 +23,22 @@ export const App: React.FC = () => {
     return saved === 'light' || saved === 'dark' ? saved : 'dark';
   });
 
+  // Keep live digital clock updating
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date().toLocaleTimeString());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Theme Synchronizer
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('ats_theme', theme);
+  }, [theme]);
+
   const toggleTheme = () => {
-    const nextTheme = theme === 'dark' ? 'light' : 'dark';
-    setTheme(nextTheme);
-    localStorage.setItem('ats_theme', nextTheme);
+    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
   };
 
   const toggleFullscreen = () => {

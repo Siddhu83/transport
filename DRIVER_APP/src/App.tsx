@@ -60,10 +60,14 @@ export const App: React.FC = () => {
   const [loginError, setLoginError] = useState<string | null>(null);
   const [isLoggingIn, setIsLoggingIn] = useState<boolean>(false);
 
-  // Tracking Daemon State
+  // Active Route & Shift Binding State
+  const [assignedBusId, setAssignedBusId] = useState<string>('11111111-1111-4111-8111-111111111111');
+  const [assignedRouteId, setAssignedRouteId] = useState<string>('a1111111-1111-4111-8111-111111111111');
+
+  // Tracking Daemon & Kiosk State
   const [daemonState, setDaemonState] = useState<TrackingDaemonState>(trackingDaemon.getState());
   const [batteryStatus, setBatteryStatus] = useState<string>('Exemption Ready');
-  const [passengerCount, setPassengerCount] = useState<number>(38);
+  const [passengerCount, setPassengerCount] = useState<number>(15);
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   const [simulatedMode, setSimulatedMode] = useState<boolean>(false);
 
@@ -142,8 +146,8 @@ export const App: React.FC = () => {
   };
 
   const handleRequestExemption = async () => {
-    const status = await requestBatteryExemption();
-    setBatteryStatus(status.message);
+    const res = await requestBatteryExemption();
+    setBatteryStatus(res.message);
   };
 
   const handlePassengerChange = (delta: number) => {
@@ -156,8 +160,6 @@ export const App: React.FC = () => {
   };
 
   const handleToggleTracking = async () => {
-    if (!session) return;
-
     if (daemonState.isRunning) {
       await trackingDaemon.stopTracking();
     } else {
@@ -166,14 +168,31 @@ export const App: React.FC = () => {
 
       await trackingDaemon.startTracking({
         busId,
+        driverId: session?.user.id || 'driver-1',
         routeId,
-        driverId: session.user.id,
-        authToken: session.token,
+        authToken: session?.token || '',
         forceSimulatedGps: simulatedMode,
         passengerCount,
       });
     }
     setDaemonState(trackingDaemon.getState());
+  };
+
+  const handleConfirmSos = (data: { passengerBand: string; failureReason: string }) => {
+    setIsSosModalOpen(false);
+    const incidentData = {
+      ...data,
+      timestamp: new Date().toLocaleTimeString(),
+    };
+    setActiveSosIncident(incidentData);
+
+    if (daemonState.isRunning) {
+      trackingDaemon.updatePassengerCount(passengerCount);
+    }
+  };
+
+  const handleResolveSos = () => {
+    setActiveSosIncident(null);
   };
 
   const toggleSimulatedMode = (enabled: boolean) => {
@@ -309,18 +328,16 @@ export const App: React.FC = () => {
   };
 
   // ---------------------------------------------------------------------------
-  // LOGIN SCREEN (If Not Authenticated)
+  // LOGIN SCREEN (Poppins Typography + Official Transit Portal Aesthetic)
   // ---------------------------------------------------------------------------
   if (!session) {
     return (
-      <div className="min-h-screen bg-[#0b0f17] text-slate-100 font-sans flex items-center justify-center p-4 selection:bg-emerald-500/30 selection:text-emerald-200">
-        <div className="w-full max-w-md space-y-6">
+      <div className="min-h-screen bg-base-100 text-base-content font-sans flex items-center justify-center p-4">
+        <div className="w-full max-w-md space-y-6 font-sans">
           {/* App Branding Header */}
-          <div className="text-center space-y-3">
-            <div className="inline-flex p-4 rounded-3xl bg-gradient-to-tr from-emerald-600 to-teal-400 p-0.5 shadow-2xl shadow-emerald-500/30">
-              <div className="bg-slate-950 p-4 rounded-[22px]">
-                <Bus className="w-10 h-10 text-emerald-400" />
-              </div>
+          <div className="text-center space-y-3 font-sans">
+            <div className="inline-flex p-3 rounded-xl bg-primary text-primary-content border border-primary-border shadow-md">
+              <Bus className="w-10 h-10" />
             </div>
             <div>
               <h1 className="text-2xl font-black tracking-tight text-white">ANITS CAPTAIN CONSOLE</h1>
@@ -328,47 +345,47 @@ export const App: React.FC = () => {
             </div>
           </div>
 
-          {/* Login Glass Card */}
-          <div className="glass-card rounded-3xl p-6 space-y-5 border border-slate-800">
-            <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
-              <Lock className="w-4 h-4 text-emerald-400" />
-              <h2 className="text-sm font-bold text-white uppercase tracking-wider">Captain Authentication</h2>
+          {/* Login Kiosk Card */}
+          <div className="kiosk-card p-6 space-y-5 font-sans">
+            <div className="flex items-center gap-2 border-b border-base-border pb-3 font-sans">
+              <Lock className="w-4 h-4 text-primary" />
+              <h2 className="text-sm font-bold text-base-content uppercase tracking-wider font-sans">Captain Authentication</h2>
             </div>
 
             {loginError && (
-              <div className="bg-rose-500/10 border border-rose-500/30 rounded-2xl p-3 text-xs text-rose-300 flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+              <div className="bg-error-bg border border-error-border rounded-lg p-3 text-xs text-error flex items-center gap-2 font-sans">
+                <AlertTriangle className="w-4 h-4 text-error shrink-0" />
                 <span>{loginError}</span>
               </div>
             )}
 
-            <form onSubmit={handleLoginSubmit} className="space-y-4">
+            <form onSubmit={handleLoginSubmit} className="space-y-4 font-sans">
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1.5">Driver Email</label>
+                <label className="block text-xs font-semibold text-base-content-muted mb-1.5 uppercase font-sans">Driver Email ID</label>
                 <div className="relative">
-                  <Mail className="w-4 h-4 text-slate-500 absolute left-3.5 top-3.5" />
+                  <Mail className="w-4 h-4 text-base-content-subtle absolute left-3.5 top-3.5" />
                   <input
                     type="email"
                     required
                     value={loginEmail}
                     onChange={(e) => setLoginEmail(e.target.value)}
                     placeholder="driver1@transport.college.edu"
-                    className="w-full bg-slate-950/80 border border-slate-800 rounded-xl pl-10 pr-4 py-3 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500 transition-colors"
+                    className="w-full bg-base-100 border border-base-border rounded-lg pl-10 pr-4 py-3 text-xs text-base-content placeholder-base-content-subtle focus:outline-none focus:border-primary transition-colors font-sans"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1.5">Captain Password</label>
+                <label className="block text-xs font-semibold text-base-content-muted mb-1.5 uppercase font-sans">Captain Password</label>
                 <div className="relative">
-                  <KeyRound className="w-4 h-4 text-slate-500 absolute left-3.5 top-3.5" />
+                  <KeyRound className="w-4 h-4 text-base-content-subtle absolute left-3.5 top-3.5" />
                   <input
                     type="password"
                     required
                     value={loginPassword}
                     onChange={(e) => setLoginPassword(e.target.value)}
                     placeholder="••••••••••••"
-                    className="w-full bg-slate-950/80 border border-slate-800 rounded-xl pl-10 pr-4 py-3 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500 transition-colors"
+                    className="w-full bg-base-100 border border-base-border rounded-lg pl-10 pr-4 py-3 text-xs text-base-content placeholder-base-content-subtle focus:outline-none focus:border-primary transition-colors font-sans"
                   />
                 </div>
               </div>
@@ -378,41 +395,41 @@ export const App: React.FC = () => {
                 disabled={isLoggingIn}
                 className="w-full min-h-[54px] py-3.5 px-4 rounded-xl font-bold text-xs tracking-wider uppercase bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 shadow-lg shadow-emerald-950/50 transition-all transform active:scale-98 disabled:opacity-50"
               >
-                {isLoggingIn ? 'Authenticating...' : 'Sign In To Captain Console'}
+                {isLoggingIn ? 'AUTHENTICATING...' : 'SIGN IN TO CAPTAIN CONSOLE'}
               </button>
             </form>
 
-            {/* Local Testing Quick Credentials Pill Box */}
-            <div className="pt-2 border-t border-slate-800/80 space-y-2.5">
-              <p className="text-[11px] font-semibold text-slate-400 flex items-center gap-1.5">
-                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                Local Test Credentials (1-Tap Fill):
+            {/* Quick Testing Credentials Box */}
+            <div className="pt-3 border-t border-base-border space-y-2 font-sans">
+              <p className="text-[11px] font-semibold text-base-content-muted flex items-center gap-1.5 uppercase font-sans">
+                <ShieldCheck className="w-3.5 h-3.5 text-primary" />
+                Local Test Accounts (1-Tap):
               </p>
               <div className="grid grid-cols-2 gap-2 text-[11px]">
                 <button
                   type="button"
                   onClick={() => handleQuickLogin('driver1@transport.college.edu')}
-                  className="glass-button p-2.5 rounded-xl text-left hover:border-emerald-500/50 transition-colors"
+                  className="bg-base-300 hover:bg-base-100 p-2.5 rounded-lg border border-base-border text-left transition-colors cursor-pointer font-sans"
                 >
-                  <span className="font-bold text-emerald-400 block">Driver #1</span>
-                  <span className="text-slate-400 text-[10px] truncate block">driver1@transport...</span>
-                  <span className="text-slate-500 text-[9px] font-mono">Pass: Password123!</span>
+                  <span className="font-bold text-base-content block font-sans">Driver #1</span>
+                  <span className="text-base-content-subtle text-[10px] truncate block font-sans">driver1@transport...</span>
+                  <span className="text-base-content-subtle text-[9px] font-sans">Pass: Password123!</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => handleQuickLogin('driver2@transport.college.edu')}
-                  className="glass-button p-2.5 rounded-xl text-left hover:border-emerald-500/50 transition-colors"
+                  className="bg-base-300 hover:bg-base-100 p-2.5 rounded-lg border border-base-border text-left transition-colors cursor-pointer font-sans"
                 >
-                  <span className="font-bold text-teal-400 block">Driver #2</span>
-                  <span className="text-slate-400 text-[10px] truncate block">driver2@transport...</span>
-                  <span className="text-slate-500 text-[9px] font-mono">Pass: Password123!</span>
+                  <span className="font-bold text-base-content block font-sans">Driver #2</span>
+                  <span className="text-base-content-subtle text-[10px] truncate block font-sans">driver2@transport...</span>
+                  <span className="text-base-content-subtle text-[9px] font-sans">Pass: Password123!</span>
                 </button>
               </div>
             </div>
           </div>
 
-          <p className="text-center text-[11px] text-slate-500">
-            🔒 Captain accounts are provisioned by College Transport Authority.
+          <p className="text-center text-[11px] text-base-content-subtle font-sans font-medium">
+            🔒 Official Driver Portal • College Transport Operations
           </p>
         </div>
       </div>
@@ -420,7 +437,7 @@ export const App: React.FC = () => {
   }
 
   // ---------------------------------------------------------------------------
-  // AUTHENTICATED CAPTAIN CONSOLE (Dynamic State)
+  // AUTHENTICATED CAPTAIN CONSOLE (Poppins Typography Transit Kiosk)
   // ---------------------------------------------------------------------------
   const user = session.user;
   const maxCapacity = user.capacity || 55;
@@ -441,22 +458,20 @@ export const App: React.FC = () => {
       <header className="sticky top-0 z-40 glass-card px-4 py-3.5 flex items-center justify-between border-b border-slate-800/80">
         <div className="flex items-center gap-3">
           <div className="relative">
-            <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-400 p-0.5 shadow-lg shadow-emerald-500/20">
-              <div className="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center">
-                <Bus className="w-6 h-6 text-emerald-400" />
-              </div>
+            <div className="w-10 h-10 rounded-lg bg-primary text-primary-content flex items-center justify-center border border-primary-border">
+              <Bus className="w-5 h-5" />
             </div>
-            <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-500 border-2 border-slate-950 rounded-full"></span>
+            <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-success border-2 border-base-200 rounded-full"></span>
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="font-bold text-base tracking-tight text-white">{user.name}</h1>
-              <span className="bg-emerald-500/20 text-emerald-300 text-[10px] font-bold px-1.5 py-0.5 rounded border border-emerald-500/30 flex items-center gap-1">
-                <UserCheck className="w-3 h-3 text-emerald-400" />
+              <h1 className="font-extrabold text-sm tracking-tight text-base-content font-sans">{user.name}</h1>
+              <span className="bg-success-bg text-success text-[10px] font-bold px-1.5 py-0.5 rounded border border-success-border flex items-center gap-1 font-sans">
+                <UserCheck className="w-3 h-3" />
                 VERIFIED
               </span>
             </div>
-            <p className="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
+            <p className="text-xs text-base-content-muted flex items-center gap-1.5 mt-0.5 font-sans">
               <span>{user.licensePlate || user.busNumber}</span>
               <span>•</span>
               <span className="text-emerald-400 font-medium">{activeCorridor.routeNumber}</span>
@@ -464,23 +479,22 @@ export const App: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 font-sans">
           <button
             onClick={toggleFullscreen}
-            className="glass-button p-2.5 rounded-xl text-slate-300 hover:text-white flex items-center gap-1.5 text-xs font-medium active:scale-95"
+            className="p-2 rounded-lg bg-base-300 hover:bg-neutral text-base-content-muted hover:text-base-content border border-base-border text-xs font-bold transition-colors cursor-pointer font-sans"
             title="Toggle Fullscreen Mode"
           >
             {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
-            <span className="hidden sm:inline">{isFullscreen ? 'Exit' : 'Fullscreen'}</span>
           </button>
 
           <button
             onClick={handleLogout}
-            className="glass-button p-2.5 rounded-xl text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 border border-rose-500/20 flex items-center gap-1.5 text-xs font-medium active:scale-95"
+            className="p-2 rounded-lg bg-error-bg hover:bg-error text-error hover:text-error-content border border-error-border text-xs font-bold transition-colors cursor-pointer flex items-center gap-1 font-sans"
             title="Sign Out"
           >
             <LogOut className="w-4 h-4" />
-            <span className="hidden sm:inline">Logout</span>
+            <span className="hidden sm:inline font-sans">Logout</span>
           </button>
         </div>
       </header>
@@ -488,11 +502,11 @@ export const App: React.FC = () => {
       {/* Main Kiosk Content Area */}
       <main className="max-w-md mx-auto px-4 pt-4 space-y-4">
         {/* Status Bar */}
-        <div className="flex items-center justify-between px-1">
+        <div className="flex items-center justify-between px-1 font-sans">
           {getStatusBadge()}
-          <span className="text-xs text-slate-400 flex items-center gap-1">
-            <Wifi className="w-3.5 h-3.5 text-emerald-400" />
-            Ping Rate: 5s
+          <span className="text-xs text-base-content-muted flex items-center gap-1 font-bold font-sans">
+            <Wifi className="w-3.5 h-3.5 text-success" />
+            PING: <span className="font-mono tabular-nums">5s</span>
           </span>
         </div>
 
@@ -661,6 +675,10 @@ export const App: React.FC = () => {
                   Mobile browsers block raw hardware GPS over unencrypted <code className="bg-slate-950/80 px-1 py-0.5 rounded text-amber-300 font-mono">http://</code> LAN Wi-Fi IPs.
                 </p>
               </div>
+
+              <span className="px-2.5 py-1 rounded-xl bg-rose-500/20 text-rose-300 font-mono text-[11px] font-bold border border-rose-500/30">
+                {PASSENGER_BAND_LABELS[activeIncident.strandedPassengerBand]?.label}
+              </span>
             </div>
 
             <div className="bg-slate-950/80 rounded-xl p-2.5 text-[11px] space-y-1 border border-slate-800 font-mono">
@@ -672,6 +690,122 @@ export const App: React.FC = () => {
               </p>
             </div>
 
+            {/* Circular 72x72px+ Touch Target with Radial Progress Ring */}
+            <div className="relative w-28 h-28 flex items-center justify-center select-none touch-none">
+              {/* SVG Radial Progress Ring */}
+              <svg className="w-28 h-28 -rotate-90 transform" viewBox="0 0 100 100">
+                {/* Background Ring */}
+                <circle
+                  cx="50"
+                  cy="50"
+                  r={RADIUS}
+                  className="stroke-slate-800/80"
+                  strokeWidth="6"
+                  fill="transparent"
+                />
+                {/* Animated Radial Progress Ring */}
+                <circle
+                  cx="50"
+                  cy="50"
+                  r={RADIUS}
+                  className="stroke-rose-500 transition-all duration-75 ease-linear"
+                  strokeWidth="6"
+                  strokeDasharray={CIRCUMFERENCE}
+                  strokeDashoffset={strokeDashoffset}
+                  strokeLinecap="round"
+                  fill="transparent"
+                />
+              </svg>
+
+              {/* Center Trigger Button (Exceeds 72x72px Touch Target requirement) */}
+              <button
+                type="button"
+                onPointerDown={startSosHold}
+                onPointerUp={cancelSosHold}
+                onPointerLeave={cancelSosHold}
+                onPointerCancel={cancelSosHold}
+                disabled={Boolean(activeIncident)}
+                className={`absolute w-20 h-20 rounded-full flex flex-col items-center justify-center transition-all transform active:scale-95 shadow-xl ${
+                  activeIncident
+                    ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
+                    : isHoldingSos
+                    ? 'bg-rose-500 text-white scale-105 shadow-rose-600/80'
+                    : 'bg-gradient-to-tr from-rose-600 to-red-500 hover:from-rose-500 hover:to-red-400 text-white shadow-rose-900/60'
+                }`}
+                style={{ minWidth: '72px', minHeight: '72px' }}
+                aria-label="Hold 2 seconds to trigger SOS Breakdown"
+              >
+                <AlertOctagon className={`w-8 h-8 ${isHoldingSos ? 'animate-bounce' : ''}`} />
+                <span className="text-[10px] font-black tracking-wider uppercase mt-0.5">
+                  {isHoldingSos ? `${sosHoldProgress}%` : 'SOS'}
+                </span>
+              </button>
+            </div>
+
+            <div className="text-[11px] text-slate-400 font-mono">
+              {isHoldingSos ? (
+                <span className="text-rose-400 font-bold animate-pulse">
+                  HOLD FIRMLY... {((2000 - (sosHoldProgress / 100) * 2000) / 1000).toFixed(1)}s
+                </span>
+              ) : activeIncident ? (
+                <span className="text-rose-400 font-semibold">Emergency Broadcast Active</span>
+              ) : (
+                <span>Hold 2s to open breakdown incident room</span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Active Emergency SOS Incident Alert Control Banner */}
+        {activeSosIncident && (
+          <div className="kiosk-card-error p-4 space-y-3 font-sans animate-in fade-in duration-150">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <ShieldAlert className="w-6 h-6 text-error animate-pulse" />
+                <div>
+                  <h3 className="text-sm font-black text-base-content uppercase font-sans">
+                    SOS INCIDENT ACTIVE
+                  </h3>
+                  <p className="text-[11px] text-error font-bold font-sans">
+                    Reported at <span className="font-mono tabular-nums">{activeSosIncident.timestamp}</span>
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={handleResolveSos}
+                className="px-3 py-1.5 rounded-lg bg-base-100 border border-base-border text-xs text-success font-bold hover:bg-base-300 flex items-center gap-1 cursor-pointer font-sans"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                Resolve
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 text-xs font-sans">
+              <div className="bg-base-100 p-2.5 rounded-lg border border-base-border">
+                <span className="text-[10px] text-base-content-subtle block uppercase font-sans">FAILURE REASON</span>
+                <span className="font-bold text-warning font-sans">{activeSosIncident.failureReason}</span>
+              </div>
+              <div className="bg-base-100 p-2.5 rounded-lg border border-base-border">
+                <span className="text-[10px] text-base-content-subtle block uppercase font-sans">STRANDED BAND</span>
+                <span className="font-bold text-error font-sans">{activeSosIncident.passengerBand}</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Pre-Shift Bus & Route Binding Selector (Only available when off duty) */}
+        {!daemonState.isRunning && (
+          <div className="kiosk-card p-4 space-y-3 font-sans text-xs">
+            <div className="flex items-center justify-between border-b border-base-border pb-2 font-sans">
+              <span className="font-bold text-base-content flex items-center gap-1.5 uppercase font-sans">
+                <MapPin className="w-4 h-4 text-primary" />
+                Pre-Shift Assignment:
+              </span>
+              <span className="badge-utility badge-success-utility text-[10px] font-sans">
+                Shift Ready
+              </span>
+            </div>
+
             <p className="text-[10px] text-emerald-400 font-medium pt-0.5">
               ⚡ Running Route GPS Simulator so pings stream to server seamlessly over HTTP!
             </p>
@@ -680,37 +814,38 @@ export const App: React.FC = () => {
 
         {/* Hero Duty Switch (Min 72px touch target) */}
         <div
-          className={`rounded-3xl p-6 transition-all duration-300 border ${
-            daemonState.isRunning ? 'glass-card-rose glow-rose' : 'glass-card-emerald glow-emerald'
+          className={`kiosk-card p-5 transition-colors duration-200 ${
+            daemonState.isRunning ? 'border-2 border-error-border' : 'border-2 border-primary-border'
           }`}
         >
-          <div className="text-center space-y-4">
-            <div className="inline-flex p-3 rounded-2xl bg-slate-900/60 border border-slate-700/50">
+          <div className="text-center space-y-4 font-sans">
+            <div className="inline-flex p-3 rounded-lg bg-base-100 border border-base-border">
               {daemonState.isRunning ? (
-                <Radio className="w-10 h-10 text-rose-400 animate-pulse" />
+                <Radio className="w-9 h-9 text-error animate-pulse" />
               ) : (
-                <Zap className="w-10 h-10 text-emerald-400 animate-pulse-slow" />
+                <Zap className="w-9 h-9 text-primary" />
               )}
             </div>
 
             <div>
-              <h2 className="text-xl font-extrabold tracking-tight text-white">
+              <h2 className="text-xl font-black tracking-tight text-base-content uppercase font-sans">
                 {daemonState.isRunning ? 'SHIFT IN PROGRESS' : 'READY TO START DUTY?'}
               </h2>
-              <p className="text-xs text-slate-300 mt-1">
+              <p className="text-xs text-base-content-muted mt-1 font-sans font-medium">
                 {daemonState.isRunning
-                  ? `Transmitting telemetry for ${user.busNumber || 'Bus'}`
+                  ? `Transmitting location for ${user.busNumber || 'Bus'}`
                   : 'Tap below to initiate Android foreground location daemon'}
               </p>
             </div>
 
+            {/* 72x72px Minimum Touch Target Duty Button */}
             <button
               onClick={handleToggleTracking}
               style={{ minHeight: '72px' }}
               className={`w-full py-4 px-6 rounded-2xl font-bold text-base tracking-wide flex items-center justify-center gap-3 transition-all transform active:scale-95 shadow-xl ${
                 daemonState.isRunning
-                  ? 'bg-gradient-to-r from-rose-600 to-red-500 hover:from-rose-500 hover:to-red-400 text-white shadow-rose-900/40'
-                  : 'bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 shadow-emerald-950/50'
+                  ? 'bg-error hover:bg-error/90 text-error-content border-error-border'
+                  : 'bg-primary hover:bg-primary-hover text-primary-content border-primary-border'
               }`}
             >
               {daemonState.isRunning ? (
@@ -728,13 +863,18 @@ export const App: React.FC = () => {
           </div>
         </div>
 
+        {/* 2-Second Press-and-Hold SOS Breakdown Operational Button (Sprint 9 Task 2) */}
+        {daemonState.isRunning && (
+          <SosHoldButton onTriggerComplete={() => setIsSosModalOpen(true)} />
+        )}
+
         {/* GPS Source / Simulator Toggle */}
-        <div className="glass-card rounded-2xl p-3.5 flex items-center justify-between">
+        <div className="kiosk-card p-3.5 flex items-center justify-between font-sans">
           <div className="flex items-center gap-2.5">
-            <Navigation className="w-4 h-4 text-emerald-400" />
+            <Navigation className="w-4 h-4 text-primary" />
             <div>
-              <p className="text-xs font-semibold text-slate-200">GPS Mode Override</p>
-              <p className="text-[11px] text-slate-400">
+              <p className="text-xs font-bold text-base-content uppercase font-sans">GPS Provider</p>
+              <p className="text-[11px] text-base-content-muted font-sans">
                 {daemonState.locationProvider === 'HARDWARE_GPS'
                   ? 'Native Device Hardware GPS'
                   : daemonState.locationProvider === 'INSECURE_ORIGIN_SIMULATED'
@@ -747,8 +887,8 @@ export const App: React.FC = () => {
             onClick={() => toggleSimulatedMode(!simulatedMode)}
             className={`min-h-[44px] px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
               simulatedMode
-                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                ? 'bg-warning-bg text-warning border-warning-border'
+                : 'bg-base-300 text-base-content border-base-border hover:bg-neutral'
             }`}
           >
             {simulatedMode ? 'Simulator Active' : 'Force Simulator'}
@@ -756,19 +896,19 @@ export const App: React.FC = () => {
         </div>
 
         {/* Live Metrics Grid */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-3 font-sans">
           {/* Card 1: Speedometer */}
-          <div className="glass-card rounded-2xl p-4 flex flex-col justify-between space-y-2">
-            <div className="flex items-center justify-between text-slate-400">
-              <span className="text-xs font-semibold tracking-wider uppercase">Speedometer</span>
-              <Gauge className="w-4 h-4 text-emerald-400" />
+          <div className="kiosk-card p-4 flex flex-col justify-between space-y-2 font-sans">
+            <div className="flex items-center justify-between text-base-content-muted">
+              <span className="text-xs font-bold tracking-wider uppercase font-sans">Speedometer</span>
+              <Gauge className="w-4 h-4 text-primary" />
             </div>
             <div>
               <div className="flex items-baseline gap-1">
                 <span className="text-3xl font-black tracking-tight text-white tabular-nums">
                   {daemonState.currentSpeed}
                 </span>
-                <span className="text-xs font-bold text-emerald-400">km/h</span>
+                <span className="text-xs font-bold text-primary font-sans">km/h</span>
               </div>
               <p className="text-[11px] text-slate-400 mt-0.5">
                 Heading: <span className="text-slate-200 font-semibold tabular-nums">{daemonState.currentHeading}° NE</span>
@@ -777,16 +917,16 @@ export const App: React.FC = () => {
           </div>
 
           {/* Card 2: Telemetry Stream Stats */}
-          <div className="glass-card rounded-2xl p-4 flex flex-col justify-between space-y-2">
-            <div className="flex items-center justify-between text-slate-400">
-              <span className="text-xs font-semibold tracking-wider uppercase">Pings Sent</span>
-              <Radio className="w-4 h-4 text-teal-400" />
+          <div className="kiosk-card p-4 flex flex-col justify-between space-y-2 font-sans">
+            <div className="flex items-center justify-between text-base-content-muted">
+              <span className="text-xs font-bold tracking-wider uppercase font-sans">Pings Transmitted</span>
+              <Radio className="w-4 h-4 text-secondary" />
             </div>
             <div>
               <div className="text-3xl font-black tracking-tight text-white tabular-nums">
                 {daemonState.totalPingsEmitted}
               </div>
-              <p className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-1">
+              <p className="text-[11px] text-base-content-subtle mt-0.5 flex items-center gap-1 font-sans">
                 <span>Buffer:</span>
                 <span className={`font-bold tabular-nums ${daemonState.bufferedPingsCount > 0 ? 'text-amber-400' : 'text-slate-300'}`}>
                   {daemonState.bufferedPingsCount}/20
@@ -799,9 +939,9 @@ export const App: React.FC = () => {
         {/* Interactive Passenger Occupancy Counter (72x72px Touch Target Buttons) */}
         <div className="glass-card rounded-2xl p-4 space-y-3">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Users className="w-4 h-4 text-emerald-400" />
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-200">
+            <div className="flex items-center gap-2 font-sans">
+              <Users className="w-4 h-4 text-primary" />
+              <span className="text-xs font-bold uppercase tracking-wider text-base-content font-sans">
                 Passenger Load Count
               </span>
             </div>
@@ -810,7 +950,8 @@ export const App: React.FC = () => {
             </span>
           </div>
 
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center justify-between gap-4 font-sans">
+            {/* 72x72px Touch Button Decrement */}
             <button
               onClick={() => handlePassengerChange(-1)}
               style={{ width: '72px', height: '72px' }}
@@ -825,6 +966,7 @@ export const App: React.FC = () => {
               <span className="text-xs text-slate-400 font-medium block">/ {maxCapacity} Seats</span>
             </div>
 
+            {/* 72x72px Touch Button Increment */}
             <button
               onClick={() => handlePassengerChange(1)}
               style={{ width: '72px', height: '72px' }}
@@ -837,22 +979,22 @@ export const App: React.FC = () => {
         </div>
 
         {/* Battery & Android Shield Module */}
-        <div className="glass-card rounded-2xl p-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+        <div className="kiosk-card p-4 flex items-center justify-between font-sans">
+          <div className="flex items-center gap-3 font-sans">
+            <div className="p-2.5 rounded-lg bg-base-100 text-primary border border-base-border">
               <BatteryCharging className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-xs font-bold text-white flex items-center gap-1.5">
-                Android Battery Doze Shield
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+              <p className="text-xs font-bold text-base-content flex items-center gap-1.5 uppercase font-sans">
+                Android Battery Shield
+                <CheckCircle2 className="w-3.5 h-3.5 text-success" />
               </p>
-              <p className="text-[11px] text-slate-400">{batteryStatus}</p>
+              <p className="text-[11px] text-base-content-muted font-sans">{batteryStatus}</p>
             </div>
           </div>
           <button
             onClick={handleRequestExemption}
-            className="glass-button px-3 py-1.5 rounded-xl text-xs font-medium text-emerald-300 hover:text-emerald-200"
+            className="px-3 py-1.5 rounded-lg bg-base-300 hover:bg-neutral border border-base-border text-xs font-bold text-base-content cursor-pointer transition-colors font-sans"
           >
             Re-check
           </button>
@@ -865,28 +1007,27 @@ export const App: React.FC = () => {
               <MapPin className="w-4 h-4 text-emerald-400" />
               {activeCorridor.name}
             </span>
-            <span className="text-slate-400">Next: Stop 2</span>
+            <span className="text-base-content-muted font-sans">Next: Stop 2</span>
           </div>
 
-          <div className="space-y-2.5 text-xs">
-            <div className="flex items-center gap-3 text-slate-400">
-              <div className="w-2.5 h-2.5 rounded-full bg-slate-600"></div>
-              <span className="line-through">Campus Main Gate</span>
-              <span className="ml-auto text-[10px] text-slate-500">08:00 AM</span>
+          <div className="space-y-2.5 text-xs font-sans">
+            <div className="flex items-center gap-3 text-base-content-subtle font-sans">
+              <div className="w-2.5 h-2.5 rounded-sm bg-base-300"></div>
+              <span className="line-through font-sans">Campus Main Gate</span>
+              <span className="ml-auto text-[10px] text-base-content-subtle font-mono tabular-nums">08:00 AM</span>
             </div>
 
-            <div className="flex items-center gap-3 font-semibold text-emerald-300">
-              <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></div>
-              <span>Transit Stop #2 (En Route)</span>
-              <span className="ml-auto text-[10px] bg-emerald-500/20 px-1.5 py-0.5 rounded text-emerald-300">
+            <div className="flex items-center gap-3 font-bold text-primary font-sans">
+              <div className="w-2.5 h-2.5 rounded-sm bg-primary animate-ping"></div>
+              <span className="font-sans">Transit Stop #2 (En Route)</span>
+              <span className="ml-auto text-[10px] bg-primary-bg px-1.5 py-0.5 rounded text-primary border border-primary-border font-sans">
                 2 mins away
               </span>
             </div>
 
-            <div className="flex items-center gap-3 text-slate-400 opacity-60">
-              <div className="w-2.5 h-2.5 rounded-full border border-slate-500"></div>
-              <span>Central Hostels Terminal</span>
-              <span className="ml-auto text-[10px]">08:25 AM</span>
+            <div className="flex items-center gap-3 text-base-content-subtle opacity-60 font-sans">
+              <div className="w-2.5 h-2.5 rounded-sm border border-base-border"></div>
+              <span className="font-sans">Central Hostels Terminal</span>
             </div>
           </div>
         </div>

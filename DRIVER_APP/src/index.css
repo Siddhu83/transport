@@ -1,59 +1,239 @@
 @import "tailwindcss";
 
-@layer utilities {
-  .glass-card {
-    background: rgba(15, 23, 42, 0.75);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+/* 
+  GOVERNMENT & PUBLIC TRANSIT UTILITY DESIGN SYSTEM
+  - Authoritative, high-visibility, distraction-free kiosk interface.
+  - Zero neon cyan gradients or vibe-coded glows.
+  - Sharp 1px borders, solid high-contrast backgrounds, tabular figures for telemetry.
+*/
+
+:root, [data-theme="dark"] {
+  /* Typography Tokens */
+  --font-sans: 'Poppins', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  /* Base Surfaces (Solid Deep Slate & Charcoal) */
+  --b1: #0b0f17;          /* base-100: Kiosk background canvas */
+  --b2: #151d2a;          /* base-200: Kiosk panel container */
+  --b3: #1e293b;          /* base-300: Elevated card surface & hover */
+  --bc: #ffffff;          /* base-content: Primary text (Crisp White) */
+  --bc-muted: #cbd5e1;    /* base-content-muted: High contrast secondary text */
+  --bc-subtle: #94a3b8;   /* base-content-subtle: Helper label text */
+  --b-border: #334155;    /* base-border: Crisp 1px panel borders */
+
+  /* Transport Primary Tokens (Deep Royal Navy Blue) */
+  --p: #1d4ed8;           /* primary: Transport Blue (600) */
+  --p-hover: #1e40af;     /* primary-hover: Deep Blue (700) */
+  --pc: #ffffff;          /* primary-content: White text */
+  --p-bg: #1e293b;        /* primary-bg container */
+  --p-border: #3b82f6;    /* primary-border */
+
+  /* Transit Safety Green (Duty Online / Active) */
+  --su: #15803d;          /* success: Transit Green (700) */
+  --suc: #ffffff;
+  --su-bg: #14532d;       /* success-bg */
+  --su-border: #22c55e;   /* success-border */
+
+  /* Caution Amber (Simulator / Buffered Status) */
+  --wa: #d97706;          /* warning: Caution Amber (600) */
+  --wac: #ffffff;
+  --wa-bg: #78350f;
+  --wa-border: #f59e0b;
+
+  /* Emergency SOS Crimson (Breakdown / Hazard) */
+  --er: #b91c1c;          /* error: Alert Crimson (700) */
+  --erc: #ffffff;
+  --er-bg: #7f1d1d;
+  --er-border: #ef4444;
+
+  /* Secondary Info Tokens */
+  --s: #475569;           /* secondary: Slate Grey */
+  --sc: #ffffff;
+  --s-bg: #1e293b;
+  --s-border: #64748b;
+}
+
+[data-theme="light"] {
+  --b1: #f8fafc;
+  --b2: #ffffff;
+  --b3: #f1f5f9;
+  --bc: #0f172a;
+  --bc-muted: #334155;
+  --bc-subtle: #64748b;
+  --b-border: #cbd5e1;
+
+  --p: #1d4ed8;
+  --pc: #ffffff;
+  --p-bg: #eff6ff;
+  --p-border: #93c5fd;
+
+  --su: #15803d;
+  --su-bg: #f0fdf4;
+  --su-border: #86efac;
+
+  --wa: #b45309;
+  --wa-bg: #fffbeb;
+  --wa-border: #fde68a;
+
+  --er: #b91c1c;
+  --er-bg: #fef2f2;
+  --er-border: #fca5a5;
+
+  --s: #475569;
+  --s-bg: #f8fafc;
+  --s-border: #cbd5e1;
+}
+
+@theme {
+  /* Font Family Definitions for Tailwind CSS v4 */
+  --font-sans: 'Poppins', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  /* Transit Utility Theme Tokens mapped for Tailwind CSS v4 */
+  --color-base-100: var(--b1);
+  --color-base-200: var(--b2);
+  --color-base-300: var(--b3);
+  --color-base-content: var(--bc);
+  --color-base-content-muted: var(--bc-muted);
+  --color-base-content-subtle: var(--bc-subtle);
+  --color-base-border: var(--b-border);
+
+  --color-primary: var(--p);
+  --color-primary-hover: var(--p-hover);
+  --color-primary-content: var(--pc);
+  --color-primary-bg: var(--p-bg);
+  --color-primary-border: var(--p-border);
+
+  --color-secondary: var(--s);
+  --color-secondary-content: var(--sc);
+  --color-secondary-bg: var(--s-bg);
+  --color-secondary-border: var(--s-border);
+
+  --color-success: var(--su);
+  --color-success-content: var(--suc);
+  --color-success-bg: var(--su-bg);
+  --color-success-border: var(--su-border);
+
+  --color-warning: var(--wa);
+  --color-warning-content: var(--wac);
+  --color-warning-bg: var(--wa-bg);
+  --color-warning-border: var(--wa-border);
+
+  --color-error: var(--er);
+  --color-error-content: var(--erc);
+  --color-error-bg: var(--er-bg);
+  --color-error-border: var(--er-border);
+}
+
+@layer base {
+  body {
+    font-family: 'Poppins', system-ui, -apple-system, sans-serif;
+    background-color: var(--b1);
+    color: var(--bc);
+    -webkit-font-smoothing: antialiased;
   }
 
-  .glass-card-emerald {
-    background: rgba(6, 78, 59, 0.35);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(16, 185, 129, 0.3);
-    box-shadow: 0 8px 32px 0 rgba(16, 185, 129, 0.2);
-  }
-
-  .glass-card-rose {
-    background: rgba(136, 19, 55, 0.35);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(244, 63, 94, 0.3);
-    box-shadow: 0 8px 32px 0 rgba(244, 63, 94, 0.2);
-  }
-
-  .glass-button {
-    background: rgba(30, 41, 59, 0.8);
-    backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    transition: all 0.2s ease-in-out;
-  }
-
-  .glass-button:active {
-    transform: scale(0.97);
-  }
-
-  .glow-emerald {
-    box-shadow: 0 0 25px rgba(16, 185, 129, 0.4);
-  }
-
-  .glow-rose {
-    box-shadow: 0 0 25px rgba(244, 63, 94, 0.4);
-  }
-
-  .glow-amber {
-    box-shadow: 0 0 25px rgba(245, 158, 11, 0.4);
+  .font-sans {
+    font-family: 'Poppins', system-ui, -apple-system, sans-serif;
   }
 }
 
-@keyframes pulse-slow {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.75; transform: scale(1.05); }
-}
+/* Transit Utility Component Layouts */
+@layer components {
+  /* Crisp Sharp-Bordered Containers (No Glass Glow / Blur) */
+  .kiosk-card {
+    background-color: var(--b2);
+    border: 1px solid var(--b-border);
+    color: var(--bc);
+    border-radius: 0.75rem; /* Crisp 12px corners */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  }
 
-.animate-pulse-slow {
-  animation: pulse-slow 3s infinite ease-in-out;
+  .kiosk-card-primary {
+    background-color: var(--b2);
+    border: 2px solid var(--p-border);
+    color: var(--bc);
+    border-radius: 0.75rem;
+  }
+
+  .kiosk-card-error {
+    background-color: var(--er-bg);
+    border: 2px solid var(--er-border);
+    color: var(--bc);
+    border-radius: 0.75rem;
+  }
+
+  /* Utility Buttons */
+  .btn-utility {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-radius: 0.75rem;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+    cursor: pointer;
+    user-select: none;
+  }
+  .btn-utility:active {
+    transform: scale(0.98);
+  }
+
+  .btn-primary-utility {
+    background-color: var(--p);
+    color: var(--pc);
+    border: 1px solid var(--p-border);
+  }
+  .btn-primary-utility:hover {
+    background-color: var(--p-hover);
+  }
+
+  .btn-success-utility {
+    background-color: var(--su);
+    color: var(--suc);
+    border: 1px solid var(--su-border);
+  }
+
+  .btn-error-utility {
+    background-color: var(--er);
+    color: var(--erc);
+    border: 1px solid var(--er-border);
+  }
+
+  .btn-neutral-utility {
+    background-color: var(--b3);
+    color: var(--bc);
+    border: 1px solid var(--b-border);
+  }
+  .btn-neutral-utility:hover {
+    background-color: #334155;
+  }
+
+  /* Status Badges */
+  .badge-utility {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.25rem 0.75rem;
+    border-radius: 0.5rem;
+    font-weight: 700;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+  }
+  .badge-success-utility {
+    background-color: var(--su-bg);
+    color: #4ade80;
+    border: 1px solid var(--su-border);
+  }
+  .badge-warning-utility {
+    background-color: var(--wa-bg);
+    color: #fbbf24;
+    border: 1px solid var(--wa-border);
+  }
+  .badge-error-utility {
+    background-color: var(--er-bg);
+    color: #f87171;
+    border: 1px solid var(--er-border);
+  }
 }
