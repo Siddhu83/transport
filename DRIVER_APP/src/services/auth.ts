@@ -15,6 +15,7 @@ export interface DriverProfile {
   busNumber?: string;
   licensePlate?: string;
   routeName?: string;
+  routeNumber?: string;
   capacity?: number;
 }
 
