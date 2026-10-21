@@ -26,10 +26,8 @@ import {
   AlertOctagon,
   X,
   Check,
-  RotateCcw,
   Route as RouteIcon,
   ChevronRight,
-  PhoneCall,
 } from 'lucide-react';
 import { requestBatteryExemption } from './services/batteryOptimization';
 import { trackingDaemon, TrackingDaemonState } from './services/trackingDaemon';
