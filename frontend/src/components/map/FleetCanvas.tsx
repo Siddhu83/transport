@@ -472,13 +472,12 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
       )}
 
       {/* Map Top Status HUD & Target Bus Selector (Hidden in Mobile View) */}
-      {!hideDropdown && (
+      {!hideDropdown && geoJsonData && (
         <div className="absolute top-4 left-4 z-10 flex flex-wrap items-center gap-3 pointer-events-auto">
           <FleetDropdown
             geoJsonData={geoJsonData}
-            selectedBusId={selectedBusId}
+            selectedBusId={selectedBusId ?? null}
             onSelectBus={handleBusDropdownSelect}
-            theme={theme}
           />
         </div>
       )}
