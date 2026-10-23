@@ -43,6 +43,13 @@ export class SSEHub {
     this.subscriberRedis = new Redis(env.REDIS_URL, {
       maxRetriesPerRequest: null,
       enableReadyCheck: false,
+      lazyConnect: true,
+      retryStrategy(times) {
+        if (env.NODE_ENV === 'test' && times > 3) {
+          return null;
+        }
+        return Math.min(times * 50, 2000);
+      },
     });
 
     this.initPubSub();
@@ -151,6 +158,10 @@ export class SSEHub {
         client.res.write(frame);
       }
     }, 500);
+
+    if (this.batchTimer && typeof this.batchTimer.unref === 'function') {
+      this.batchTimer.unref();
+    }
   }
 
   /**
@@ -163,6 +174,10 @@ export class SSEHub {
         client.res.write(': heartbeat\n\n');
       }
     }, 15000);
+
+    if (this.heartbeatTimer && typeof this.heartbeatTimer.unref === 'function') {
+      this.heartbeatTimer.unref();
+    }
   }
 
   /**
@@ -188,9 +203,17 @@ export class SSEHub {
   }
 
   public close() {
-    if (this.batchTimer) clearInterval(this.batchTimer);
-    if (this.heartbeatTimer) clearInterval(this.heartbeatTimer);
-    this.subscriberRedis.disconnect();
+    if (this.batchTimer) {
+      clearInterval(this.batchTimer);
+      this.batchTimer = null;
+    }
+    if (this.heartbeatTimer) {
+      clearInterval(this.heartbeatTimer);
+      this.heartbeatTimer = null;
+    }
+    try {
+      this.subscriberRedis.disconnect();
+    } catch {}
     this.clients.clear();
   }
 }
