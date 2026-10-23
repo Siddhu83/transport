@@ -53,6 +53,7 @@ describe('Sprint 10: In-Memory SOS Breakdown Engine & Radius Sweep Algorithm', (
       await redis.del(`bus:${distantBusId}:state`);
     } catch {}
     await app.close();
+    redis.disconnect();
   });
 
   test('POST /api/v1/sos/trigger accepts valid breakdown payload and sets status to 202', async () => {
