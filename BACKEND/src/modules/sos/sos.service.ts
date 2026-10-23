@@ -3,6 +3,7 @@ import { prisma } from '../../infrastructure/prisma.js';
 import { redis } from '../../infrastructure/redis.js';
 import { SosTriggerPayload, CandidateBus, SosIncidentResponse } from './sos.schemas.js';
 import { BusStatus, SosIncidentStatus } from '@prisma/client';
+import { enqueueSosIncident } from './sos.queue.js';
 
 /**
  * Executes a sub-5ms in-memory proximity sweep using Redis GEOSEARCH
@@ -202,6 +203,23 @@ export async function triggerSosIncident(
       createdAt: new Date().toISOString(),
       resolvedAt: null,
     };
+  }
+
+  // 4. Asynchronously enqueue to BullMQ notification pipeline (Sprint 11 DoD: < 200ms)
+  try {
+    await enqueueSosIncident({
+      incidentId: incidentRecord.incidentId,
+      busId: payload.busId,
+      routeId: payload.routeId,
+      driverId,
+      candidates: candidateReliefBuses,
+      reason: payload.reason,
+      strandedPassengerBand: payload.strandedPassengerBand,
+      notes: payload.notes,
+      createdAt: incidentRecord.createdAt,
+    });
+  } catch (queueErr) {
+    console.warn('[SosService] Failed to enqueue BullMQ emergency alert job:', queueErr);
   }
 
   return {
