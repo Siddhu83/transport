@@ -7,6 +7,7 @@ import { authRoutes } from './modules/auth/auth.routes.js';
 import { telemetryRoutes } from './modules/telemetry/telemetry.routes.js';
 import { sosRoutes } from './modules/sos/sos.routes.js';
 import { routeManagementRoutes } from './modules/routes/routes.routes.js';
+import { sseHub } from './modules/telemetry/sseHub.js';
 
 export function buildApp() {
   const app = Fastify({
@@ -39,6 +40,11 @@ export function buildApp() {
   app.register(telemetryRoutes, { prefix: '/api/v1/telemetry' });
   app.register(sosRoutes, { prefix: '/api/v1/sos' });
   app.register(routeManagementRoutes, { prefix: '/api/v1/routes' });
+
+  // Lifecycle Hook: Cleanup background telemetry broadcasters on server close
+  app.addHook('onClose', async () => {
+    sseHub.close();
+  });
 
   return app;
 }
