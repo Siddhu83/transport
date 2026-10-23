@@ -32,6 +32,7 @@ describe('Real-Time Server-Sent Events (SSE) Stream Integration Tests', () => {
     await redis.del(`bus:${testBusId}:state`);
     sseHub.close();
     await app.close();
+    redis.disconnect();
   });
 
   test('GET /api/v1/telemetry/stream connects and receives SSE heartbeat and fleet snapshot frames', async () => {
