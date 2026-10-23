@@ -31,6 +31,7 @@ describe('High-Frequency Telemetry Ingestion Integration Tests', () => {
     await redis.del('buses:live');
     await redis.del(`bus:${testBusId}:state`);
     await app.close();
+    redis.disconnect();
   });
 
   test('POST /api/v1/telemetry/ping with valid payload populates Redis in-memory spatial index and hash', async () => {
