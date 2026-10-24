@@ -38,7 +38,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
   const dynamicBusTitle = selectedBusName || selectedBusPlate || 'FLEET BUS';
   const topPadding = isFullscreen
     ? 'max(env(safe-area-inset-top, 0px), 2rem)'
-    : 'max(env(safe-area-inset-top, 0px), 2.75rem)';
+    : 'max(env(safe-area-inset-top, 0px), 0.5rem)';
 
   return (
     <header
