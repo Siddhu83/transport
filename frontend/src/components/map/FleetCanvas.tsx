@@ -445,7 +445,7 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
 
       {/* Loading Overlay with ThinkingOrb (solving state) */}
       {!isLoaded && !mapError && (
-        <div className="absolute inset-0 flex items-center justify-center z-20 backdrop-blur-md bg-slate-950/85">
+        <div className="absolute inset-0 flex items-center justify-center z-20 backdrop-blur-md bg-theme-canvas/85">
           <div className="flex flex-col items-center gap-3">
             <ThinkingOrb
               state="solving"
@@ -453,10 +453,10 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
               theme={theme === 'light' ? 'light' : 'dark'}
               color="#f59e0b"
             />
-            <p className="text-xs tracking-wider uppercase font-sans font-bold text-slate-200 mt-1">
+            <p className="text-xs tracking-wider uppercase font-sans font-bold text-theme-main mt-1">
               Initializing WebGL Vector Canvas...
             </p>
-            <span className="text-[10px] text-slate-500 font-mono">
+            <span className="text-[10px] text-theme-muted font-mono">
               Connecting Real-Time Telemetry Engine
             </span>
           </div>
