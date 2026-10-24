@@ -60,14 +60,14 @@ export const RoutesDirectoryView: React.FC<RoutesDirectoryViewProps> = ({
   activeFeatures,
 }) => {
   return (
-    <div className="fixed inset-0 z-20 pt-20 pb-20 px-4 overflow-y-auto bg-slate-950/95 backdrop-blur-xl">
+    <div className="fixed inset-0 z-20 view-content-padding px-4 overflow-y-auto bg-theme-canvas/95 backdrop-blur-xl">
       <div className="max-w-md mx-auto space-y-3 pb-6">
         <div className="flex items-center justify-between text-xs px-1">
-          <span className="font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-            <RouteIcon className="w-4 h-4 text-amber-400" />
+          <span className="font-bold text-theme-main uppercase tracking-wider flex items-center gap-1.5">
+            <RouteIcon className="w-4 h-4 text-amber-500 dark:text-amber-400" />
             Active Corridors
           </span>
-          <span className="text-[10px] font-mono text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+          <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
             {activeFeatures.length} Fleet Buses Live
           </span>
         </div>
@@ -83,39 +83,39 @@ export const RoutesDirectoryView: React.FC<RoutesDirectoryViewProps> = ({
             <div
               key={corridor.id}
               onClick={() => onSelectRouteBus(corridor.id)}
-              className="glass-panel rounded-2xl p-4 border border-slate-800/80 hover:border-amber-500/40 transition-all cursor-pointer active:scale-98 space-y-3 shadow-lg"
+              className="glass-panel rounded-2xl p-4 border border-theme-border hover:border-amber-500/50 transition-all cursor-pointer active:scale-98 space-y-3 shadow-lg"
             >
               <div className="flex items-start justify-between">
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-black px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-mono border border-amber-500/30">
+                    <span className="text-xs font-black px-2 py-0.5 rounded bg-amber-500/15 text-amber-600 dark:text-amber-300 font-mono border border-amber-500/30">
                       {corridor.routeNumber}
                     </span>
-                    <h3 className="text-xs font-bold text-white">{corridor.name}</h3>
+                    <h3 className="text-xs font-bold text-theme-main">{corridor.name}</h3>
                   </div>
 
-                  <p className="text-[11px] text-slate-400 mt-1 flex items-center gap-1">
-                    <MapPin className="w-3 h-3 text-slate-500 shrink-0" />
+                  <p className="text-[11px] text-theme-muted mt-1 flex items-center gap-1">
+                    <MapPin className="w-3 h-3 text-theme-muted shrink-0" />
                     <span>{corridor.startPoint}</span>
-                    <span className="text-slate-600">→</span>
-                    <span className="text-slate-300 font-medium">{corridor.endPoint}</span>
+                    <span className="text-theme-muted">→</span>
+                    <span className="text-theme-main font-medium">{corridor.endPoint}</span>
                   </p>
                 </div>
 
-                <ChevronRight className="w-4 h-4 text-slate-500 shrink-0 mt-1" />
+                <ChevronRight className="w-4 h-4 text-theme-muted shrink-0 mt-1" />
               </div>
 
-              <div className="flex items-center justify-between pt-2 border-t border-slate-800/80 text-[10px] font-mono">
-                <span className="text-slate-400 flex items-center gap-1">
-                  <Clock className="w-3 h-3 text-slate-500" />
+              <div className="flex items-center justify-between pt-2 border-t border-theme-border-subtle text-[10px] font-mono">
+                <span className="text-theme-muted flex items-center gap-1">
+                  <Clock className="w-3 h-3 text-theme-muted" />
                   {corridor.frequency}
                 </span>
 
                 <span
                   className={`font-bold flex items-center gap-1 px-2 py-0.5 rounded ${
                     hasBuses
-                      ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                      : 'bg-slate-900 text-slate-400 border border-slate-800'
+                      ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                      : 'bg-theme-card-subtle text-theme-muted border border-theme-border'
                   }`}
                 >
                   <Bus className="w-3 h-3" />
