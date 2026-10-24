@@ -22,7 +22,10 @@ export const MobileNavBar: React.FC<MobileNavBarProps> = ({
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 bg-theme-card/95 backdrop-blur-2xl border-t border-theme-border px-3 pt-2 safe-bottom-padding select-none shadow-[0_-8px_30px_rgba(0,0,0,0.06)] dark:shadow-[0_-8px_30px_rgba(0,0,0,0.6)]">
+    <nav
+      className="fixed bottom-0 left-0 right-0 z-40 bg-theme-card/95 backdrop-blur-2xl border-t border-theme-border px-3 pt-2 select-none shadow-[0_-8px_30px_rgba(0,0,0,0.06)] dark:shadow-[0_-8px_30px_rgba(0,0,0,0.6)]"
+      style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 0.75rem)' }}
+    >
       <div className="max-w-md mx-auto grid grid-cols-4 gap-2">
         {tabs.map((tab) => {
           const Icon = tab.icon;
