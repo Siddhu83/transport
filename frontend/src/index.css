@@ -77,18 +77,45 @@
   }
 }
 
-/* Safe Area & Fullscreen Notch Inset Utilities */
+/* Safe Area & Fullscreen Camera Notch Inset System */
+:root {
+  --safe-top: max(env(safe-area-inset-top, 0px), 2.75rem);
+  --safe-bottom: max(env(safe-area-inset-bottom, 0px), 0.75rem);
+}
+
+/* In Fullscreen mode on mobile, hardware punch-holes need extra top breathing room */
+html[data-fullscreen="true"] {
+  --safe-top: max(env(safe-area-inset-top, 0px), 3.25rem);
+  --safe-bottom: max(env(safe-area-inset-bottom, 0px), 1rem);
+}
+
+/* Desktop viewport override (no hardware notch on desktop monitors) */
+@media (min-width: 640px) {
+  :root {
+    --safe-top: 1rem;
+    --safe-bottom: 0.5rem;
+  }
+  html[data-fullscreen="true"] {
+    --safe-top: 1rem;
+    --safe-bottom: 0.5rem;
+  }
+}
+
 .safe-top-padding {
-  padding-top: max(env(safe-area-inset-top), 0.75rem);
+  padding-top: 2.75rem; /* Static CSS fallback */
+  padding-top: var(--safe-top);
 }
 
 .safe-bottom-padding {
-  padding-bottom: max(env(safe-area-inset-bottom), 0.5rem);
+  padding-bottom: 0.75rem; /* Static CSS fallback */
+  padding-bottom: var(--safe-bottom);
 }
 
 .view-content-padding {
-  padding-top: calc(max(env(safe-area-inset-top), 0.75rem) + 4.75rem);
-  padding-bottom: calc(max(env(safe-area-inset-bottom), 0.5rem) + 4.75rem);
+  padding-top: 8rem; /* Static CSS fallback: guarantees content never goes under header */
+  padding-top: calc(var(--safe-top) + 5.25rem);
+  padding-bottom: 6rem; /* Static CSS fallback */
+  padding-bottom: calc(var(--safe-bottom) + 5rem);
 }
 
 /* Glassmorphism & Panel Utilities - Dark Theme Default */
