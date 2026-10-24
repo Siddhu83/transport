@@ -16,13 +16,17 @@
   --color-status-sos: #ef4444;
   --color-status-offduty: #64748b;
 
-  /* Dynamic Dynamic Theme Tokens */
+  /* Dynamic Theme Tokens */
   --color-theme-canvas: var(--color-canvas);
   --color-theme-card: var(--color-surface-card);
+  --color-theme-card-subtle: var(--color-surface-card-subtle);
   --color-theme-hover: var(--color-surface-hover);
   --color-theme-border: var(--color-border);
+  --color-theme-border-subtle: var(--color-border-subtle);
   --color-theme-main: var(--color-text-main);
   --color-theme-muted: var(--color-text-muted);
+  --color-theme-amber: var(--color-accent-amber);
+  --color-theme-amber-subtle: var(--color-accent-amber-subtle);
 }
 
 @layer base {
@@ -30,23 +34,31 @@
     --font-sans: 'Poppins', system-ui, -apple-system, sans-serif;
     --font-mono: 'JetBrains Mono', monospace;
 
-    /* Dark Mode Defaults (Obsidian Neon) */
+    /* Dark Mode Defaults (Obsidian Amber) */
     --color-canvas: #0b0f17;
-    --color-surface-card: #121824;
-    --color-surface-hover: #1b2333;
+    --color-surface-card: #121826;
+    --color-surface-card-subtle: #0f1522;
+    --color-surface-hover: #1e283d;
     --color-border: #1e293b;
+    --color-border-subtle: rgba(255, 255, 255, 0.06);
     --color-text-main: #f8fafc;
     --color-text-muted: #94a3b8;
+    --color-accent-amber: #f59e0b;
+    --color-accent-amber-subtle: rgba(245, 158, 11, 0.15);
   }
 
   [data-theme="light"] {
-    /* Light Mode Defaults (Voyager) */
-    --color-canvas: #f8fafc;
+    /* Light Mode Defaults (Voyager Clean Minimalist Slate) */
+    --color-canvas: #f4f6fb;
     --color-surface-card: #ffffff;
-    --color-surface-hover: #f1f5f9;
+    --color-surface-card-subtle: #f8fafc;
+    --color-surface-hover: #e2e8f0;
     --color-border: #e2e8f0;
+    --color-border-subtle: #edf2f7;
     --color-text-main: #0f172a;
-    --color-text-muted: #475569;
+    --color-text-muted: #64748b;
+    --color-accent-amber: #d97706;
+    --color-accent-amber-subtle: rgba(217, 119, 6, 0.12);
   }
 
   body {
@@ -65,39 +77,54 @@
   }
 }
 
+/* Safe Area & Fullscreen Notch Inset Utilities */
+.safe-top-padding {
+  padding-top: max(env(safe-area-inset-top), 0.75rem);
+}
+
+.safe-bottom-padding {
+  padding-bottom: max(env(safe-area-inset-bottom), 0.5rem);
+}
+
+.view-content-padding {
+  padding-top: calc(max(env(safe-area-inset-top), 0.75rem) + 4.75rem);
+  padding-bottom: calc(max(env(safe-area-inset-bottom), 0.5rem) + 4.75rem);
+}
+
 /* Glassmorphism & Panel Utilities - Dark Theme Default */
 .glass-panel {
-  background: rgba(18, 24, 36, 0.85);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: rgba(18, 24, 38, 0.82);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.08);
   color: #f8fafc;
-  transition: background 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+  transition: background 0.3s ease, border-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
 }
 
 .glass-panel-glow {
-  background: rgba(18, 24, 36, 0.90);
+  background: rgba(18, 24, 38, 0.90);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(0, 240, 255, 0.2);
-  box-shadow: 0 0 20px rgba(0, 240, 255, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  box-shadow: 0 0 20px rgba(245, 158, 11, 0.1);
   color: #f8fafc;
   transition: background 0.3s ease, border-color 0.3s ease, color 0.3s ease;
 }
 
 /* Light Theme Glassmorphism Overrides */
 [data-theme="light"] .glass-panel {
-  background: rgba(255, 255, 255, 0.88);
-  border: 1px solid rgba(0, 0, 0, 0.1);
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(226, 232, 240, 0.85);
   color: #0f172a;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.06), 0 4px 6px -2px rgba(0, 0, 0, 0.03);
 }
 
 [data-theme="light"] .glass-panel-glow {
-  background: rgba(255, 255, 255, 0.95);
-  border: 1px solid rgba(0, 180, 216, 0.3);
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(217, 119, 6, 0.3);
   color: #0f172a;
-  box-shadow: 0 4px 20px rgba(0, 180, 216, 0.12);
+  box-shadow: 0 8px 25px rgba(217, 119, 6, 0.12);
 }
 
 /* MapLibre Controls Override: Repositioned away from footer & styled in sleek glassmorphism */
