@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { VehicleFeatureProperties } from '../components/map/FleetCanvas';
+import { VehicleFeatureProperties } from '../components/map/FleetCanvas.js';
 import { ENDPOINTS } from '../config/api.js';
 
 export type StreamConnectionStatus = 'CONNECTING' | 'CONNECTED' | 'RECONNECTING' | 'OFFLINE';
