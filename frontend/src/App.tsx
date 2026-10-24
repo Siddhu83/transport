@@ -172,6 +172,7 @@ export const App: React.FC = () => {
         latencyMs={latencyMs}
         isConnected={isConnected}
         totalBusesCount={interpolatedGeoJson.features.length}
+        isFullscreen={isFullscreen}
       />
 
       {/* Search Results Dropdown List (If search query active in Home mode) */}
@@ -265,6 +266,7 @@ export const App: React.FC = () => {
         <RoutesDirectoryView
           onSelectRouteBus={handleSelectRouteBus}
           activeFeatures={interpolatedGeoJson.features}
+          isFullscreen={isFullscreen}
         />
       )}
 
