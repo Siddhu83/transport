@@ -11,6 +11,7 @@ interface MobileHeaderProps {
   latencyMs?: number | null;
   isConnected: boolean;
   totalBusesCount?: number;
+  isFullscreen?: boolean;
 }
 
 export const MobileHeader: React.FC<MobileHeaderProps> = ({
@@ -24,6 +25,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
   latencyMs,
   isConnected,
   totalBusesCount = 0,
+  isFullscreen = false,
 }) => {
   // Static time-based greeting (Zero DB fetch, zero user-name logic)
   const getGreeting = (): string => {
@@ -34,9 +36,15 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
   };
 
   const dynamicBusTitle = selectedBusName || selectedBusPlate || 'FLEET BUS';
+  const topPadding = isFullscreen
+    ? 'max(env(safe-area-inset-top, 0px), 3.25rem)'
+    : 'max(env(safe-area-inset-top, 0px), 2.75rem)';
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-30 pointer-events-none safe-top-padding px-3 sm:px-4">
+    <header
+      className="fixed top-0 left-0 right-0 z-30 pointer-events-none px-3 sm:px-4 transition-[padding] duration-200"
+      style={{ paddingTop: topPadding }}
+    >
       <div className="max-w-md mx-auto pointer-events-auto space-y-2">
         {/* State A: Home / Fleet Explorer Mode */}
         {activeTab === 'home' && (
