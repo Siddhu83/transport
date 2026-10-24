@@ -82,7 +82,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </div>
 
         {/* Section 2: Real-time Telemetry Diagnostics */}
-        <div className="glass-panel rounded-2xl p-4 border border-slate-800/80 space-y-3 shadow-lg font-mono">
+        <div className="glass-panel rounded-2xl p-4 border border-slate-800/80 space-y-3 shadow-lg">
           <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 font-sans">
             Stream Diagnostics (Hot Path)
           </h2>
@@ -134,8 +134,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
         {/* App Footer Info */}
         <div className="text-center space-y-1 pt-2">
-          <p className="text-[11px] text-slate-400 font-mono">ANITS College Transport Management System</p>
-          <p className="text-[10px] text-slate-600 font-mono">Architecture Compliant • Dual-Plane High-Throughput Engine</p>
+          <p className="text-[11px] text-slate-400">ANITS College Transport Management System</p>
+          <p className="text-[10px] text-slate-600">Architecture Compliant • Dual-Plane High-Throughput Engine</p>
         </div>
       </div>
     </div>

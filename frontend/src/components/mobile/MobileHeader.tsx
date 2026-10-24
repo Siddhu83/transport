@@ -46,7 +46,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
                 <h1 className="text-sm font-extrabold tracking-tight text-white flex items-center gap-1.5">
                   {getGreeting()}
                 </h1>
-                <p className="text-[11px] text-slate-400 font-mono mt-0.5">
+                <p className="text-[11px] text-slate-400 mt-0.5">
                   ANITS Campus Transit • <span className="text-emerald-400 font-bold">{totalBusesCount} Buses Active</span>
                 </p>
               </div>
@@ -66,13 +66,13 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
 
             {/* Minimal Search Bar (No corridor pills - clean single focus) */}
             <div className="relative">
-              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-3" />
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.25" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => onSearchChange(e.target.value)}
                 placeholder="Search bus number (e.g. 101) or corridor..."
-                className="w-full bg-slate-950/80 border border-slate-800/90 rounded-xl pl-9 pr-8 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500/60 transition-colors"
+                className="w-full bg-slate-950/80 border border-slate-800/90 rounded-xl pl-9 pr-2 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500/60 transition-colors"
               />
               {searchQuery && (
                 <button
@@ -108,7 +108,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
                   {selectedRouteName}
                 </p>
               ) : (
-                <p className="text-[10px] text-slate-400 font-mono">Live Tracking</p>
+                <p className="text-[10px] text-slate-400">Live Tracking</p>
               )}
             </div>
 

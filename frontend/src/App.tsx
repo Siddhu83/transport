@@ -184,7 +184,7 @@ export const App: React.FC = () => {
               );
             })
           ) : (
-            <div className="p-4 text-center text-xs text-slate-400 font-mono">
+            <div className="p-4 text-center text-xs text-slate-400">
               No active buses matching "{searchQuery}"
             </div>
           )}
