@@ -61,7 +61,7 @@ export const RoutesDirectoryView: React.FC<RoutesDirectoryViewProps> = ({
 }) => {
   return (
     <div className="fixed inset-0 z-20 view-content-padding px-4 overflow-y-auto bg-theme-canvas/95 backdrop-blur-xl">
-      <div className="max-w-md mx-auto space-y-3 pb-6">
+      <div className="max-w-md mx-auto space-y-3 pb-6 pt-2">
         <div className="flex items-center justify-between text-xs px-1">
           <span className="font-bold text-theme-main uppercase tracking-wider flex items-center gap-1.5">
             <RouteIcon className="w-4 h-4 text-amber-500 dark:text-amber-400" />
