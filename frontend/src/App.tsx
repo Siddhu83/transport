@@ -131,7 +131,7 @@ export const App: React.FC = () => {
   };
 
   return (
-    <div className="relative w-screen h-screen overflow-hidden select-none bg-[#090d16] text-slate-100 font-sans">
+    <div className="relative w-screen h-screen overflow-hidden select-none bg-theme-canvas text-theme-main font-sans">
       {/* 1. Mobile Header (Dynamic Search / Greeting / In-Ride Mode) */}
       <MobileHeader
         activeTab={activeTab}
@@ -154,7 +154,7 @@ export const App: React.FC = () => {
 
       {/* Search Results Dropdown List (If search query active in Home mode) */}
       {activeTab === 'home' && searchQuery.trim() && (
-        <div className="fixed top-28 left-4 right-4 z-40 max-w-md mx-auto bg-slate-900/95 border border-slate-800 rounded-2xl p-2 shadow-2xl backdrop-blur-xl space-y-1 max-h-60 overflow-y-auto animate-fade-in">
+        <div className="fixed top-32 left-4 right-4 z-40 max-w-md mx-auto glass-panel border border-theme-border rounded-2xl p-2 shadow-2xl backdrop-blur-xl space-y-1 max-h-60 overflow-y-auto animate-fade-in">
           {filteredVehicles.length > 0 ? (
             filteredVehicles.map((f) => {
               const p = f.properties;
@@ -162,29 +162,29 @@ export const App: React.FC = () => {
                 <button
                   key={p.busId}
                   onClick={() => handleSelectBus(p as VehicleFeatureProperties)}
-                  className="w-full text-left p-2.5 rounded-xl hover:bg-slate-800 flex items-center justify-between text-xs transition-colors"
+                  className="w-full text-left p-2.5 rounded-xl hover:bg-theme-hover flex items-center justify-between text-xs transition-colors"
                 >
                   <div className="flex items-center gap-2">
-                    <div className="p-1.5 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                    <div className="p-1.5 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
                       <Bus className="w-3.5 h-3.5" />
                     </div>
                     <div>
-                      <span className="font-extrabold text-white block">
+                      <span className="font-extrabold text-theme-main block">
                         {p.plateNumber || `BUS-${p.busId.slice(0, 4)}`}
                       </span>
-                      <span className="text-[10px] text-slate-400">
+                      <span className="text-[10px] text-theme-muted">
                         {p.routeName || 'Campus Corridor'}
                       </span>
                     </div>
                   </div>
-                  <span className="text-[10px] font-mono text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded">
+                  <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded">
                     {p.speed || 35} km/h
                   </span>
                 </button>
               );
             })
           ) : (
-            <div className="p-4 text-center text-xs text-slate-400">
+            <div className="p-4 text-center text-xs text-theme-muted">
               No active buses matching "{searchQuery}"
             </div>
           )}
@@ -208,16 +208,19 @@ export const App: React.FC = () => {
       {/* Floating Recenter Button (FlightRadar24 / Uber Style) */}
       {activeTab !== 'routes' && activeTab !== 'settings' && (
         <div
-          className={`fixed right-4 z-20 transition-all duration-300 ${
-            selectedVehicleProps && activeTab === 'mybus' ? 'bottom-52' : 'bottom-20'
-          }`}
+          className="fixed right-4 z-20 transition-all duration-300"
+          style={{
+            bottom: selectedVehicleProps && activeTab === 'mybus'
+              ? 'calc(max(env(safe-area-inset-bottom), 0.5rem) + 14rem)'
+              : 'calc(max(env(safe-area-inset-bottom), 0.5rem) + 5rem)'
+          }}
         >
           <button
             onClick={() => setRecenterTrigger((prev) => prev + 1)}
             title="Recenter Camera on Bus"
-            className="flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-slate-900/90 hover:bg-slate-800 text-slate-200 hover:text-white border border-slate-700/80 shadow-xl backdrop-blur-md text-xs font-mono font-bold transition-all active:scale-95 cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-2xl glass-panel hover:bg-theme-hover text-theme-main border border-theme-border shadow-xl backdrop-blur-md text-xs font-mono font-bold transition-all active:scale-95 cursor-pointer"
           >
-            <RotateCcw className="w-3.5 h-3.5 text-amber-400" />
+            <RotateCcw className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400" />
             <span className="text-[11px]">Recenter</span>
           </button>
         </div>
