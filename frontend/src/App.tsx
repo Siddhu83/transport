@@ -33,19 +33,41 @@ export const App: React.FC = () => {
     setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
   };
 
+  // Fullscreen Synchronizer (Handles Esc key, back gesture, and programmatic toggles)
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      const active = Boolean(document.fullscreenElement);
+      setIsFullscreen(active);
+      document.documentElement.setAttribute('data-fullscreen', active ? 'true' : 'false');
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+    };
+  }, []);
+
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().then(() => setIsFullscreen(true)).catch(() => {});
+      document.documentElement
+        .requestFullscreen()
+        .then(() => {
+          setIsFullscreen(true);
+          document.documentElement.setAttribute('data-fullscreen', 'true');
+        })
+        .catch(() => {});
     } else {
       if (document.exitFullscreen) {
-        document.exitFullscreen().then(() => setIsFullscreen(false)).catch(() => {});
+        document.exitFullscreen()
+          .then(() => {
+            setIsFullscreen(false);
+            document.documentElement.setAttribute('data-fullscreen', 'false');
+          })
+          .catch(() => {});
       }
     }
   };
-
-  useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-  }, [theme]);
 
   // 1. Hook: Manage Fastify Server-Sent Events (SSE) telemetry connection
   const { geoJsonData: rawGeoJson, status: streamStatus, latencyMs, isConnected } = useTelemetryStream();
@@ -154,7 +176,10 @@ export const App: React.FC = () => {
 
       {/* Search Results Dropdown List (If search query active in Home mode) */}
       {activeTab === 'home' && searchQuery.trim() && (
-        <div className="fixed top-32 left-4 right-4 z-40 max-w-md mx-auto glass-panel border border-theme-border rounded-2xl p-2 shadow-2xl backdrop-blur-xl space-y-1 max-h-60 overflow-y-auto animate-fade-in">
+        <div
+          className="fixed left-4 right-4 z-40 max-w-md mx-auto glass-panel border border-theme-border rounded-2xl p-2 shadow-2xl backdrop-blur-xl space-y-1 max-h-60 overflow-y-auto animate-fade-in"
+          style={{ top: 'calc(var(--safe-top) + 8.5rem)' }}
+        >
           {filteredVehicles.length > 0 ? (
             filteredVehicles.map((f) => {
               const p = f.properties;
