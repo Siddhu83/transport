@@ -22,7 +22,7 @@ export const MobileNavBar: React.FC<MobileNavBarProps> = ({
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 bg-[#070b12]/95 backdrop-blur-2xl border-t border-slate-800/90 px-3 py-2 select-none shadow-[0_-8px_30px_rgba(0,0,0,0.6)]">
+    <nav className="fixed bottom-0 left-0 right-0 z-40 bg-theme-card/95 backdrop-blur-2xl border-t border-theme-border px-3 pt-2 safe-bottom-padding select-none shadow-[0_-8px_30px_rgba(0,0,0,0.06)] dark:shadow-[0_-8px_30px_rgba(0,0,0,0.6)]">
       <div className="max-w-md mx-auto grid grid-cols-4 gap-2">
         {tabs.map((tab) => {
           const Icon = tab.icon;
@@ -34,8 +34,8 @@ export const MobileNavBar: React.FC<MobileNavBarProps> = ({
               onClick={() => onTabChange(tab.id)}
               className={`relative flex flex-col items-center justify-center py-2 px-1 rounded-2xl transition-all duration-200 cursor-pointer active:scale-95 ${
                 isActive
-                  ? 'bg-gradient-to-b from-amber-500/20 via-amber-500/10 to-transparent border border-amber-500/40 text-amber-400 shadow-[0_0_20px_rgba(245,158,11,0.18)]'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
+                  ? 'bg-gradient-to-b from-amber-500/20 via-amber-500/10 to-transparent border border-amber-500/40 text-amber-500 dark:text-amber-400 shadow-[0_0_20px_rgba(245,158,11,0.18)]'
+                  : 'text-theme-muted hover:text-theme-main hover:bg-theme-hover'
               }`}
               style={{ minHeight: '52px' }}
               aria-current={isActive ? 'page' : undefined}
@@ -43,7 +43,7 @@ export const MobileNavBar: React.FC<MobileNavBarProps> = ({
               {/* Luminous Top Glow Bar on Active Tab */}
               {isActive && (
                 <div className="absolute -top-2 left-1/2 -translate-x-1/2 flex flex-col items-center">
-                  <span className="w-8 h-1 bg-gradient-to-r from-amber-500 via-amber-300 to-amber-500 rounded-full shadow-[0_0_12px_#f59e0b]" />
+                  <span className="w-8 h-1 bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 rounded-full shadow-[0_0_12px_#f59e0b]" />
                 </div>
               )}
 
@@ -52,8 +52,8 @@ export const MobileNavBar: React.FC<MobileNavBarProps> = ({
                 <Icon
                   className={`w-4 h-4 transition-transform duration-200 ${
                     isActive
-                      ? 'text-amber-400 scale-115 stroke-[2.5]'
-                      : 'text-slate-400 stroke-[1.8]'
+                      ? 'text-amber-500 dark:text-amber-400 scale-115 stroke-[2.5]'
+                      : 'text-theme-muted stroke-[1.8]'
                   }`}
                 />
 
@@ -70,8 +70,8 @@ export const MobileNavBar: React.FC<MobileNavBarProps> = ({
               <span
                 className={`text-[10px] tracking-tight mt-1 transition-colors ${
                   isActive
-                    ? 'text-amber-300 font-extrabold'
-                    : 'text-slate-400 font-medium'
+                    ? 'text-amber-600 dark:text-amber-300 font-extrabold'
+                    : 'text-theme-muted font-medium'
                 }`}
               >
                 {tab.label}
