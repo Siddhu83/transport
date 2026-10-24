@@ -31,7 +31,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 }) => {
   return (
     <div className="fixed inset-0 z-20 view-content-padding px-4 overflow-y-auto bg-theme-canvas/95 backdrop-blur-xl">
-      <div className="max-w-md mx-auto space-y-4 pb-6">
+      <div className="max-w-md mx-auto space-y-4 pb-6 pt-2">
         {/* Section 1: Appearance & Display */}
         <div className="glass-panel rounded-2xl p-4 border border-theme-border space-y-3 shadow-lg">
           <h2 className="text-xs font-bold uppercase tracking-wider text-theme-muted">
