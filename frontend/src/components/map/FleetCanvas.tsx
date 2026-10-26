@@ -96,7 +96,7 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
       });
     }
 
-    const activeLocation = userLocationRef.current || userLocation;
+    const activeLocation = userLocationRef.current || userLocation || getCachedUserCoords();
 
     // 2. User Location GeoJSON Source
     if (!map.getSource('user-location-source')) {
@@ -125,7 +125,7 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
         source: 'user-location-source',
         paint: {
           'circle-radius': 18,
-          'circle-color': '#facc15',
+          'circle-color': '#fdb063ff',
           'circle-opacity': 0.3,
           'circle-blur': 0.6,
         },
@@ -139,10 +139,10 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
         type: 'circle',
         source: 'user-location-source',
         paint: {
-          'circle-radius': 5,
-          'circle-color': '#facc15',
-          'circle-stroke-width': 0.5,
-          'circle-stroke-color': '#ffffff',
+          'circle-radius': 6,
+          'circle-color': '#ee7e15ff',
+          'circle-stroke-width': 1.5,
+          'circle-stroke-color': '#ffffffff',
         },
       });
     }
@@ -156,7 +156,7 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
         layout: {
           'text-field': 'You',
           'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
-          'text-size': 11,
+          'text-size': 10,
           'text-offset': [0, 1.4],
           'text-anchor': 'top',
         },
@@ -331,39 +331,49 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
 
     const targetStyle = theme === 'dark' ? DARK_MATTER_STYLE : VOYAGER_STYLE;
 
-    const handleStyleLoad = () => {
-      if (mapRef.current) {
-        attachMapLayers(mapRef.current, theme);
-        const source = mapRef.current.getSource('buses-source') as maplibregl.GeoJSONSource;
-        if (source && geoJsonData) {
-          source.setData(geoJsonData);
-        }
+    let rehydrated = false;
+    const rehydrate = () => {
+      if (!mapRef.current || rehydrated) return;
+      if (!mapRef.current.isStyleLoaded()) return;
+      rehydrated = true;
 
-        const activeCoords = userLocationRef.current || userLocation;
-        if (activeCoords) {
-          const userSource = mapRef.current.getSource('user-location-source') as maplibregl.GeoJSONSource;
-          if (userSource) {
-            userSource.setData({
-              type: 'FeatureCollection',
-              features: [
-                {
-                  type: 'Feature',
-                  geometry: {
-                    type: 'Point',
-                    coordinates: activeCoords,
-                  },
-                  properties: {},
+      attachMapLayers(mapRef.current, theme);
+      const source = mapRef.current.getSource('buses-source') as maplibregl.GeoJSONSource;
+      if (source && geoJsonData) {
+        source.setData(geoJsonData);
+      }
+
+      const activeCoords = userLocationRef.current || userLocation || getCachedUserCoords();
+      if (activeCoords) {
+        const userSource = mapRef.current.getSource('user-location-source') as maplibregl.GeoJSONSource;
+        if (userSource) {
+          userSource.setData({
+            type: 'FeatureCollection',
+            features: [
+              {
+                type: 'Feature',
+                geometry: {
+                  type: 'Point',
+                  coordinates: activeCoords,
                 },
-              ],
-            });
-          }
+                properties: {},
+              },
+            ],
+          });
         }
       }
     };
 
-    mapRef.current.once('style.load', handleStyleLoad);
-    mapRef.current.setStyle(targetStyle);
+    mapRef.current.once('style.load', rehydrate);
+    mapRef.current.on('styledata', rehydrate);
+    mapRef.current.setStyle(targetStyle, { diff: false });
 
+    return () => {
+      if (mapRef.current) {
+        mapRef.current.off('style.load', rehydrate);
+        mapRef.current.off('styledata', rehydrate);
+      }
+    };
   }, [theme]);
 
   // HTML5 Client-Side Geolocation Handler
@@ -431,9 +441,11 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
     }
   }, [geoJsonData, isLoaded]);
 
-  // Sync user location source when userLocation state updates
+  // Sync user location source when userLocation state updates or theme switches
   useEffect(() => {
-    if (!mapRef.current || !isLoaded || !userLocation) return;
+    if (!mapRef.current || !isLoaded) return;
+    const activeCoords = userLocation || userLocationRef.current || getCachedUserCoords();
+    if (!activeCoords) return;
     const userSource = mapRef.current.getSource('user-location-source') as maplibregl.GeoJSONSource;
     if (userSource) {
       userSource.setData({
@@ -443,14 +455,14 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
             type: 'Feature',
             geometry: {
               type: 'Point',
-              coordinates: userLocation,
+              coordinates: activeCoords,
             },
             properties: {},
           },
         ],
       });
     }
-  }, [userLocation, isLoaded]);
+  }, [userLocation, isLoaded, theme]);
 
   // Update selection highlight dynamically
   useEffect(() => {
