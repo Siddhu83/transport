@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
-import { AlertCircle, Locate } from 'lucide-react';
+import { AlertCircle, Locate, Plus, Minus, RotateCcw } from 'lucide-react';
 import { ThinkingOrb } from 'thinking-orbs';
 import { FleetDropdown } from './FleetDropdown';
 
@@ -28,12 +28,27 @@ export interface FleetCanvasProps {
   streamStatus?: string;
   theme?: 'dark' | 'light';
   hideDropdown?: boolean;
+  hideControls?: boolean;
   recenterTrigger?: number;
+  onRecenter?: () => void;
 }
 
 // ANITS Campus Tagarapuvalasa / Visakhapatnam Default Center
 const DEFAULT_CENTER: [number, number] = [83.4215, 17.9045];
 const DEFAULT_ZOOM = 13;
+
+const getCachedCenter = (): [number, number] => {
+  try {
+    const saved = localStorage.getItem('ats_last_coords');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed) && parsed.length === 2 && typeof parsed[0] === 'number') {
+        return parsed as [number, number];
+      }
+    }
+  } catch {}
+  return DEFAULT_CENTER;
+};
 
 const DARK_MATTER_STYLE = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
 const VOYAGER_STYLE = 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json';
@@ -42,11 +57,13 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
   geoJsonData,
   onVehicleSelect,
   selectedBusId,
-  center = DEFAULT_CENTER,
+  center = getCachedCenter(),
   zoom = DEFAULT_ZOOM,
   theme = 'dark',
   hideDropdown = false,
+  hideControls = false,
   recenterTrigger,
+  onRecenter,
 }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
@@ -259,8 +276,7 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
         attributionControl: false,
       });
 
-      // Add compact navigation controls (positioned away from mobile bottom sheet & footer)
-      map.addControl(new maplibregl.NavigationControl({ showCompass: true }), 'top-right');
+      // Compact attribution control
       map.addControl(
         new maplibregl.AttributionControl({
           compact: true,
@@ -274,8 +290,8 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
         mapRef.current = map;
         setIsLoaded(true);
 
-        // Auto-request HTML5 Geolocation on initial map load
-        detectUserLocation(map, false);
+        // Auto-request HTML5 Geolocation on initial map load & fly to user coordinates
+        detectUserLocation(map, true);
       });
 
       map.on('error', (e) => {
@@ -328,6 +344,9 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
         const coords: [number, number] = [longitude, latitude];
         setUserLocation(coords);
         setIsLocating(false);
+        try {
+          localStorage.setItem('ats_last_coords', JSON.stringify(coords));
+        } catch {}
 
         if (targetMap) {
           const userSource = targetMap.getSource('user-location-source') as maplibregl.GeoJSONSource;
@@ -438,6 +457,46 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
     detectUserLocation(mapRef.current, true);
   };
 
+  const handleRecenterClick = () => {
+    if (onRecenter) {
+      onRecenter();
+      return;
+    }
+    if (selectedBusId && geoJsonData) {
+      const selectedFeature = geoJsonData.features.find(
+        (f) => f.properties.busId === selectedBusId
+      );
+      if (selectedFeature && selectedFeature.geometry.type === 'Point' && mapRef.current) {
+        mapRef.current.flyTo({
+          center: selectedFeature.geometry.coordinates as [number, number],
+          zoom: 15.5,
+          pitch: 35,
+          bearing: selectedFeature.properties.heading || 0,
+          speed: 1.2,
+          curve: 1.4,
+          essential: true,
+        });
+        return;
+      }
+    }
+    if (userLocation && mapRef.current) {
+      mapRef.current.flyTo({
+        center: userLocation,
+        zoom: 14.5,
+        pitch: 25,
+        speed: 1.2,
+      });
+    } else if (mapRef.current) {
+      mapRef.current.flyTo({
+        center: DEFAULT_CENTER,
+        zoom: DEFAULT_ZOOM,
+        pitch: 30,
+        bearing: 0,
+        speed: 1.2,
+      });
+    }
+  };
+
   return (
     <div className="relative w-full h-full min-h-[500px] overflow-hidden bg-theme-canvas">
       {/* Map Container */}
@@ -482,22 +541,59 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
         </div>
       )}
 
-      {/* Map Quick Action Floating Controls */}
-      <div className="absolute top-4 right-4 z-10 flex flex-col gap-2 pointer-events-auto font-mono">
-        <button
-          onClick={handleLocateClick}
-          title="Center on My Location (Student GPS)"
-          className={`glass-panel p-3 rounded-xl transition-all cursor-pointer shadow-xl border border-theme-border ${
-            isLocating
-              ? 'text-brand-primary animate-spin border-brand-primary/50'
-              : userLocation
-              ? 'text-brand-primary border-brand-primary/40 bg-brand-primary/10'
-              : 'text-theme-muted hover:text-brand-primary hover:bg-theme-hover'
-          }`}
+      {/* Floating Map Action Controls Stack (Repositioned away from Header & Nav) */}
+      {!hideControls && (
+        <div
+          className="fixed right-3.5 z-20 flex flex-col items-center gap-2 pointer-events-auto select-none transition-all duration-300"
+          style={{
+            bottom: selectedBusId
+              ? 'calc(max(env(safe-area-inset-bottom, 0px), 0.5rem) + 14.5rem)'
+              : 'calc(max(env(safe-area-inset-bottom, 0px), 0.5rem) + 5rem)',
+          }}
         >
-          <Locate className="w-4 h-4" />
-        </button>
-      </div>
+          {/* Recenter Button */}
+          <button
+            onClick={handleRecenterClick}
+            title={selectedBusId ? 'Recenter on Selected Bus' : 'Recenter Map'}
+            className="flex items-center justify-center w-10 h-10 rounded-2xl glass-panel text-theme-main hover:text-amber-500 hover:bg-theme-hover border border-theme-border shadow-lg backdrop-blur-xl transition-all active:scale-95 cursor-pointer"
+          >
+            <RotateCcw className="w-4 h-4 text-amber-500 dark:text-amber-400" />
+          </button>
+
+          {/* GPS Locate Button */}
+          <button
+            onClick={handleLocateClick}
+            title="Center on My Location (GPS)"
+            className={`flex items-center justify-center w-10 h-10 rounded-2xl glass-panel transition-all active:scale-95 cursor-pointer shadow-lg backdrop-blur-xl border border-theme-border ${
+              isLocating
+                ? 'text-amber-500 animate-spin border-amber-500/50'
+                : userLocation
+                ? 'text-amber-500 border-amber-500/40 bg-amber-500/10'
+                : 'text-theme-muted hover:text-amber-500 hover:bg-theme-hover'
+            }`}
+          >
+            <Locate className="w-4 h-4" />
+          </button>
+
+          {/* Zoom In & Out Pill */}
+          <div className="flex flex-col rounded-2xl glass-panel border border-theme-border shadow-lg backdrop-blur-xl overflow-hidden divide-y divide-theme-border/60">
+            <button
+              onClick={() => mapRef.current?.zoomIn({ duration: 250 })}
+              title="Zoom In"
+              className="flex items-center justify-center w-10 h-9 text-theme-muted hover:text-theme-main hover:bg-theme-hover transition-all active:scale-95 cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => mapRef.current?.zoomOut({ duration: 250 })}
+              title="Zoom Out"
+              className="flex items-center justify-center w-10 h-9 text-theme-muted hover:text-theme-main hover:bg-theme-hover transition-all active:scale-95 cursor-pointer"
+            >
+              <Minus className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
