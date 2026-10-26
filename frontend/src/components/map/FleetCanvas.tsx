@@ -50,6 +50,19 @@ const getCachedCenter = (): [number, number] => {
   return DEFAULT_CENTER;
 };
 
+const getCachedUserCoords = (): [number, number] | null => {
+  try {
+    const saved = localStorage.getItem('ats_last_coords');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed) && parsed.length === 2 && typeof parsed[0] === 'number') {
+        return parsed as [number, number];
+      }
+    }
+  } catch {}
+  return null;
+};
+
 const DARK_MATTER_STYLE = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
 const VOYAGER_STYLE = 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json';
 
@@ -69,7 +82,8 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
   const mapRef = useRef<maplibregl.Map | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
-  const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
+  const [userLocation, setUserLocation] = useState<[number, number] | null>(getCachedUserCoords);
+  const userLocationRef = useRef<[number, number] | null>(userLocation);
   const [isLocating, setIsLocating] = useState<boolean>(false);
 
   // Helper to attach WebGL sources & layers onto map style load
@@ -82,17 +96,19 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
       });
     }
 
+    const activeLocation = userLocationRef.current || userLocation;
+
     // 2. User Location GeoJSON Source
     if (!map.getSource('user-location-source')) {
       map.addSource('user-location-source', {
         type: 'geojson',
         data: {
           type: 'FeatureCollection',
-          features: userLocation
+          features: activeLocation
             ? [
                 {
                   type: 'Feature',
-                  geometry: { type: 'Point', coordinates: userLocation },
+                  geometry: { type: 'Point', coordinates: activeLocation },
                   properties: {},
                 },
               ]
@@ -123,9 +139,9 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
         type: 'circle',
         source: 'user-location-source',
         paint: {
-          'circle-radius': 7,
+          'circle-radius': 5,
           'circle-color': '#facc15',
-          'circle-stroke-width': 2.5,
+          'circle-stroke-width': 0.5,
           'circle-stroke-color': '#ffffff',
         },
       });
@@ -138,7 +154,7 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
         type: 'symbol',
         source: 'user-location-source',
         layout: {
-          'text-field': 'You (Student)',
+          'text-field': 'You',
           'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
           'text-size': 11,
           'text-offset': [0, 1.4],
@@ -322,6 +338,26 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
         if (source && geoJsonData) {
           source.setData(geoJsonData);
         }
+
+        const activeCoords = userLocationRef.current || userLocation;
+        if (activeCoords) {
+          const userSource = mapRef.current.getSource('user-location-source') as maplibregl.GeoJSONSource;
+          if (userSource) {
+            userSource.setData({
+              type: 'FeatureCollection',
+              features: [
+                {
+                  type: 'Feature',
+                  geometry: {
+                    type: 'Point',
+                    coordinates: activeCoords,
+                  },
+                  properties: {},
+                },
+              ],
+            });
+          }
+        }
       }
     };
 
@@ -342,6 +378,7 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
       (position) => {
         const { longitude, latitude } = position.coords;
         const coords: [number, number] = [longitude, latitude];
+        userLocationRef.current = coords;
         setUserLocation(coords);
         setIsLocating(false);
         try {
@@ -393,6 +430,27 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
       source.setData(geoJsonData);
     }
   }, [geoJsonData, isLoaded]);
+
+  // Sync user location source when userLocation state updates
+  useEffect(() => {
+    if (!mapRef.current || !isLoaded || !userLocation) return;
+    const userSource = mapRef.current.getSource('user-location-source') as maplibregl.GeoJSONSource;
+    if (userSource) {
+      userSource.setData({
+        type: 'FeatureCollection',
+        features: [
+          {
+            type: 'Feature',
+            geometry: {
+              type: 'Point',
+              coordinates: userLocation,
+            },
+            properties: {},
+          },
+        ],
+      });
+    }
+  }, [userLocation, isLoaded]);
 
   // Update selection highlight dynamically
   useEffect(() => {
