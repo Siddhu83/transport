@@ -1,7 +1,7 @@
 import { Radio, ArrowLeft, Search, X, Bus } from 'lucide-react';
 
 interface MobileHeaderProps {
-  activeTab: 'home' | 'mybus' | 'routes' | 'settings';
+  activeTab: 'home' | 'mybus' | 'settings';
   searchQuery: string;
   onSearchChange: (query: string) => void;
   onBackToHome: () => void;
@@ -133,20 +133,6 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
           </div>
         )}
 
-        {/* State C: Routes Directory Header */}
-        {activeTab === 'routes' && (
-          <div className="glass-panel rounded-2xl px-4 py-3 shadow-xl border border-theme-border flex items-center justify-between">
-            <div>
-              <h1 className="text-xs font-black tracking-wider uppercase text-theme-main">
-                Transit Corridors
-              </h1>
-              <p className="text-[10px] text-theme-muted">Campus Express Route Network</p>
-            </div>
-            <span className="text-[10px] font-mono font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded-md">
-              4 Corridors
-            </span>
-          </div>
-        )}
 
         {/* State D: Settings Header */}
         {activeTab === 'settings' && (

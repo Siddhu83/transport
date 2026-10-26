@@ -6,7 +6,6 @@ import { useFleetInterpolation } from './hooks/useFleetInterpolation';
 import { MobileHeader } from './components/mobile/MobileHeader';
 import { RideStatusSheet } from './components/mobile/RideStatusSheet';
 import { MobileNavBar, NavTab } from './components/mobile/MobileNavBar';
-import { RoutesDirectoryView } from './components/mobile/RoutesDirectoryView';
 import { SettingsView } from './components/mobile/SettingsView';
 import { Bus } from 'lucide-react';
 
@@ -16,7 +15,6 @@ export const App: React.FC = () => {
 
   // Derive active tab from URL path
   const getTabFromPath = (pathname: string): NavTab => {
-    if (pathname.startsWith('/routes')) return 'routes';
     if (pathname.startsWith('/settings')) return 'settings';
     if (pathname.startsWith('/mybus')) return 'mybus';
     return 'home';
@@ -138,22 +136,8 @@ export const App: React.FC = () => {
         }
       }
       navigate('/mybus');
-    } else if (tab === 'routes') {
-      navigate('/routes');
     } else if (tab === 'settings') {
       navigate('/settings');
-    }
-  };
-
-  // Handler: Selecting a corridor from the Routes view
-  const handleSelectRouteBus = (routeId: string) => {
-    const matchingFeature = interpolatedGeoJson.features.find(
-      (f) => f.properties.routeId === routeId
-    );
-    if (matchingFeature) {
-      handleSelectBus(matchingFeature.properties as VehicleFeatureProperties);
-    } else if (interpolatedGeoJson.features.length > 0) {
-      handleSelectBus(interpolatedGeoJson.features[0]?.properties as VehicleFeatureProperties);
     }
   };
 
@@ -240,7 +224,7 @@ export const App: React.FC = () => {
           streamStatus={streamStatus}
           theme={theme}
           hideDropdown={true} // Clean mobile canvas without desktop dropdowns
-          hideControls={activeTab === 'routes' || activeTab === 'settings'}
+          hideControls={activeTab === 'settings'}
           recenterTrigger={recenterTrigger}
           onRecenter={() => setRecenterTrigger((prev) => prev + 1)}
         />
@@ -255,16 +239,7 @@ export const App: React.FC = () => {
         />
       )}
 
-      {/* 4. Routes Directory View (When Routes Tab Active) */}
-      {activeTab === 'routes' && (
-        <RoutesDirectoryView
-          onSelectRouteBus={handleSelectRouteBus}
-          activeFeatures={interpolatedGeoJson.features}
-          isFullscreen={isFullscreen}
-        />
-      )}
-
-      {/* 5. Settings & Preferences View (When Settings Tab Active) */}
+      {/* 4. Settings & Preferences View (When Settings Tab Active) */}
       {activeTab === 'settings' && (
         <SettingsView
           theme={theme}

@@ -1,7 +1,7 @@
 import React from 'react';
-import { Home, Bus, MapPin, Settings } from 'lucide-react';
+import { Home, Bus, Settings } from 'lucide-react';
 
-export type NavTab = 'home' | 'mybus' | 'routes' | 'settings';
+export type NavTab = 'home' | 'mybus' | 'settings';
 
 interface MobileNavBarProps {
   activeTab: NavTab;
@@ -17,7 +17,6 @@ export const MobileNavBar: React.FC<MobileNavBarProps> = ({
   const tabs = [
     { id: 'home' as const, label: 'Home', icon: Home },
     { id: 'mybus' as const, label: 'My Bus', icon: Bus, badge: hasActiveBus },
-    { id: 'routes' as const, label: 'Routes', icon: MapPin },
     { id: 'settings' as const, label: 'Settings', icon: Settings },
   ];
 
@@ -26,7 +25,7 @@ export const MobileNavBar: React.FC<MobileNavBarProps> = ({
       className="fixed bottom-0 left-0 right-0 z-40 bg-theme-card/95 backdrop-blur-2xl border-t border-theme-border px-3 pt-2 select-none shadow-[0_-2px_10px_rgba(0,0,0,0.03)] dark:shadow-[0_-2px_12px_rgba(0,0,0,0.22)]"
       style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 0.4rem)' }}
     >
-      <div className="max-w-md mx-auto grid grid-cols-4 gap-2">
+      <div className="max-w-md mx-auto grid grid-cols-3 gap-2">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
