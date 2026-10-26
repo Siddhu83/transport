@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { FleetCanvas, VehicleFeatureProperties } from './components/map/FleetCanvas';
 import { useTelemetryStream } from './hooks/useTelemetryStream';
 import { useFleetInterpolation } from './hooks/useFleetInterpolation';
@@ -7,11 +8,21 @@ import { RideStatusSheet } from './components/mobile/RideStatusSheet';
 import { MobileNavBar, NavTab } from './components/mobile/MobileNavBar';
 import { RoutesDirectoryView } from './components/mobile/RoutesDirectoryView';
 import { SettingsView } from './components/mobile/SettingsView';
-import { RotateCcw, Bus } from 'lucide-react';
+import { Bus } from 'lucide-react';
 
 export const App: React.FC = () => {
-  // Navigation & Screen Mode State
-  const [activeTab, setActiveTab] = useState<NavTab>('home');
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // Derive active tab from URL path
+  const getTabFromPath = (pathname: string): NavTab => {
+    if (pathname.startsWith('/routes')) return 'routes';
+    if (pathname.startsWith('/settings')) return 'settings';
+    if (pathname.startsWith('/mybus')) return 'mybus';
+    return 'home';
+  };
+
+  const activeTab = getTabFromPath(location.pathname);
   const [selectedBusId, setSelectedBusId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [recenterTrigger, setRecenterTrigger] = useState<number>(0);
@@ -100,35 +111,37 @@ export const App: React.FC = () => {
   const handleSelectBus = (vehicle: VehicleFeatureProperties | null) => {
     if (!vehicle) {
       setSelectedBusId(null);
-      setActiveTab('home');
+      navigate('/');
       return;
     }
     setSelectedBusId(vehicle.busId);
     setSearchQuery('');
-    setActiveTab('mybus'); // Automatically highlights 'My Bus' tab in the footer!
+    navigate('/mybus');
   };
 
   // Handler: User clicks Back to global fleet
   const handleBackToHome = () => {
     setSelectedBusId(null);
-    setActiveTab('home'); // Footer returns to 'Home' as active tab!
+    navigate('/');
   };
 
   // Handler: Tapping footer navigation tabs
   const handleTabChange = (tab: NavTab) => {
-    setActiveTab(tab);
-
     if (tab === 'home') {
-      // Removing focus returns to global fleet map overview
       setSelectedBusId(null);
+      navigate('/');
     } else if (tab === 'mybus') {
-      // If no bus selected yet, pick the first active bus or preserve current selection
       if (!selectedBusId && interpolatedGeoJson.features.length > 0) {
         const firstBus = interpolatedGeoJson.features[0]?.properties as VehicleFeatureProperties;
         if (firstBus) {
           setSelectedBusId(firstBus.busId);
         }
       }
+      navigate('/mybus');
+    } else if (tab === 'routes') {
+      navigate('/routes');
+    } else if (tab === 'settings') {
+      navigate('/settings');
     }
   };
 
@@ -147,7 +160,7 @@ export const App: React.FC = () => {
   // Handler: Reset Preferences & State
   const handleResetPreferences = () => {
     setSelectedBusId(null);
-    setActiveTab('home');
+    navigate('/');
     setSearchQuery('');
     setRecenterTrigger((prev) => prev + 1);
   };
@@ -227,30 +240,11 @@ export const App: React.FC = () => {
           streamStatus={streamStatus}
           theme={theme}
           hideDropdown={true} // Clean mobile canvas without desktop dropdowns
+          hideControls={activeTab === 'routes' || activeTab === 'settings'}
           recenterTrigger={recenterTrigger}
+          onRecenter={() => setRecenterTrigger((prev) => prev + 1)}
         />
       </div>
-
-      {/* Floating Recenter Button (FlightRadar24 / Uber Style) */}
-      {activeTab !== 'routes' && activeTab !== 'settings' && (
-        <div
-          className="fixed right-4 z-20 transition-all duration-300"
-          style={{
-            bottom: selectedVehicleProps && activeTab === 'mybus'
-              ? 'calc(max(env(safe-area-inset-bottom), 0.5rem) + 14rem)'
-              : 'calc(max(env(safe-area-inset-bottom), 0.5rem) + 5rem)'
-          }}
-        >
-          <button
-            onClick={() => setRecenterTrigger((prev) => prev + 1)}
-            title="Recenter Camera on Bus"
-            className="flex items-center gap-1.5 px-3 py-2 rounded-2xl glass-panel hover:bg-theme-hover text-theme-main border border-theme-border shadow-xl backdrop-blur-md text-xs font-mono font-bold transition-all active:scale-95 cursor-pointer"
-          >
-            <RotateCcw className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400" />
-            <span className="text-[11px]">Recenter</span>
-          </button>
-        </div>
-      )}
 
       {/* 3. Multi-Snap Bottom Sheet (Active Ride Focus / My Bus Tab) */}
       {selectedVehicleProps && activeTab === 'mybus' && (
