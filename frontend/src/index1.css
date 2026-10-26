@@ -154,14 +154,7 @@ html[data-fullscreen="true"] {
   box-shadow: 0 8px 25px rgba(217, 119, 6, 0.12);
 }
 
-/* MapLibre Controls Override: Repositioned away from footer & styled in sleek glassmorphism */
-.maplibregl-ctrl-top-right {
-  top: 82px !important;
-  right: 14px !important;
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 8px !important;
-}
+/* MapLibre Controls Override: Styled in sleek glassmorphism */
 
 .maplibregl-ctrl-group {
   background: rgba(15, 23, 42, 0.9) !important;
