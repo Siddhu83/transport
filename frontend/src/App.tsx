@@ -7,7 +7,7 @@ import { MobileHeader } from './components/mobile/MobileHeader';
 import { RideStatusSheet } from './components/mobile/RideStatusSheet';
 import { MobileNavBar, NavTab } from './components/mobile/MobileNavBar';
 import { SettingsView } from './components/mobile/SettingsView';
-import { Bus } from 'lucide-react';
+import { Bus, AlertCircle, X } from 'lucide-react';
 
 export const App: React.FC = () => {
   const location = useLocation();
@@ -25,6 +25,7 @@ export const App: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [recenterTrigger, setRecenterTrigger] = useState<number>(0);
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
+  const [locationNotice, setLocationNotice] = useState<string | null>(null);
 
   // Theme Management (Default Dark Obsidian)
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
@@ -172,6 +173,28 @@ export const App: React.FC = () => {
         isFullscreen={isFullscreen}
       />
 
+      {/* Floating Location / Warning Toast Notification (Glassmorphism & z-50 forward) */}
+      {locationNotice && (
+        <div
+          className="fixed left-3.5 right-3.5 max-w-md mx-auto z-50 p-3.5 rounded-2xl border border-amber-500/40 bg-theme-card/90 dark:bg-amber-950/70 backdrop-blur-2xl shadow-[0_8px_30px_rgba(245,158,11,0.2)] flex items-center gap-3 text-amber-500 dark:text-amber-400 select-none animate-in fade-in slide-in-from-top-3 duration-200"
+          style={{ top: 'calc(max(env(safe-area-inset-top, 0px), 0.75rem) + 4.5rem)' }}
+        >
+          <div className="p-1.5 rounded-xl bg-amber-500/15 border border-amber-500/30 shrink-0">
+            <AlertCircle className="w-4 h-4 text-amber-500 dark:text-amber-400" />
+          </div>
+          <p className="text-xs font-sans font-medium text-theme-main flex-1 leading-snug">
+            {locationNotice}
+          </p>
+          <button
+            onClick={() => setLocationNotice(null)}
+            className="text-theme-muted hover:text-theme-main p-1.5 rounded-lg hover:bg-theme-hover transition-colors cursor-pointer"
+            aria-label="Dismiss notice"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       {/* Search Results Dropdown List (If search query active in Home mode) */}
       {activeTab === 'home' && searchQuery.trim() && (
         <div
@@ -227,6 +250,7 @@ export const App: React.FC = () => {
           hideControls={activeTab === 'settings'}
           recenterTrigger={recenterTrigger}
           onRecenter={() => setRecenterTrigger((prev) => prev + 1)}
+          onLocationNotice={setLocationNotice}
         />
       </div>
 

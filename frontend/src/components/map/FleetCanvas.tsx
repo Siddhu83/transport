@@ -31,6 +31,7 @@ export interface FleetCanvasProps {
   hideControls?: boolean;
   recenterTrigger?: number;
   onRecenter?: () => void;
+  onLocationNotice?: (notice: string | null) => void;
 }
 
 // ANITS Campus Tagarapuvalasa / Visakhapatnam Default Center
@@ -77,6 +78,7 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
   hideControls = false,
   recenterTrigger,
   onRecenter,
+  onLocationNotice,
 }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
@@ -88,10 +90,16 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
   const [locationNotice, setLocationNotice] = useState<string | null>(null);
   const noticeTimerRef = useRef<number | null>(null);
 
-  const showLocationNotice = (msg: string) => {
+  const showLocationNotice = (msg: string | null) => {
     setLocationNotice(msg);
+    if (onLocationNotice) onLocationNotice(msg);
     if (noticeTimerRef.current) clearTimeout(noticeTimerRef.current);
-    noticeTimerRef.current = window.setTimeout(() => setLocationNotice(null), 6000);
+    if (msg) {
+      noticeTimerRef.current = window.setTimeout(() => {
+        setLocationNotice(null);
+        if (onLocationNotice) onLocationNotice(null);
+      }, 6000);
+    }
   };
 
   // Helper to attach WebGL sources & layers onto map style load
@@ -657,14 +665,21 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
         </div>
       )}
 
-      {/* Location Permission Guidance Toast */}
-      {locationNotice && (
-        <div className="absolute top-20 left-4 right-4 z-30 glass-panel p-3.5 rounded-2xl border border-amber-500/40 shadow-2xl flex items-center gap-3 text-amber-500 backdrop-blur-xl">
-          <AlertCircle className="w-4 h-4 shrink-0 text-amber-500" />
-          <p className="text-xs font-sans font-medium text-theme-main flex-1">{locationNotice}</p>
+      {/* Location Permission Guidance Toast (Rendered locally if onLocationNotice not wired) */}
+      {!onLocationNotice && locationNotice && (
+        <div
+          className="fixed left-3.5 right-3.5 max-w-md mx-auto z-50 p-3.5 rounded-2xl border border-amber-500/40 bg-theme-card/90 dark:bg-amber-950/70 backdrop-blur-2xl shadow-[0_8px_30px_rgba(245,158,11,0.2)] flex items-center gap-3 text-amber-500 dark:text-amber-400 select-none animate-in fade-in slide-in-from-top-3 duration-200"
+          style={{ top: 'calc(max(env(safe-area-inset-top, 0px), 0.75rem) + 4.5rem)' }}
+        >
+          <div className="p-1.5 rounded-xl bg-amber-500/15 border border-amber-500/30 shrink-0">
+            <AlertCircle className="w-4 h-4 text-amber-500 dark:text-amber-400" />
+          </div>
+          <p className="text-xs font-sans font-medium text-theme-main flex-1 leading-snug">
+            {locationNotice}
+          </p>
           <button
-            onClick={() => setLocationNotice(null)}
-            className="text-theme-muted hover:text-theme-main p-1 cursor-pointer"
+            onClick={() => showLocationNotice(null)}
+            className="text-theme-muted hover:text-theme-main p-1.5 rounded-lg hover:bg-theme-hover transition-colors cursor-pointer"
             aria-label="Dismiss notice"
           >
             <X className="w-4 h-4" />
