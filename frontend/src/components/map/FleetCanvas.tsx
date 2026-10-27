@@ -141,7 +141,7 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
         source: 'user-location-source',
         paint: {
           'circle-radius': 18,
-          'circle-color': '#fdb063ff',
+          'circle-color': '#f9d43fff',
           'circle-opacity': 0.3,
           'circle-blur': 0.6,
         },
@@ -158,7 +158,7 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
           'circle-radius': 6,
           'circle-color': '#ee7e15ff',
           'circle-stroke-width': 1.5,
-          'circle-stroke-color': '#ffffffff',
+          'circle-stroke-color': '#ffc289ff',
         },
       });
     }
