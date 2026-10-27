@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
-import { AlertCircle, Locate, Plus, Minus, RotateCcw } from 'lucide-react';
+import { AlertCircle, Locate, Plus, Minus, RotateCcw, X } from 'lucide-react';
 import { ThinkingOrb } from 'thinking-orbs';
 import { FleetDropdown } from './FleetDropdown';
 
@@ -85,6 +85,14 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
   const [userLocation, setUserLocation] = useState<[number, number] | null>(getCachedUserCoords);
   const userLocationRef = useRef<[number, number] | null>(userLocation);
   const [isLocating, setIsLocating] = useState<boolean>(false);
+  const [locationNotice, setLocationNotice] = useState<string | null>(null);
+  const noticeTimerRef = useRef<number | null>(null);
+
+  const showLocationNotice = (msg: string) => {
+    setLocationNotice(msg);
+    if (noticeTimerRef.current) clearTimeout(noticeTimerRef.current);
+    noticeTimerRef.current = window.setTimeout(() => setLocationNotice(null), 6000);
+  };
 
   // Helper to attach WebGL sources & layers onto map style load
   const attachMapLayers = (map: maplibregl.Map, currentTheme: 'dark' | 'light') => {
@@ -377,9 +385,10 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
   }, [theme]);
 
   // HTML5 Client-Side Geolocation Handler
-  const detectUserLocation = (mapInstance?: maplibregl.Map | null, flyTo = true) => {
+  const detectUserLocation = (mapInstance?: maplibregl.Map | null, flyTo = true, isManual = false) => {
     const targetMap = mapInstance || mapRef.current;
     if (!navigator.geolocation) {
+      if (isManual) showLocationNotice('Geolocation is not supported by your browser.');
       return;
     }
 
@@ -391,6 +400,7 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
         userLocationRef.current = coords;
         setUserLocation(coords);
         setIsLocating(false);
+        setLocationNotice(null);
         try {
           localStorage.setItem('ats_last_coords', JSON.stringify(coords));
         } catch {}
@@ -416,7 +426,7 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
           if (flyTo) {
             targetMap.flyTo({
               center: coords,
-              zoom: 14.5,
+              zoom: 15,
               pitch: 25,
               speed: 1.2,
               curve: 1.2,
@@ -425,12 +435,45 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
         }
       },
       (error) => {
-        console.info('HTML5 Geolocation info/fallback:', error.message);
         setIsLocating(false);
+        if (error.code === 1) { // PERMISSION_DENIED
+          showLocationNotice('Location access blocked. Tap the 🔒 icon in your browser address bar to allow location.');
+          const cached = getCachedUserCoords();
+          if (cached && targetMap && flyTo) {
+            targetMap.flyTo({ center: cached, zoom: 14.5, pitch: 25, speed: 1.2 });
+          }
+        } else if (isManual) {
+          showLocationNotice('Unable to acquire GPS fix. Try again in an open area.');
+        } else {
+          console.info('HTML5 Geolocation fallback:', error.message);
+        }
       },
-      { enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 }
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: isManual ? 0 : 30000 }
     );
   };
+
+  // Listen to browser permission state changes in real time
+  useEffect(() => {
+    if (!navigator.permissions) return;
+    let permStatus: PermissionStatus | null = null;
+    navigator.permissions.query({ name: 'geolocation' }).then((status) => {
+      permStatus = status;
+      const onChange = () => {
+        if (status.state === 'granted') {
+          setLocationNotice(null);
+          detectUserLocation(mapRef.current, true, true);
+        }
+      };
+      status.addEventListener('change', onChange);
+    }).catch(() => {});
+
+    return () => {
+      if (permStatus) {
+        permStatus.onchange = null;
+      }
+      if (noticeTimerRef.current) clearTimeout(noticeTimerRef.current);
+    };
+  }, []);
 
   // Sync GeoJSON updates without re-instantiating WebGL map instance
   useEffect(() => {
@@ -524,7 +567,21 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
   };
 
   const handleLocateClick = () => {
-    detectUserLocation(mapRef.current, true);
+    const known = userLocationRef.current || userLocation || getCachedUserCoords();
+    if (known && mapRef.current) {
+      // Instant snap/fly back to known pin when zoomed away
+      mapRef.current.flyTo({
+        center: known,
+        zoom: 15,
+        pitch: 25,
+        speed: 1.3,
+        curve: 1.2,
+      });
+      // Concurrently poll fresh high-accuracy GPS in background with maximumAge: 0
+      detectUserLocation(mapRef.current, false, true);
+    } else {
+      detectUserLocation(mapRef.current, true, true);
+    }
   };
 
   const handleRecenterClick = () => {
@@ -597,6 +654,21 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
         <div className="absolute top-4 left-4 right-4 z-30 glass-panel p-4 rounded-xl border border-status-sos/40 flex items-center gap-3 text-status-sos">
           <AlertCircle className="w-5 h-5 shrink-0 text-status-sos" />
           <p className="text-xs font-mono font-bold">{mapError}</p>
+        </div>
+      )}
+
+      {/* Location Permission Guidance Toast */}
+      {locationNotice && (
+        <div className="absolute top-20 left-4 right-4 z-30 glass-panel p-3.5 rounded-2xl border border-amber-500/40 shadow-2xl flex items-center gap-3 text-amber-500 backdrop-blur-xl">
+          <AlertCircle className="w-4 h-4 shrink-0 text-amber-500" />
+          <p className="text-xs font-sans font-medium text-theme-main flex-1">{locationNotice}</p>
+          <button
+            onClick={() => setLocationNotice(null)}
+            className="text-theme-muted hover:text-theme-main p-1 cursor-pointer"
+            aria-label="Dismiss notice"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
       )}
 
