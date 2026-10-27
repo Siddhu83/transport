@@ -7,6 +7,7 @@ import { MobileHeader } from './components/mobile/MobileHeader';
 import { RideStatusSheet } from './components/mobile/RideStatusSheet';
 import { MobileNavBar, NavTab } from './components/mobile/MobileNavBar';
 import { SettingsView } from './components/mobile/SettingsView';
+import { ControlTower } from './pages/admin/ControlTower';
 import { Bus, AlertCircle, X } from 'lucide-react';
 
 export const App: React.FC = () => {
@@ -149,6 +150,11 @@ export const App: React.FC = () => {
     setSearchQuery('');
     setRecenterTrigger((prev) => prev + 1);
   };
+
+  // Super Admin Control Tower HUD Route (Sprint 12)
+  if (location.pathname.startsWith('/admin') || location.pathname.startsWith('/control-tower')) {
+    return <ControlTower />;
+  }
 
   return (
     <div className="relative w-screen h-screen overflow-hidden select-none bg-theme-canvas text-theme-main font-sans">
