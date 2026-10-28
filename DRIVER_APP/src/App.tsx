@@ -108,6 +108,21 @@ export const App: React.FC = () => {
     return () => clearInterval(interval);
   }, [activeIncident]);
 
+  // Fullscreen Synchronizer (Handles Esc key, back gesture, and programmatic toggles)
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      const active = Boolean(document.fullscreenElement);
+      setIsFullscreen(active);
+      document.documentElement.setAttribute('data-fullscreen', active ? 'true' : 'false');
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+    };
+  }, []);
+
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError(null);
@@ -183,10 +198,22 @@ export const App: React.FC = () => {
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().then(() => setIsFullscreen(true)).catch(() => {});
+      document.documentElement
+        .requestFullscreen()
+        .then(() => {
+          setIsFullscreen(true);
+          document.documentElement.setAttribute('data-fullscreen', 'true');
+        })
+        .catch(() => {});
     } else {
       if (document.exitFullscreen) {
-        document.exitFullscreen().then(() => setIsFullscreen(false)).catch(() => {});
+        document
+          .exitFullscreen()
+          .then(() => {
+            setIsFullscreen(false);
+            document.documentElement.setAttribute('data-fullscreen', 'false');
+          })
+          .catch(() => {});
       }
     }
   };
@@ -313,7 +340,13 @@ export const App: React.FC = () => {
   // ---------------------------------------------------------------------------
   if (!session) {
     return (
-      <div className="min-h-screen bg-[#0b0f17] text-slate-100 font-sans flex items-center justify-center p-4 selection:bg-emerald-500/30 selection:text-emerald-200">
+      <div
+        className="min-h-screen bg-[#0b0f17] text-slate-100 font-sans flex items-center justify-center p-4 selection:bg-emerald-500/30 selection:text-emerald-200"
+        style={{
+          paddingTop: 'calc(max(env(safe-area-inset-top, 0px), 1rem) + 0.5rem)',
+          paddingBottom: 'calc(max(env(safe-area-inset-bottom, 0px), 1rem) + 0.5rem)',
+        }}
+      >
         <div className="w-full max-w-md space-y-6">
           {/* App Branding Header */}
           <div className="text-center space-y-3">
@@ -435,39 +468,47 @@ export const App: React.FC = () => {
   const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
   const strokeDashoffset = CIRCUMFERENCE * (1 - sosHoldProgress / 100);
 
+  // Dynamic header top padding accounting for notch and fullscreen mode
+  const headerTopPadding = isFullscreen
+    ? 'calc(max(env(safe-area-inset-top, 0px), 1.5rem) + 0.5rem)'
+    : 'calc(max(env(safe-area-inset-top, 0px), 0.5rem) + 0.5rem)';
+
   return (
     <div className="min-h-screen bg-[#0b0f17] text-slate-100 font-sans pb-16 selection:bg-emerald-500/30 selection:text-emerald-200">
       {/* Top Header Bar */}
-      <header className="sticky top-0 z-40 glass-card px-4 py-3.5 flex items-center justify-between border-b border-slate-800/80">
-        <div className="flex items-center gap-3">
-          <div className="relative">
-            <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-400 p-0.5 shadow-lg shadow-emerald-500/20">
+      <header
+        className="sticky top-0 z-40 glass-card px-3 sm:px-4 pb-3 flex items-center justify-between border-b border-slate-800/80 transition-[padding] duration-200"
+        style={{ paddingTop: headerTopPadding }}
+      >
+        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1 mr-2">
+          <div className="relative shrink-0">
+            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-400 p-0.5 shadow-lg shadow-emerald-500/20">
               <div className="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center">
-                <Bus className="w-6 h-6 text-emerald-400" />
+                <Bus className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-400" />
               </div>
             </div>
-            <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-500 border-2 border-slate-950 rounded-full"></span>
+            <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 sm:w-3.5 sm:h-3.5 bg-emerald-500 border-2 border-slate-950 rounded-full"></span>
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="font-bold text-base tracking-tight text-white">{user.name}</h1>
-              <span className="bg-emerald-500/20 text-emerald-300 text-[10px] font-bold px-1.5 py-0.5 rounded border border-emerald-500/30 flex items-center gap-1">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <h1 className="font-bold text-sm sm:text-base tracking-tight text-white truncate">{user.name}</h1>
+              <span className="bg-emerald-500/20 text-emerald-300 text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded border border-emerald-500/30 flex items-center gap-1 shrink-0">
                 <UserCheck className="w-3 h-3 text-emerald-400" />
-                VERIFIED
+                <span className="hidden xs:inline">VERIFIED</span>
               </span>
             </div>
-            <p className="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
-              <span>{user.licensePlate || user.busNumber}</span>
+            <p className="text-[11px] sm:text-xs text-slate-400 flex items-center gap-1 mt-0.5 truncate">
+              <span className="truncate">{user.licensePlate || user.busNumber}</span>
               <span>•</span>
-              <span className="text-emerald-400 font-medium">{activeCorridor.routeNumber}</span>
+              <span className="text-emerald-400 font-medium shrink-0">{activeCorridor.routeNumber}</span>
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           <button
             onClick={toggleFullscreen}
-            className="glass-button p-2.5 rounded-xl text-slate-300 hover:text-white flex items-center gap-1.5 text-xs font-medium active:scale-95"
+            className="glass-button p-2 sm:p-2.5 rounded-xl text-slate-300 hover:text-white flex items-center gap-1.5 text-xs font-medium active:scale-95"
             title="Toggle Fullscreen Mode"
           >
             {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
@@ -476,7 +517,7 @@ export const App: React.FC = () => {
 
           <button
             onClick={handleLogout}
-            className="glass-button p-2.5 rounded-xl text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 border border-rose-500/20 flex items-center gap-1.5 text-xs font-medium active:scale-95"
+            className="glass-button p-2 sm:p-2.5 rounded-xl text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 border border-rose-500/20 flex items-center gap-1.5 text-xs font-medium active:scale-95"
             title="Sign Out"
           >
             <LogOut className="w-4 h-4" />
@@ -486,7 +527,10 @@ export const App: React.FC = () => {
       </header>
 
       {/* Main Kiosk Content Area */}
-      <main className="max-w-md mx-auto px-4 pt-4 space-y-4">
+      <main
+        className="max-w-md mx-auto px-4 pt-4 space-y-4"
+        style={{ paddingBottom: 'calc(max(env(safe-area-inset-bottom, 0px), 1rem) + 2rem)' }}
+      >
         {/* Status Bar */}
         <div className="flex items-center justify-between px-1">
           {getStatusBadge()}
@@ -896,7 +940,10 @@ export const App: React.FC = () => {
       {/* 1-TAP SOS BREAKDOWN CONFIRMATION MODAL (Sprint 9 Task 3)               */}
       {/* ----------------------------------------------------------------------- */}
       {isSosModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-3 sm:p-4 bg-slate-950/85 backdrop-blur-md animate-fade-in">
+        <div
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-3 sm:p-4 bg-slate-950/85 backdrop-blur-md animate-fade-in overflow-y-auto"
+          style={{ paddingBottom: 'calc(max(env(safe-area-inset-bottom, 0px), 0.75rem) + 0.5rem)' }}
+        >
           <div className="w-full max-w-md bg-slate-900 border-2 border-rose-500/70 rounded-3xl p-5 sm:p-6 space-y-5 shadow-2xl shadow-rose-950/80">
             {/* Modal Header */}
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
@@ -1039,7 +1086,10 @@ export const App: React.FC = () => {
       {/* ACTIVE CORRIDOR SELECTOR MODAL (Shift Binding)                         */}
       {/* ----------------------------------------------------------------------- */}
       {isCorridorModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
+        <div
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in overflow-y-auto"
+          style={{ paddingBottom: 'calc(max(env(safe-area-inset-bottom, 0px), 0.75rem) + 0.5rem)' }}
+        >
           <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-5 space-y-4 shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <div className="flex items-center gap-2">

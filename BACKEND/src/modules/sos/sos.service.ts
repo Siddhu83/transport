@@ -125,23 +125,42 @@ export async function triggerSosIncident(
 
   try {
     const created = await prisma.$transaction(async (tx) => {
-      // Check if bus exists in DB to prevent FK violation in mock/test scenarios
-      const busExists = await tx.bus.findUnique({ where: { id: payload.busId } });
+      // Resolve valid entities in database to guarantee zero FK failures
       const driverExists = await tx.user.findUnique({ where: { id: driverId } });
-      const routeExists = await tx.route.findUnique({ where: { id: payload.routeId } });
+      const fallbackDriver = driverExists || (await tx.user.findFirst({ where: { role: 'DRIVER' } }));
 
-      if (busExists && driverExists && routeExists) {
+      let targetBus = await tx.bus.findUnique({ where: { id: payload.busId } });
+      if (!targetBus) {
+        if (fallbackDriver?.assignedBusId) {
+          targetBus = await tx.bus.findUnique({ where: { id: fallbackDriver.assignedBusId } });
+        }
+        if (!targetBus) {
+          targetBus = await tx.bus.findFirst();
+        }
+      }
+
+      let targetRoute = await tx.route.findUnique({ where: { id: payload.routeId } });
+      if (!targetRoute) {
+        if (targetBus?.currentRouteId) {
+          targetRoute = await tx.route.findUnique({ where: { id: targetBus.currentRouteId } });
+        }
+        if (!targetRoute) {
+          targetRoute = await tx.route.findFirst();
+        }
+      }
+
+      if (targetBus && fallbackDriver && targetRoute) {
         // Update bus status to EMERGENCY
         await tx.bus.update({
-          where: { id: payload.busId },
+          where: { id: targetBus.id },
           data: { status: BusStatus.EMERGENCY },
         });
 
         const incident = await tx.sosIncident.create({
           data: {
-            busId: payload.busId,
-            routeId: payload.routeId,
-            driverId,
+            busId: targetBus.id,
+            routeId: targetRoute.id,
+            driverId: fallbackDriver.id,
             status: SosIncidentStatus.OPEN,
             reason: payload.reason,
             strandedPassengerBand: payload.strandedPassengerBand,

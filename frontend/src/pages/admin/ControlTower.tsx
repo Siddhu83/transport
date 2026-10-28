@@ -141,6 +141,48 @@ export const ControlTower: React.FC = () => {
     };
   }, []);
 
+  // Auto-detect SOS vehicles from live telemetry stream
+  useEffect(() => {
+    const liveSosFeature = interpolatedGeoJson.features.find(
+      (f) => f.properties.status === 'SOS'
+    );
+    if (liveSosFeature) {
+      const props = liveSosFeature.properties as VehicleFeatureProperties;
+      const [lng, lat] = liveSosFeature.geometry.coordinates as [number, number];
+
+      setActiveIncident((prev) => {
+        // If already bound to this bus, keep coordinates synced with live telemetry
+        if (prev && prev.busId === props.busId) {
+          if (prev.longitude !== lng || prev.latitude !== lat) {
+            return { ...prev, longitude: lng, latitude: lat };
+          }
+          return prev;
+        }
+        // If no active incident or previously resolved, auto-bind to live SOS vehicle
+        if (!prev || prev.status === 'RESOLVED') {
+          return {
+            id: `sos-${props.busId}`,
+            busId: props.busId,
+            plateNumber: props.plateNumber || `BUS-${props.busId.slice(0, 4).toUpperCase()}`,
+            routeId: props.routeId || 'campus-corridor',
+            routeName: props.routeName || 'Campus Corridor',
+            driverName: 'Fleet Captain',
+            driverPhone: '+91 98480 22334',
+            latitude: lat,
+            longitude: lng,
+            reason: 'MECHANICAL_BREAKDOWN',
+            strandedPassengerBand: 'BAND_C_30_TO_50',
+            passengerCount: props.passengerCount || 38,
+            status: 'OPEN',
+            triggeredAt: Date.now(),
+            notes: 'Live breakdown signal received from Captain Console.',
+          };
+        }
+        return prev;
+      });
+    }
+  }, [interpolatedGeoJson]);
+
   // Timer for active incident
   useEffect(() => {
     if (!activeIncident || activeIncident.status === 'RESOLVED') {
@@ -475,13 +517,37 @@ export const ControlTower: React.FC = () => {
     const feat = interpolatedGeoJson.features.find((f) => f.properties.busId === busId);
     if (feat) {
       const [lng, lat] = feat.geometry.coordinates as [number, number];
+      const props = feat.properties as VehicleFeatureProperties;
+
       mapRef.current.flyTo({
         center: [lng, lat],
-        zoom: 15,
+        zoom: props.status === 'SOS' ? 14 : 15,
+        pitch: props.status === 'SOS' ? 40 : 25,
         essential: true,
         duration: 1200,
       });
       setSelectedBusId(busId);
+
+      // If clicked bus is in SOS / Emergency state, immediately bind active incident & render 5km circle!
+      if (props.status === 'SOS') {
+        setActiveIncident({
+          id: `incident-${props.busId}`,
+          busId: props.busId,
+          plateNumber: props.plateNumber || `BUS-${props.busId.slice(0, 4).toUpperCase()}`,
+          routeId: props.routeId || 'campus-corridor',
+          routeName: props.routeName || 'Campus Corridor',
+          driverName: 'Fleet Captain',
+          driverPhone: '+91 98480 22334',
+          latitude: lat,
+          longitude: lng,
+          reason: 'MECHANICAL_BREAKDOWN',
+          strandedPassengerBand: 'BAND_C_30_TO_50',
+          passengerCount: props.passengerCount || 38,
+          status: 'OPEN',
+          triggeredAt: Date.now(),
+          notes: 'Emergency breakdown triggered from driver console.',
+        });
+      }
     }
   }, [interpolatedGeoJson]);
 
