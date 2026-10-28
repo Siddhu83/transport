@@ -234,11 +234,12 @@ export function useFleetInterpolation(
 ## 5. View-Specific UX Flows & Screen Layouts
 
 ### 5.1 Student Mobile PWA (Bottom Sheet Architecture)
-- **Top Bar (Z-Index 30):** Minimal transparent status pill indicating network connection state (`[● Live 32ms]` / `[○ Reconnecting...]`) and route selector chip.
+- **Top Bar (Z-Index 30):** Minimal transparent status pill indicating network connection state (`[● Live 32ms]` / `[○ Reconnecting...]`) and active bus identifier.
 - **Middle Canvas:** Unobstructed full-bleed interactive map with automated camera framing following the student's assigned bus.
-- **Interactive Drawer (Vaul / shadcn Sheet):**
+- **Interactive Drawer (Native Zero-Dependency Glassmorphism Sheet):**
   - **Snap Point 1 (Collapsed, 96px):** Current bus ETA, remaining stops count, and live status badge.
-  - **Snap Point 2 (Expanded, 60% viewport):** Step-by-step stop breakdown with completed stops grayed out, current stop highlighted in emerald, and expected arrival timestamps.
+  - **Snap Point 2 (Expanded, 60% viewport):** Step-by-step stop breakdown with completed stops grayed out, current stop highlighted in emerald, expected arrival timestamps, and emergency breakdown overlay when SOS triggers.
+  - **Note:** Public transit route catalog / routes directory view is removed as out of scope for college student persona (streamlined 3-tab layout: Home, My Bus, Settings).
 
 ```
 ┌──────────────────────────────────────────────┐

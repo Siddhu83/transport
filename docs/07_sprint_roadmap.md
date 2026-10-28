@@ -192,13 +192,14 @@ This document details the **15-Sprint (30-Week)** master engineering roadmap for
 #### Sprint 13: Student Mobile PWA & Bottom Sheet UX Architecture
 - **Objective:** Develop the Student Mobile PWA with offline caching, bottom sheet drawer, and live emergency broadcast overlays.
 - **Key Tasks:**
-  1. Build Student Mobile PWA with Service Worker static asset caching for offline resilience.
-  2. Implement Vaul/shadcn Sheet bottom drawer with 2 snap points (Collapsed ETA card / Expanded route stop list).
+  1. Build Student Mobile PWA with Service Worker static asset caching for offline resilience (`public/sw.js`).
+  2. Implement native glassmorphism bottom drawer with 2 snap points (Collapsed 96px ETA card / Expanded route stop list) without third-party library bloat.
   3. Implement route stop visualizer highlighting completed stops, active vehicle location, and upcoming arrival timestamps.
   4. Implement emergency breakdown overlay banner displaying replacement bus details when assigned vehicle triggers SOS.
 - **Deliverables & Definition of Done (DoD):**
-  - Student PWA loading in \(< 1\text{s}\) on 4G cellular networks.
+  - Student PWA loading in < 1s on 4G cellular networks.
   - Live route progression visualization verified against student persona requirements.
+  - Streamlined 3-tab layout (`Home`, `My Bus`, `Settings`) with zero third-party sheet dependencies; redundant public transit routes catalog view removed.
 - **Contract Mappings:** [05_frontend_guidelines.md §5.1](https://github.com/Siddhu83/transport/docs/05_frontend_guidelines.md#51-student-mobile-pwa-bottom-sheet-architecture), [01_requirements_and_roles.md §3.1](https://github.com/Siddhu83/transport/docs/01_requirements_and_roles.md#31-student-persona).
 
 #### Sprint 14: System Hardening, Circuit Breakers & Health Probes
@@ -265,7 +266,7 @@ This document details the **15-Sprint (30-Week)** master engineering roadmap for
 | **Sprint 10** | Sprint 3 | `src/modules/sos/trigger.ts`, `src/services/proximity.ts` | SOS §2, SOS §3 | High |
 | **Sprint 11** | Sprint 10 | `src/queues/sosQueue.ts`, `src/workers/sosWorker.ts` | SOS §4, AGENT §1.4 | Medium |
 | **Sprint 12** | Sprint 6, 11 | `frontend/src/pages/admin/ControlTower.tsx` | Frontend §5.3, SOS §1 | Medium |
-| **Sprint 13** | Sprint 6 | `frontend/src/pages/student/MobilePwa.tsx` | Frontend §5.1, Req §3.1 | Low |
+| **Sprint 13** | Sprint 6 | `frontend/src/components/mobile/RideStatusSheet.tsx`, `public/sw.js` | Frontend §5.1, Req §3.1 | Low |
 | **Sprint 14** | Sprint 3, 11 | `src/infrastructure/circuitBreaker.ts`, `src/modules/health/*` | Resilience §4, Resilience §5 | High |
 | **Sprint 15** | All (1–14) | `tests/load/k6-telemetry.js`, Deployment configs | Req §4, Arch §5 | Critical |
 
