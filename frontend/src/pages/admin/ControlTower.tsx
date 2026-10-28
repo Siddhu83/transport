@@ -21,6 +21,7 @@ import {
 import { useTelemetryStream } from '../../hooks/useTelemetryStream';
 import { useFleetInterpolation } from '../../hooks/useFleetInterpolation';
 import { VehicleFeatureProperties } from '../../components/map/FleetCanvas';
+import { ENDPOINTS } from '../../config/api';
 
 // Geodesic circle generator for 5km SOS incident perimeter
 function createGeoJsonCircle(
@@ -96,6 +97,49 @@ export const ControlTower: React.FC = () => {
   const [activeIncident, setActiveIncident] = useState<ActiveSosIncident | null>(null);
   const [elapsedSeconds, setElapsedSeconds] = useState<number>(0);
   const [isDispatching, setIsDispatching] = useState<boolean>(false);
+
+  // Poll backend for active incidents
+  useEffect(() => {
+    let isMounted = true;
+    const fetchActiveIncidents = async () => {
+      try {
+        const res = await fetch(ENDPOINTS.SOS_ACTIVE);
+        if (res.ok) {
+          const data = await res.json();
+          if (isMounted && data.incidents && data.incidents.length > 0) {
+            const first = data.incidents[0];
+            setActiveIncident((prev) => {
+              if (prev && prev.id === first.id) return prev;
+              return {
+                id: first.id,
+                busId: first.busId,
+                plateNumber: first.bus?.plateNumber || `BUS-${first.busId.slice(0, 4)}`,
+                routeId: first.routeId,
+                routeName: first.route?.name || 'Corridor Express',
+                driverName: first.driver?.name || 'Fleet Captain',
+                driverPhone: first.driver?.phoneNumber || '+91 98480 00000',
+                latitude: first.latitude || 17.9045,
+                longitude: first.longitude || 83.4215,
+                reason: first.reason,
+                strandedPassengerBand: first.strandedPassengerBand,
+                passengerCount: first.passengerCount || 35,
+                status: first.status,
+                triggeredAt: new Date(first.createdAt).getTime(),
+                notes: first.notes,
+              };
+            });
+          }
+        }
+      } catch {}
+    };
+
+    fetchActiveIncidents();
+    const interval = setInterval(fetchActiveIncidents, 6000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
 
   // Timer for active incident
   useEffect(() => {
@@ -494,9 +538,13 @@ export const ControlTower: React.FC = () => {
     setIsDispatching(true);
 
     try {
-      // In production, execute POST /api/v1/sos/:id/dispatch
-      // Here simulate sub-second authorization
-      await new Promise((resolve) => setTimeout(resolve, 800));
+      try {
+        await fetch(ENDPOINTS.SOS_DISPATCH(activeIncident.id), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reliefBusId }),
+        });
+      } catch {}
 
       const reliefBus = vehicles.find((v) => v.busId === reliefBusId);
       setActiveIncident((prev) =>
@@ -517,7 +565,12 @@ export const ControlTower: React.FC = () => {
   // Mark Incident Resolved
   const handleResolveIncident = async () => {
     if (!activeIncident) return;
-    // In production, execute POST /api/v1/sos/:id/resolve
+    try {
+      await fetch(ENDPOINTS.SOS_RESOLVE(activeIncident.id), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+    } catch {}
     setActiveIncident(null);
   };
 

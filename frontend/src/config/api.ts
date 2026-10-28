@@ -11,6 +11,10 @@ export const ENDPOINTS = {
   TELEMETRY_STREAM: `${API_BASE_URL}/telemetry/stream`,
   TELEMETRY_PING: `${API_BASE_URL}/telemetry/ping`,
   TELEMETRY_BATCH_DRAIN: `${API_BASE_URL}/telemetry/batch-drain`,
+  SOS_ACTIVE: `${API_BASE_URL}/sos/active`,
+  SOS_TRIGGER: `${API_BASE_URL}/sos/trigger`,
+  SOS_DISPATCH: (id: string) => `${API_BASE_URL}/sos/${id}/dispatch`,
+  SOS_RESOLVE: (id: string) => `${API_BASE_URL}/sos/${id}/resolve`,
 } as const;
 
 export type ApiEndpoints = typeof ENDPOINTS;
