@@ -147,34 +147,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </button>
           </div>
         </div>
-
-        {/* Section 4: Super Admin Fleet Command Console */}
-        <div className="glass-panel rounded-2xl p-4 border border-theme-border space-y-3 shadow-lg">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-theme-muted font-sans">
-            Fleet Operations & Dispatch
-          </h2>
-
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className="p-2 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-500 dark:text-indigo-400">
-                <Compass className="w-4 h-4" />
-              </div>
-              <div>
-                <p className="text-xs font-bold text-theme-main">Control Tower HUD</p>
-                <p className="text-[10px] text-theme-muted">Super Admin split-canvas & SOS dispatch</p>
-              </div>
-            </div>
-
-            <button
-              onClick={() => navigate('/admin')}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-indigo-500 dark:text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 hover:bg-indigo-500/20 transition-colors active:scale-95 cursor-pointer"
-            >
-              <span>Launch</span>
-              <ExternalLink className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        </div>
-
+        
         {/* App Footer Info */}
         <div className="text-center space-y-1 pt-2">
           <p className="text-[11px] text-theme-muted">ANITS College Transport Management System</p>
