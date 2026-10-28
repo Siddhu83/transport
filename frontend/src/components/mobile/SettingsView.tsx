@@ -1,5 +1,4 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
   Sun,
   Moon,
@@ -7,8 +6,6 @@ import {
   Minimize2,
   Radio,
   RotateCcw,
-  Compass,
-  ExternalLink,
 } from 'lucide-react';
 
 interface SettingsViewProps {
@@ -32,7 +29,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   streamStatus,
   onResetPreferences,
 }) => {
-  const navigate = useNavigate();
+
 
   const topPadding = isFullscreen
     ? 'calc(max(env(safe-area-inset-top, 0px), 3.25rem) + 4rem)'
