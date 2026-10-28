@@ -8,6 +8,9 @@ import {
   ChevronDown,
   Wind,
   X,
+  AlertTriangle,
+  ShieldAlert,
+  LifeBuoy,
 } from 'lucide-react';
 import { VehicleFeatureProperties } from '../map/FleetCanvas';
 
@@ -25,6 +28,8 @@ export const RideStatusSheet: React.FC<RideStatusSheetProps> = ({
 
   if (!vehicle) return null;
 
+  const isEmergency = vehicle.status === 'SOS';
+
   // Derive realistic operational metrics
   const busNumber = vehicle.plateNumber || `BUS-${vehicle.busId.slice(0, 4).toUpperCase()}`;
   const routeName = vehicle.routeName || 'Sector 1 Express Corridor';
@@ -39,12 +44,19 @@ export const RideStatusSheet: React.FC<RideStatusSheetProps> = ({
   const etaMinutes = speed > 40 ? 5 : speed > 20 ? 8 : 12;
 
   // Realistic Campus Stops Timeline for this route
-  const STOPS_TIMELINE = [
-    { name: 'Tagarapuvalasa Main Gate', time: '08:00 AM', status: 'COMPLETED' },
-    { name: 'Tagarapuvalasa Junction', time: `In ${etaMinutes} mins`, status: 'EN_ROUTE' },
-    { name: 'Anandapuram Toll Gate', time: '08:22 AM', status: 'UPCOMING' },
-    { name: 'ANITS Central Campus Terminal', time: '08:35 AM', status: 'DESTINATION' },
-  ];
+  const STOPS_TIMELINE = isEmergency
+    ? [
+        { name: 'Tagarapuvalasa Main Gate', time: '08:00 AM', status: 'COMPLETED' },
+        { name: 'Tagarapuvalasa Junction (Breakdown Site)', time: 'STOPPED', status: 'BREAKDOWN' },
+        { name: 'Anandapuram Toll Gate', time: 'Relief Bus ~6 min', status: 'RELIEF' },
+        { name: 'ANITS Central Campus Terminal', time: 'Delayed ~15 min', status: 'DESTINATION' },
+      ]
+    : [
+        { name: 'Tagarapuvalasa Main Gate', time: '08:00 AM', status: 'COMPLETED' },
+        { name: 'Tagarapuvalasa Junction', time: `In ${etaMinutes} mins`, status: 'EN_ROUTE' },
+        { name: 'Anandapuram Toll Gate', time: '08:22 AM', status: 'UPCOMING' },
+        { name: 'ANITS Central Campus Terminal', time: '08:35 AM', status: 'DESTINATION' },
+      ];
 
   return (
     <div
@@ -68,14 +80,26 @@ export const RideStatusSheet: React.FC<RideStatusSheetProps> = ({
             <div className="flex items-start justify-between">
               <div>
                 {/* Large Glanceable Gold/Amber Typography */}
-                <div className="flex items-baseline gap-2">
-                  <h2 className="text-xl font-black tracking-tight text-amber-500 dark:text-amber-400 tabular-nums">
-                    {etaMinutes} MINS AWAY
-                  </h2>
-                  <span className="text-[10px] font-extrabold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded">
-                    On Time
-                  </span>
-                </div>
+                {isEmergency ? (
+                  <div className="flex items-baseline gap-2">
+                    <h2 className="text-lg font-black tracking-tight text-rose-500 dark:text-rose-400 tabular-nums flex items-center gap-1.5 animate-pulse">
+                      <AlertTriangle className="w-4 h-4 text-rose-500" />
+                      BREAKDOWN REPORTED
+                    </h2>
+                    <span className="text-[10px] font-extrabold text-amber-500 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded">
+                      Relief Dispatched
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex items-baseline gap-2">
+                    <h2 className="text-xl font-black tracking-tight text-amber-500 dark:text-amber-400 tabular-nums">
+                      {etaMinutes} MINS AWAY
+                    </h2>
+                    <span className="text-[10px] font-extrabold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded">
+                      On Time
+                    </span>
+                  </div>
+                )}
 
                 <p className="text-xs font-bold text-theme-main mt-0.5 flex items-center gap-1.5">
                   <span>{busNumber}</span>
@@ -88,20 +112,48 @@ export const RideStatusSheet: React.FC<RideStatusSheetProps> = ({
               <div className="flex items-center gap-1.5">
                 <button
                   onClick={() => setIsExpanded(!isExpanded)}
-                  className="p-1.5 rounded-xl bg-theme-hover text-theme-muted hover:text-theme-main border border-theme-border transition-colors"
+                  className="p-1.5 rounded-xl bg-theme-hover text-theme-muted hover:text-theme-main border border-theme-border transition-colors cursor-pointer"
                   title={isExpanded ? 'Show Less' : 'Show More Details'}
                 >
                   {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
                 </button>
                 <button
                   onClick={onClose}
-                  className="p-1.5 rounded-xl bg-theme-hover text-theme-muted hover:text-theme-main border border-theme-border transition-colors"
+                  className="p-1.5 rounded-xl bg-theme-hover text-theme-muted hover:text-theme-main border border-theme-border transition-colors cursor-pointer"
                   title="Close Selection"
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
             </div>
+
+            {/* Emergency Breakdown Overlay Banner (Sprint 13 Core Requirement) */}
+            {isEmergency && (
+              <div className="p-3 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-300 space-y-2 animate-in fade-in duration-200">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-rose-500 dark:text-rose-400 flex items-center gap-1.5">
+                    <ShieldAlert className="w-4 h-4 text-rose-500" />
+                    Emergency Rerouting Activated
+                  </span>
+                  <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 font-bold">
+                    Code RED
+                  </span>
+                </div>
+                <p className="text-[11px] text-theme-muted leading-relaxed">
+                  Bus has pulled over due to mechanical issue. Relief Bus AP 39 TE 2045 has been authorized by Dispatch.
+                </p>
+                <div className="pt-2 border-t border-rose-500/20 flex items-center justify-between text-xs">
+                  <div>
+                    <span className="text-[10px] text-theme-muted block">Replacement Vehicle</span>
+                    <span className="font-bold text-theme-main">AP 39 TE 2045 (Relief)</span>
+                  </div>
+                  <div className="text-right font-mono">
+                    <span className="text-[10px] text-theme-muted block">Estimated Arrival</span>
+                    <span className="font-bold text-emerald-500 dark:text-emerald-400 tabular-nums">~6 mins away</span>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Next Stop Indicator */}
             <div className="flex items-center gap-1.5 text-xs text-theme-muted">
@@ -140,14 +192,24 @@ export const RideStatusSheet: React.FC<RideStatusSheetProps> = ({
                 </div>
               </div>
 
-              {/* Working Call Driver Phone Dialer Pill */}
-              <a
-                href="tel:9876543210"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-theme-card-subtle hover:bg-theme-hover text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-xs font-bold transition-all active:scale-95"
-              >
-                <Phone className="w-3.5 h-3.5 fill-current" />
-                <span>Call Driver</span>
-              </a>
+              {/* Working Call Driver or Helpline Phone Dialer Pill */}
+              {isEmergency ? (
+                <a
+                  href="tel:18004255555"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 border border-rose-500/30 text-xs font-bold transition-all active:scale-95"
+                >
+                  <LifeBuoy className="w-3.5 h-3.5" />
+                  <span>Helpline</span>
+                </a>
+              ) : (
+                <a
+                  href="tel:9876543210"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-theme-card-subtle hover:bg-theme-hover text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-xs font-bold transition-all active:scale-95"
+                >
+                  <Phone className="w-3.5 h-3.5 fill-current" />
+                  <span>Call Driver</span>
+                </a>
+              )}
             </div>
 
             {/* Expanded Content: Tabular Metrics & Route Timeline */}
@@ -195,6 +257,8 @@ export const RideStatusSheet: React.FC<RideStatusSheetProps> = ({
                       const isCompleted = stop.status === 'COMPLETED';
                       const isEnRoute = stop.status === 'EN_ROUTE';
                       const isDestination = stop.status === 'DESTINATION';
+                      const isBreakdown = stop.status === 'BREAKDOWN';
+                      const isRelief = stop.status === 'RELIEF';
 
                       return (
                         <div key={stop.name} className="flex items-center gap-2.5">
@@ -202,7 +266,11 @@ export const RideStatusSheet: React.FC<RideStatusSheetProps> = ({
                           <div className="flex flex-col items-center">
                             <div
                               className={`w-2.5 h-2.5 rounded-full ${
-                                isCompleted
+                                isBreakdown
+                                  ? 'bg-rose-500 ring-4 ring-rose-500/20 animate-pulse'
+                                  : isRelief
+                                  ? 'bg-amber-500 ring-4 ring-amber-500/20'
+                                  : isCompleted
                                   ? 'bg-slate-400 dark:bg-slate-600'
                                   : isEnRoute
                                   ? 'bg-emerald-500 dark:bg-emerald-400 ring-4 ring-emerald-500/20 animate-pulse'
@@ -219,7 +287,11 @@ export const RideStatusSheet: React.FC<RideStatusSheetProps> = ({
                           {/* Stop Name */}
                           <span
                             className={`flex-1 truncate ${
-                              isCompleted
+                              isBreakdown
+                                ? 'text-rose-500 dark:text-rose-400 font-bold'
+                                : isRelief
+                                ? 'text-amber-500 dark:text-amber-300 font-bold'
+                                : isCompleted
                                 ? 'text-theme-muted line-through opacity-70'
                                 : isEnRoute
                                 ? 'text-emerald-600 dark:text-emerald-300 font-bold'
@@ -234,7 +306,11 @@ export const RideStatusSheet: React.FC<RideStatusSheetProps> = ({
                           {/* Timestamp Pill */}
                           <span
                             className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${
-                              isEnRoute
+                              isBreakdown
+                                ? 'bg-rose-500/20 text-rose-400 font-bold'
+                                : isRelief
+                                ? 'bg-amber-500/20 text-amber-400 font-bold'
+                                : isEnRoute
                                 ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 font-bold'
                                 : isDestination
                                 ? 'bg-amber-500/10 text-amber-600 dark:text-amber-300'
