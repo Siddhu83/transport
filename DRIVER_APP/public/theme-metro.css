@@ -1,0 +1,121 @@
+/* ==========================================================================
+   THEME C: INSTITUTIONAL METRO TRANSIT (Municipal Transit Authority CAD/AVL)
+   Aesthetic: Official college/municipal transport utility kiosk. Deep navy
+              command surfaces, authoritative green & red traffic-grade tokens.
+   ========================================================================== */
+
+:root, [data-theme="metro"], body {
+  --b1: #0a1128;          /* Canvas: Institutional Deep Navy */
+  --b2: #111c38;          /* Cards: Command Blue-Steel */
+  --b3: #1c2b54;          /* Elevated: Dark Royal Slate */
+  --bc: #ffffff;          /* Primary Text: High-Contrast White */
+  --bc-muted: #8fa3d0;    /* Secondary: Soft Periwinkle Slate */
+  --bc-subtle: #5f75a6;   /* Muted: Cadet Blue */
+  --b-border: #273c75;    /* 1px Steel Blue Border */
+
+  --p: #10b981;           /* Primary Action: Transit Kelly Green */
+  --p-hover: #059669;
+  --pc: #ffffff;
+  --p-bg: #111c38;
+  --p-border: #059669;
+
+  --su: #10b981;          /* Duty Online: Transit Kelly Green */
+  --su-bg: #064e3b;
+  --su-border: #059669;
+
+  --wa: #f59e0b;          /* Caution Amber */
+  --wa-bg: #78350f;
+  --wa-border: #d97706;
+
+  --er: #b91c1c;          /* Emergency SOS: Signal Red */
+  --er-bg: #7f1d1d;
+  --er-border: #ef4444;
+
+  background-color: var(--b1) !important;
+  color: var(--bc) !important;
+}
+
+/* Background & Header Opaque Overrides */
+body, #root, .min-h-screen {
+  background-color: #0a1128 !important;
+}
+
+header {
+  background-color: #0a1128 !important;
+  border-bottom: 1px solid #273c75 !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5) !important;
+}
+
+/* Card & Surface Overrides - Municipal Utility Kiosk */
+.glass-card,
+.kiosk-card {
+  background: #111c38 !important;
+  border: 1px solid #273c75 !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border-radius: 0.75rem !important;
+}
+
+.glass-card-rose,
+.kiosk-card-error {
+  background: #23121b !important;
+  border: 2px solid #ef4444 !important;
+  box-shadow: 0 4px 16px rgba(239, 68, 68, 0.25) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.glass-card-emerald {
+  background: #0f2420 !important;
+  border: 2px solid #10b981 !important;
+  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.25) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Eliminate All Neon Glows */
+.glow-emerald,
+.glow-rose {
+  box-shadow: none !important;
+}
+
+/* Buttons & Interactive Elements */
+.glass-button {
+  background: #1c2b54 !important;
+  border: 1px solid #273c75 !important;
+  color: #e2e8f0 !important;
+  border-radius: 0.75rem !important;
+}
+
+.glass-button:hover {
+  background: #273c75 !important;
+  color: #ffffff !important;
+}
+
+/* Active Duty Button (Transit Solid Kelly Green) */
+button.bg-gradient-to-r.from-emerald-500.to-teal-400 {
+  background: linear-gradient(135deg, #10b981, #059669) !important;
+  color: #ffffff !important;
+  font-weight: 800 !important;
+  border: 1px solid #34d399 !important;
+  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.35) !important;
+}
+
+/* Verified & Route Badges */
+.bg-emerald-500\/20,
+.bg-emerald-500\/10 {
+  background: rgba(16, 185, 129, 0.15) !important;
+  border-color: rgba(16, 185, 129, 0.35) !important;
+  color: #34d399 !important;
+}
+
+.text-emerald-400,
+.text-emerald-300 {
+  color: #34d399 !important;
+}
+
+.bg-emerald-600 {
+  background-color: #059669 !important;
+}
+

@@ -1,0 +1,120 @@
+/* ==========================================================================
+   THEME A: AVIATION INDUSTRIAL CAD/AVL (Cockpit High-Contrast)
+   Aesthetic: Distraction-free, rugged cockpit terminal. Zero neon glow,
+              crisp matte surfaces, high-contrast amber/white avionics.
+   ========================================================================== */
+
+:root, [data-theme="aviation"], body {
+  --b1: #090d14;          /* Canvas: Deep Matte Obsidian */
+  --b2: #111827;          /* Cards: Matte Charcoal Slate */
+  --b3: #1f2937;          /* Elevated: Dark Slate */
+  --bc: #f9fafb;          /* Primary Text: Crisp Cool White */
+  --bc-muted: #9ca3af;    /* Secondary: Neutral Avionics Grey */
+  --bc-subtle: #6b7280;   /* Muted: Slate Grey */
+  --b-border: #374151;    /* 1px Crisp Industrial Outline */
+
+  --p: #f59e0b;           /* Primary Action: Safety Amber */
+  --p-hover: #d97706;
+  --pc: #090d14;
+  --p-bg: #1e293b;
+  --p-border: #f59e0b;
+
+  --su: #10b981;          /* Duty Online: High-Vis Emerald */
+  --su-bg: #064e3b;
+  --su-border: #059669;
+
+  --wa: #f59e0b;          /* Caution: Safety Amber */
+  --wa-bg: #78350f;
+  --wa-border: #d97706;
+
+  --er: #dc2626;          /* Emergency SOS: Aviation Alert Crimson */
+  --er-bg: #7f1d1d;
+  --er-border: #ef4444;
+
+  background-color: var(--b1) !important;
+  color: var(--bc) !important;
+}
+
+/* Background & Header Opaque Overrides */
+body, #root, .min-h-screen {
+  background-color: #090d14 !important;
+}
+
+header {
+  background-color: #090d14 !important;
+  border-bottom: 1px solid #374151 !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6) !important;
+}
+
+/* Card & Surface Overrides - Clean Matte (Zero Neon Glow / Zero Glass Blur) */
+.glass-card,
+.kiosk-card {
+  background: #111827 !important;
+  border: 1px solid #374151 !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border-radius: 0.875rem !important;
+}
+
+.glass-card-rose,
+.kiosk-card-error {
+  background: #1a1215 !important;
+  border: 2px solid #ef4444 !important;
+  box-shadow: 0 4px 16px rgba(239, 68, 68, 0.2) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.glass-card-emerald {
+  background: #0f1c18 !important;
+  border: 2px solid #10b981 !important;
+  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.2) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Eliminate All Neon Glows */
+.glow-emerald,
+.glow-rose {
+  box-shadow: none !important;
+}
+
+/* Buttons & Interactive Elements */
+.glass-button {
+  background: #1f2937 !important;
+  border: 1px solid #374151 !important;
+  color: #f3f4f6 !important;
+}
+
+.glass-button:hover {
+  background: #374151 !important;
+  border-color: #4b5563 !important;
+}
+
+/* Active Duty Button (Aviation Safety Amber Accent) */
+button.bg-gradient-to-r.from-emerald-500.to-teal-400 {
+  background: linear-gradient(135deg, #f59e0b, #d97706) !important;
+  color: #090d14 !important;
+  font-weight: 800 !important;
+  border: 1px solid #fbbf24 !important;
+  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.35) !important;
+}
+
+/* Verified & Route Badges */
+.bg-emerald-500\/20,
+.bg-emerald-500\/10 {
+  background: rgba(245, 158, 11, 0.15) !important;
+  border-color: rgba(245, 158, 11, 0.4) !important;
+  color: #fbbf24 !important;
+}
+
+.text-emerald-400,
+.text-emerald-300 {
+  color: #f59e0b !important;
+}
+
+.bg-emerald-600 {
+  background-color: #d97706 !important;
+}
+

@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
-  Zap,
   Radio,
-  Navigation,
   Gauge,
   Users,
   BatteryCharging,
@@ -27,7 +25,7 @@ import {
   X,
   Check,
   Route as RouteIcon,
-  ChevronRight,
+  Compass,
 } from 'lucide-react';
 import { requestBatteryExemption } from './services/batteryOptimization';
 import { trackingDaemon, TrackingDaemonState } from './services/trackingDaemon';
@@ -65,13 +63,6 @@ export const App: React.FC = () => {
   const [batteryStatus, setBatteryStatus] = useState<string>('Exemption Ready');
   const [passengerCount, setPassengerCount] = useState<number>(38);
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
-  const [simulatedMode, setSimulatedMode] = useState<boolean>(false);
-
-  // Active Route Corridor Shift Binding State
-  const [selectedRouteId, setSelectedRouteId] = useState<string>(() => {
-    return session?.user?.assignedRouteId || CAMPUS_CORRIDORS[0]!.id;
-  });
-  const [isCorridorModalOpen, setIsCorridorModalOpen] = useState<boolean>(false);
 
   // SOS Breakdown & Press-and-Hold State (Sprint 9 Requirement)
   const [isHoldingSos, setIsHoldingSos] = useState<boolean>(false);
@@ -131,9 +122,6 @@ export const App: React.FC = () => {
     try {
       const authSession = await AuthService.login(loginEmail, loginPassword);
       setSession(authSession);
-      if (authSession.user.assignedRouteId) {
-        setSelectedRouteId(authSession.user.assignedRouteId);
-      }
     } catch (err: any) {
       setLoginError(err.message || 'Login failed');
     } finally {
@@ -177,23 +165,18 @@ export const App: React.FC = () => {
       await trackingDaemon.stopTracking();
     } else {
       const busId = session.user.assignedBusId || '11111111-1111-4111-8111-111111111111';
-      const routeId = selectedRouteId || session.user.assignedRouteId || 'a1111111-1111-4111-8111-111111111111';
+      const routeId = session.user.assignedRouteId || 'a1111111-1111-4111-8111-111111111111';
 
       await trackingDaemon.startTracking({
         busId,
         routeId,
         driverId: session.user.id,
         authToken: session.token,
-        forceSimulatedGps: simulatedMode,
+        forceSimulatedGps: false,
         passengerCount,
       });
     }
     setDaemonState(trackingDaemon.getState());
-  };
-
-  const toggleSimulatedMode = (enabled: boolean) => {
-    setSimulatedMode(enabled);
-    trackingDaemon.setSimulatedMode(enabled);
   };
 
   const toggleFullscreen = () => {
@@ -268,7 +251,7 @@ export const App: React.FC = () => {
 
     const coords = trackingDaemon.getCurrentCoordinates();
     const busId = session.user.assignedBusId || '11111111-1111-4111-8111-111111111111';
-    const routeId = selectedRouteId || session.user.assignedRouteId || 'a1111111-1111-4111-8111-111111111111';
+    const routeId = session.user.assignedRouteId || 'a1111111-1111-4111-8111-111111111111';
 
     try {
       const response = await SosService.triggerSos(
@@ -457,8 +440,8 @@ export const App: React.FC = () => {
   // ---------------------------------------------------------------------------
   const user = session.user;
   const maxCapacity = user.capacity || 55;
-  const activeCorridor = CAMPUS_CORRIDORS.find((c) => c.id === selectedRouteId) || {
-    id: selectedRouteId,
+  const activeCorridor = {
+    id: user.assignedRouteId || CAMPUS_CORRIDORS[0]!.id,
     routeNumber: user.routeNumber || 'R-101',
     name: user.routeName || 'Sector 1 Express Corridor',
   };
@@ -475,9 +458,9 @@ export const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#0b0f17] text-slate-100 font-sans pb-16 selection:bg-emerald-500/30 selection:text-emerald-200">
-      {/* Top Header Bar */}
+      {/* Top Header Bar (Opaque background prevents content bleed-through on scroll) */}
       <header
-        className="sticky top-0 z-40 glass-card px-3 sm:px-4 pb-3 flex items-center justify-between border-b border-slate-800/80 transition-[padding] duration-200"
+        className="sticky top-0 z-50 bg-[#0b0f17] px-3 sm:px-4 pb-3 flex items-center justify-between border-b border-slate-800 shadow-md shadow-black/40 transition-[padding] duration-200"
         style={{ paddingTop: headerTopPadding }}
       >
         <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1 mr-2">
@@ -584,356 +567,360 @@ export const App: React.FC = () => {
           </div>
         )}
 
-        {/* ACTIVE ROUTE / VEHICLE SHIFT BINDING INTERFACE (Sprint 9 Task 4) */}
-        <div className="glass-card rounded-2xl p-4 border border-slate-800 space-y-2">
-          <div className="flex items-center justify-between text-xs">
-            <span className="text-slate-400 font-semibold uppercase tracking-wider flex items-center gap-1.5">
-              <RouteIcon className="w-4 h-4 text-emerald-400" />
-              Active Shift Binding
-            </span>
+        {/* ======================================================================= */}
+        {/* TRANSIT HEADS-UP HUD (Reference C: Dynamic Duty Awareness)             */}
+        {/* ======================================================================= */}
+
+        {daemonState.isRunning ? (
+          /* ===================================================================== */
+          /* MODE B: ON-DUTY TRANSIT HEADS-UP HUD (Active Route Flight Deck)       */
+          /* ===================================================================== */
+          <div className="space-y-4 animate-fade-in">
+            {/* 1. Priority Glanceable Next Stop Card */}
+            <div className="bg-slate-900/90 border-2 border-emerald-500/40 rounded-2xl p-4 sm:p-5 space-y-3 shadow-xl">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-emerald-400 font-extrabold uppercase tracking-wider flex items-center gap-1.5">
+                  <MapPin className="w-4 h-4 text-emerald-400 animate-pulse" />
+                  Next Scheduled Stop
+                </span>
+                <span className="bg-emerald-500/20 text-emerald-300 font-bold px-2.5 py-0.5 rounded-full border border-emerald-500/30 text-[11px] animate-pulse">
+                  ~2 MINS • 450M
+                </span>
+              </div>
+
+              <div>
+                <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white">Transit Stop #2</h2>
+                <p className="text-xs text-slate-400 mt-0.5">{activeCorridor.name} (En Route)</p>
+              </div>
+
+              {/* Dynamic Stop Progression Ribbon */}
+              <div className="pt-2 border-t border-slate-800/80 space-y-1.5">
+                <div className="flex items-center justify-between text-[11px] text-slate-400">
+                  <span className="line-through text-slate-500">Campus Main Gate</span>
+                  <span className="text-emerald-400 font-bold">Stop #2</span>
+                  <span className="text-slate-500">Central Hostels</span>
+                </div>
+                <div className="w-full bg-slate-950 rounded-full h-2 overflow-hidden flex border border-slate-800">
+                  <div className="bg-slate-600 h-full w-1/3"></div>
+                  <div className="bg-emerald-500 h-full w-1/3 animate-pulse"></div>
+                  <div className="bg-transparent h-full w-1/3"></div>
+                </div>
+              </div>
+            </div>
+
+            {/* 2. Cockpit Telemetry HUD (Speedometer & Ping Rate) */}
+            <div className="grid grid-cols-2 gap-3">
+              {/* Speedometer Gauge Tile */}
+              <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 flex flex-col justify-between">
+                <div className="flex items-center justify-between text-slate-400 mb-1">
+                  <span className="text-[11px] font-bold uppercase tracking-wider">Speed</span>
+                  <Gauge className="w-4 h-4 text-emerald-400" />
+                </div>
+                <div>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-3xl font-black text-white tabular-nums">
+                      {daemonState.currentSpeed}
+                    </span>
+                    <span className="text-xs font-bold text-emerald-400">km/h</span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-1">
+                    <Compass className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                    <span className="tabular-nums font-mono">{daemonState.currentHeading}° Heading</span>
+                  </p>
+                </div>
+              </div>
+
+              {/* Telemetry Stream Heartbeat */}
+              <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 flex flex-col justify-between">
+                <div className="flex items-center justify-between text-slate-400 mb-1">
+                  <span className="text-[11px] font-bold uppercase tracking-wider">Telemetry</span>
+                  <Radio className="w-4 h-4 text-teal-400" />
+                </div>
+                <div>
+                  <div className="text-3xl font-black text-white tabular-nums">
+                    {daemonState.totalPingsEmitted}
+                  </div>
+                  <p className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-1">
+                    <span>Buffer:</span>
+                    <span className={`font-mono font-bold tabular-nums ${daemonState.bufferedPingsCount > 0 ? 'text-amber-400' : 'text-slate-300'}`}>
+                      {daemonState.bufferedPingsCount}/20
+                    </span>
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* 3. Tactile Passenger Occupancy Stepper (Min 72px touch targets) */}
+            <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 space-y-3 shadow-lg">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Users className="w-4 h-4 text-emerald-400" />
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-200">
+                    Passenger Load Count
+                  </span>
+                </div>
+                <span className={`text-xs font-bold px-2 py-0.5 rounded border tabular-nums ${
+                  passengerCount / maxCapacity > 0.85
+                    ? 'bg-rose-500/20 text-rose-300 border-rose-500/30'
+                    : passengerCount / maxCapacity > 0.65
+                    ? 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                    : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                }`}>
+                  {Math.round((passengerCount / maxCapacity) * 100)}% Full
+                </span>
+              </div>
+
+              {/* Capacity Fill Meter */}
+              <div className="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden border border-slate-800">
+                <div
+                  className={`h-full transition-all duration-300 ${
+                    passengerCount / maxCapacity > 0.85 ? 'bg-rose-500' : passengerCount / maxCapacity > 0.65 ? 'bg-amber-500' : 'bg-emerald-500'
+                  }`}
+                  style={{ width: `${Math.min(100, Math.round((passengerCount / maxCapacity) * 100))}%` }}
+                ></div>
+              </div>
+
+              <div className="flex items-center justify-between gap-4 pt-1">
+                <button
+                  onClick={() => handlePassengerChange(-1)}
+                  style={{ width: '72px', height: '72px' }}
+                  className="rounded-2xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-2xl flex items-center justify-center active:scale-90 border border-slate-700 shadow-md transition-transform"
+                  aria-label="Decrease passenger count"
+                >
+                  -
+                </button>
+
+                <div className="text-center">
+                  <span className="text-3xl font-black text-white tabular-nums">{passengerCount}</span>
+                  <span className="text-xs text-slate-400 font-medium block">/ {maxCapacity} Seats</span>
+                </div>
+
+                <button
+                  onClick={() => handlePassengerChange(1)}
+                  style={{ width: '72px', height: '72px' }}
+                  className="rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-2xl flex items-center justify-center active:scale-90 shadow-lg shadow-emerald-950/40 transition-transform"
+                  aria-label="Increase passenger count"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+
+            {/* 4. Guarded In-Transit Emergency SOS Station */}
+            <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 sm:p-5 relative overflow-hidden shadow-lg">
+              <div className="flex items-center justify-between gap-4">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded border border-rose-500/20">
+                      Safety Safeguard
+                    </span>
+                  </div>
+                  <h3 className="text-sm font-extrabold text-white">Emergency SOS Breakdown</h3>
+                  <p className="text-[11px] text-slate-400 mt-0.5 leading-snug">
+                    {isHoldingSos ? (
+                      <span className="text-rose-400 font-bold animate-pulse">
+                        Hold firmly... {((2000 - (sosHoldProgress / 100) * 2000) / 1000).toFixed(1)}s
+                      </span>
+                    ) : activeIncident ? (
+                      <span className="text-rose-400 font-semibold">Incident broadcast active</span>
+                    ) : (
+                      <span>Hold 2 seconds to initiate breakdown dispatch</span>
+                    )}
+                  </p>
+                </div>
+
+                <div className="relative w-20 h-20 flex items-center justify-center shrink-0 select-none touch-none">
+                  <svg className="w-20 h-20 -rotate-90 transform" viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r={RADIUS} className="stroke-slate-800/80" strokeWidth="6" fill="transparent" />
+                    <circle
+                      cx="50"
+                      cy="50"
+                      r={RADIUS}
+                      className="stroke-rose-500 transition-all duration-75 ease-linear"
+                      strokeWidth="6"
+                      strokeDasharray={CIRCUMFERENCE}
+                      strokeDashoffset={strokeDashoffset}
+                      strokeLinecap="round"
+                      fill="transparent"
+                    />
+                  </svg>
+
+                  <button
+                    type="button"
+                    onPointerDown={startSosHold}
+                    onPointerUp={cancelSosHold}
+                    onPointerLeave={cancelSosHold}
+                    onPointerCancel={cancelSosHold}
+                    disabled={Boolean(activeIncident)}
+                    className={`absolute w-14 h-14 rounded-full flex flex-col items-center justify-center transition-all transform active:scale-95 shadow-lg ${
+                      activeIncident
+                        ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
+                        : isHoldingSos
+                        ? 'bg-rose-500 text-white scale-105 shadow-rose-600/80'
+                        : 'bg-rose-600 hover:bg-rose-500 text-white shadow-rose-900/60'
+                    }`}
+                    style={{ minWidth: '56px', minHeight: '56px' }}
+                    aria-label="Hold 2 seconds to trigger SOS Breakdown"
+                  >
+                    <AlertOctagon className={`w-6 h-6 ${isHoldingSos ? 'animate-bounce' : ''}`} />
+                    <span className="text-[9px] font-black tracking-wider uppercase mt-0.5">
+                      {isHoldingSos ? `${sosHoldProgress}%` : 'SOS'}
+                    </span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* 5. End Duty Action Button (Min 64px touch target) */}
             <button
-              onClick={() => setIsCorridorModalOpen(true)}
-              className="text-[11px] font-bold text-emerald-400 hover:text-emerald-300 flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 active:scale-95"
+              onClick={handleToggleTracking}
+              style={{ minHeight: '64px' }}
+              className="w-full py-4 px-6 rounded-2xl font-bold text-sm tracking-wider uppercase bg-rose-600/90 hover:bg-rose-600 text-white flex items-center justify-center gap-2 border border-rose-500/40 shadow-lg shadow-rose-950/40 transition-all active:scale-95"
             >
-              Change Corridor <ChevronRight className="w-3 h-3" />
+              <Square className="w-5 h-5 fill-current" />
+              END TRANSIT DUTY (OFFLINE)
             </button>
           </div>
-
-          <div className="bg-slate-950/70 rounded-xl p-3 flex items-center justify-between border border-slate-800/80">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-black text-white bg-slate-800 px-2 py-0.5 rounded font-mono">
-                  {user.busNumber || 'BUS-101'}
-                </span>
-                <span className="text-xs font-bold text-emerald-400">{activeCorridor.routeNumber}</span>
-              </div>
-              <p className="text-[11px] text-slate-300 font-medium mt-1">{activeCorridor.name}</p>
-            </div>
-            <span className="text-[10px] text-slate-400 bg-slate-900 px-2 py-1 rounded-md border border-slate-800">
-              Assigned
-            </span>
-          </div>
-        </div>
-
-        {/* PRIMARY OPERATIONAL BUTTON: 2-SECOND PRESS-AND-HOLD SOS TRIGGER (Sprint 9 Tasks 1 & 2) */}
-        <div className="glass-card-rose rounded-3xl p-6 border-2 border-rose-500/40 relative overflow-hidden shadow-2xl shadow-rose-950/40">
-          <div className="flex flex-col items-center text-center space-y-4">
-            <div className="space-y-1">
-              <span className="text-[10px] font-black uppercase tracking-widest text-rose-400 bg-rose-500/10 px-3 py-1 rounded-full border border-rose-500/20">
-                Critical Safety Safeguard
-              </span>
-              <h2 className="text-lg font-black tracking-tight text-white">EMERGENCY SOS DISPATCH</h2>
-              <p className="text-xs text-slate-400 max-w-[280px]">
-                Eliminates accidental touches: press and hold for 2 seconds to initiate breakdown dispatch.
-              </p>
-            </div>
-
-            {/* Circular 72x72px+ Touch Target with Radial Progress Ring */}
-            <div className="relative w-28 h-28 flex items-center justify-center select-none touch-none">
-              {/* SVG Radial Progress Ring */}
-              <svg className="w-28 h-28 -rotate-90 transform" viewBox="0 0 100 100">
-                {/* Background Ring */}
-                <circle
-                  cx="50"
-                  cy="50"
-                  r={RADIUS}
-                  className="stroke-slate-800/80"
-                  strokeWidth="6"
-                  fill="transparent"
-                />
-                {/* Animated Radial Progress Ring */}
-                <circle
-                  cx="50"
-                  cy="50"
-                  r={RADIUS}
-                  className="stroke-rose-500 transition-all duration-75 ease-linear"
-                  strokeWidth="6"
-                  strokeDasharray={CIRCUMFERENCE}
-                  strokeDashoffset={strokeDashoffset}
-                  strokeLinecap="round"
-                  fill="transparent"
-                />
-              </svg>
-
-              {/* Center Trigger Button (Exceeds 72x72px Touch Target requirement) */}
-              <button
-                type="button"
-                onPointerDown={startSosHold}
-                onPointerUp={cancelSosHold}
-                onPointerLeave={cancelSosHold}
-                onPointerCancel={cancelSosHold}
-                disabled={Boolean(activeIncident)}
-                className={`absolute w-20 h-20 rounded-full flex flex-col items-center justify-center transition-all transform active:scale-95 shadow-xl ${
-                  activeIncident
-                    ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
-                    : isHoldingSos
-                    ? 'bg-rose-500 text-white scale-105 shadow-rose-600/80'
-                    : 'bg-gradient-to-tr from-rose-600 to-red-500 hover:from-rose-500 hover:to-red-400 text-white shadow-rose-900/60'
-                }`}
-                style={{ minWidth: '72px', minHeight: '72px' }}
-                aria-label="Hold 2 seconds to trigger SOS Breakdown"
-              >
-                <AlertOctagon className={`w-8 h-8 ${isHoldingSos ? 'animate-bounce' : ''}`} />
-                <span className="text-[10px] font-black tracking-wider uppercase mt-0.5">
-                  {isHoldingSos ? `${sosHoldProgress}%` : 'SOS'}
-                </span>
-              </button>
-            </div>
-
-            <div className="text-[11px] text-slate-400 font-mono">
-              {isHoldingSos ? (
-                <span className="text-rose-400 font-bold animate-pulse">
-                  HOLD FIRMLY... {((2000 - (sosHoldProgress / 100) * 2000) / 1000).toFixed(1)}s
-                </span>
-              ) : activeIncident ? (
-                <span className="text-rose-400 font-semibold">Emergency Broadcast Active</span>
-              ) : (
-                <span>Hold 2s to open breakdown incident room</span>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Insecure HTTP Security Warning Banner */}
-        {daemonState.locationProvider === 'INSECURE_ORIGIN_SIMULATED' && (
-          <div className="glass-card-rose rounded-2xl p-4 space-y-2 border border-rose-500/30">
-            <div className="flex items-start gap-2.5">
-              <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5 animate-pulse" />
-              <div>
-                <p className="font-bold text-rose-200 text-xs">HTTP Wi-Fi Geolocation Notice</p>
-                <p className="text-slate-300 text-[11px] leading-relaxed mt-0.5">
-                  Mobile browsers block raw hardware GPS over unencrypted <code className="bg-slate-950/80 px-1 py-0.5 rounded text-amber-300 font-mono">http://</code> LAN Wi-Fi IPs.
+        ) : (
+          /* ===================================================================== */
+          /* MODE A: OFF-DUTY / IDLE (Reference C: Central Uber-Style Action Hero) */
+          /* ===================================================================== */
+          <div className="space-y-4 animate-fade-in">
+            {/* 1. Uber-Inspired Central GO Duty Station */}
+            <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 sm:p-8 text-center space-y-4 shadow-xl">
+              <div className="flex flex-col items-center">
+                <button
+                  onClick={handleToggleTracking}
+                  className="w-28 h-28 rounded-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-2xl tracking-wider uppercase flex flex-col items-center justify-center shadow-2xl shadow-emerald-950/80 transition-all transform active:scale-95 border-4 border-slate-900 select-none"
+                  style={{ minWidth: '112px', minHeight: '112px' }}
+                >
+                  <Play className="w-8 h-8 fill-current ml-1 mb-0.5" />
+                  <span>GO</span>
+                </button>
+                <h2 className="text-lg font-black tracking-tight text-white mt-4">READY TO START DUTY</h2>
+                <p className="text-xs text-slate-400 max-w-[280px] mt-1">
+                  Tap GO to initiate vehicle tracking daemon and stream telemetry to Central Dispatch.
                 </p>
               </div>
             </div>
 
-            <div className="bg-slate-950/80 rounded-xl p-2.5 text-[11px] space-y-1 border border-slate-800 font-mono">
-              <p className="font-bold text-emerald-400 flex items-center gap-1">
-                <span>🔒 For 100% Real Phone GPS:</span>
-              </p>
-              <p className="text-slate-300">
-                Open <code className="text-emerald-300 underline font-semibold">https://{window.location.hostname}:3001</code> on your phone (accept SSL certificate prompt).
-              </p>
+            {/* 2. Fixed Assigned Vehicle & Corridor Card */}
+            <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-slate-400 font-semibold uppercase tracking-wider flex items-center gap-1.5">
+                  <RouteIcon className="w-4 h-4 text-emerald-400" />
+                  Assigned Vehicle & Corridor
+                </span>
+                <span className="text-[10px] font-bold text-slate-400 bg-slate-950 px-2 py-0.5 rounded border border-slate-800 flex items-center gap-1">
+                  <Lock className="w-3 h-3 text-slate-500" />
+                  Fixed Shift
+                </span>
+              </div>
+
+              <div className="bg-slate-950/70 rounded-xl p-3 flex items-center justify-between border border-slate-800/80">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-black text-white bg-slate-800 px-2 py-0.5 rounded font-mono">
+                      {user.busNumber || 'BUS-101'}
+                    </span>
+                    <span className="text-xs font-bold text-emerald-400">{activeCorridor.routeNumber}</span>
+                  </div>
+                  <p className="text-[11px] text-slate-300 font-medium mt-1">{activeCorridor.name}</p>
+                </div>
+                <span className="text-[10px] text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-md border border-emerald-500/20 font-semibold">
+                  Authorized
+                </span>
+              </div>
             </div>
 
-            <p className="text-[10px] text-emerald-400 font-medium pt-0.5">
-              ⚡ Running Route GPS Simulator so pings stream to server seamlessly over HTTP!
-            </p>
+            {/* 3. Pre-Shift Android Battery Shield */}
+            <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                  <BatteryCharging className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-white flex items-center gap-1.5">
+                    Android Battery Doze Shield
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                  </p>
+                  <p className="text-[11px] text-slate-400">{batteryStatus}</p>
+                </div>
+              </div>
+              <button
+                onClick={handleRequestExemption}
+                className="glass-button px-3 py-1.5 rounded-xl text-xs font-medium text-emerald-300 hover:text-emerald-200"
+              >
+                Re-check
+              </button>
+            </div>
+
+            {/* 4. Guarded Standby Emergency SOS Station */}
+            <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 sm:p-5 relative overflow-hidden shadow-lg">
+              <div className="flex items-center justify-between gap-4">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded border border-rose-500/20">
+                      Emergency Standby
+                    </span>
+                  </div>
+                  <h3 className="text-sm font-extrabold text-white">Emergency SOS Breakdown</h3>
+                  <p className="text-[11px] text-slate-400 mt-0.5 leading-snug">
+                    {isHoldingSos ? (
+                      <span className="text-rose-400 font-bold animate-pulse">
+                        Hold firmly... {((2000 - (sosHoldProgress / 100) * 2000) / 1000).toFixed(1)}s
+                      </span>
+                    ) : activeIncident ? (
+                      <span className="text-rose-400 font-semibold">Incident broadcast active</span>
+                    ) : (
+                      <span>Hold 2 seconds to initiate breakdown dispatch</span>
+                    )}
+                  </p>
+                </div>
+
+                <div className="relative w-20 h-20 flex items-center justify-center shrink-0 select-none touch-none">
+                  <svg className="w-20 h-20 -rotate-90 transform" viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r={RADIUS} className="stroke-slate-800/80" strokeWidth="6" fill="transparent" />
+                    <circle
+                      cx="50"
+                      cy="50"
+                      r={RADIUS}
+                      className="stroke-rose-500 transition-all duration-75 ease-linear"
+                      strokeWidth="6"
+                      strokeDasharray={CIRCUMFERENCE}
+                      strokeDashoffset={strokeDashoffset}
+                      strokeLinecap="round"
+                      fill="transparent"
+                    />
+                  </svg>
+
+                  <button
+                    type="button"
+                    onPointerDown={startSosHold}
+                    onPointerUp={cancelSosHold}
+                    onPointerLeave={cancelSosHold}
+                    onPointerCancel={cancelSosHold}
+                    disabled={Boolean(activeIncident)}
+                    className={`absolute w-14 h-14 rounded-full flex flex-col items-center justify-center transition-all transform active:scale-95 shadow-lg ${
+                      activeIncident
+                        ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
+                        : isHoldingSos
+                        ? 'bg-rose-500 text-white scale-105 shadow-rose-600/80'
+                        : 'bg-rose-600 hover:bg-rose-500 text-white shadow-rose-900/60'
+                    }`}
+                    style={{ minWidth: '56px', minHeight: '56px' }}
+                    aria-label="Hold 2 seconds to trigger SOS Breakdown"
+                  >
+                    <AlertOctagon className={`w-6 h-6 ${isHoldingSos ? 'animate-bounce' : ''}`} />
+                    <span className="text-[9px] font-black tracking-wider uppercase mt-0.5">
+                      {isHoldingSos ? `${sosHoldProgress}%` : 'SOS'}
+                    </span>
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         )}
-
-        {/* Hero Duty Switch (Min 72px touch target) */}
-        <div
-          className={`rounded-3xl p-6 transition-all duration-300 border ${
-            daemonState.isRunning ? 'glass-card-rose glow-rose' : 'glass-card-emerald glow-emerald'
-          }`}
-        >
-          <div className="text-center space-y-4">
-            <div className="inline-flex p-3 rounded-2xl bg-slate-900/60 border border-slate-700/50">
-              {daemonState.isRunning ? (
-                <Radio className="w-10 h-10 text-rose-400 animate-pulse" />
-              ) : (
-                <Zap className="w-10 h-10 text-emerald-400 animate-pulse-slow" />
-              )}
-            </div>
-
-            <div>
-              <h2 className="text-xl font-extrabold tracking-tight text-white">
-                {daemonState.isRunning ? 'SHIFT IN PROGRESS' : 'READY TO START DUTY?'}
-              </h2>
-              <p className="text-xs text-slate-300 mt-1">
-                {daemonState.isRunning
-                  ? `Transmitting telemetry for ${user.busNumber || 'Bus'}`
-                  : 'Tap below to initiate Android foreground location daemon'}
-              </p>
-            </div>
-
-            <button
-              onClick={handleToggleTracking}
-              style={{ minHeight: '72px' }}
-              className={`w-full py-4 px-6 rounded-2xl font-bold text-base tracking-wide flex items-center justify-center gap-3 transition-all transform active:scale-95 shadow-xl ${
-                daemonState.isRunning
-                  ? 'bg-gradient-to-r from-rose-600 to-red-500 hover:from-rose-500 hover:to-red-400 text-white shadow-rose-900/40'
-                  : 'bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 shadow-emerald-950/50'
-              }`}
-            >
-              {daemonState.isRunning ? (
-                <>
-                  <Square className="w-6 h-6 fill-current" />
-                  END TRANSIT DUTY (OFFLINE)
-                </>
-              ) : (
-                <>
-                  <Play className="w-6 h-6 fill-current" />
-                  START TRANSIT DUTY (ONLINE)
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-
-        {/* GPS Source / Simulator Toggle */}
-        <div className="glass-card rounded-2xl p-3.5 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <Navigation className="w-4 h-4 text-emerald-400" />
-            <div>
-              <p className="text-xs font-semibold text-slate-200">GPS Mode Override</p>
-              <p className="text-[11px] text-slate-400">
-                {daemonState.locationProvider === 'HARDWARE_GPS'
-                  ? 'Native Device Hardware GPS'
-                  : daemonState.locationProvider === 'INSECURE_ORIGIN_SIMULATED'
-                  ? 'Wi-Fi HTTP Simulator'
-                  : 'Simulated Route Track'}
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={() => toggleSimulatedMode(!simulatedMode)}
-            className={`min-h-[44px] px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
-              simulatedMode
-                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-            }`}
-          >
-            {simulatedMode ? 'Simulator Active' : 'Force Simulator'}
-          </button>
-        </div>
-
-        {/* Live Metrics Grid */}
-        <div className="grid grid-cols-2 gap-3">
-          {/* Card 1: Speedometer */}
-          <div className="glass-card rounded-2xl p-4 flex flex-col justify-between space-y-2">
-            <div className="flex items-center justify-between text-slate-400">
-              <span className="text-xs font-semibold tracking-wider uppercase">Speedometer</span>
-              <Gauge className="w-4 h-4 text-emerald-400" />
-            </div>
-            <div>
-              <div className="flex items-baseline gap-1">
-                <span className="text-3xl font-black tracking-tight text-white tabular-nums">
-                  {daemonState.currentSpeed}
-                </span>
-                <span className="text-xs font-bold text-emerald-400">km/h</span>
-              </div>
-              <p className="text-[11px] text-slate-400 mt-0.5">
-                Heading: <span className="text-slate-200 font-semibold tabular-nums">{daemonState.currentHeading}° NE</span>
-              </p>
-            </div>
-          </div>
-
-          {/* Card 2: Telemetry Stream Stats */}
-          <div className="glass-card rounded-2xl p-4 flex flex-col justify-between space-y-2">
-            <div className="flex items-center justify-between text-slate-400">
-              <span className="text-xs font-semibold tracking-wider uppercase">Pings Sent</span>
-              <Radio className="w-4 h-4 text-teal-400" />
-            </div>
-            <div>
-              <div className="text-3xl font-black tracking-tight text-white tabular-nums">
-                {daemonState.totalPingsEmitted}
-              </div>
-              <p className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-1">
-                <span>Buffer:</span>
-                <span className={`font-bold tabular-nums ${daemonState.bufferedPingsCount > 0 ? 'text-amber-400' : 'text-slate-300'}`}>
-                  {daemonState.bufferedPingsCount}/20
-                </span>
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Interactive Passenger Occupancy Counter (72x72px Touch Target Buttons) */}
-        <div className="glass-card rounded-2xl p-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Users className="w-4 h-4 text-emerald-400" />
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-200">
-                Passenger Load Count
-              </span>
-            </div>
-            <span className="text-xs font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20 tabular-nums">
-              {Math.round((passengerCount / maxCapacity) * 100)}% Full
-            </span>
-          </div>
-
-          <div className="flex items-center justify-between gap-4">
-            <button
-              onClick={() => handlePassengerChange(-1)}
-              style={{ width: '72px', height: '72px' }}
-              className="rounded-2xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-2xl flex items-center justify-center active:scale-90 border border-slate-700 shadow-md"
-              aria-label="Decrease passenger count"
-            >
-              -
-            </button>
-
-            <div className="text-center">
-              <span className="text-3xl font-black text-white tabular-nums">{passengerCount}</span>
-              <span className="text-xs text-slate-400 font-medium block">/ {maxCapacity} Seats</span>
-            </div>
-
-            <button
-              onClick={() => handlePassengerChange(1)}
-              style={{ width: '72px', height: '72px' }}
-              className="rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-2xl flex items-center justify-center active:scale-90 shadow-lg shadow-emerald-950/40"
-              aria-label="Increase passenger count"
-            >
-              +
-            </button>
-          </div>
-        </div>
-
-        {/* Battery & Android Shield Module */}
-        <div className="glass-card rounded-2xl p-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-              <BatteryCharging className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-xs font-bold text-white flex items-center gap-1.5">
-                Android Battery Doze Shield
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-              </p>
-              <p className="text-[11px] text-slate-400">{batteryStatus}</p>
-            </div>
-          </div>
-          <button
-            onClick={handleRequestExemption}
-            className="glass-button px-3 py-1.5 rounded-xl text-xs font-medium text-emerald-300 hover:text-emerald-200"
-          >
-            Re-check
-          </button>
-        </div>
-
-        {/* Route Progress Timeline */}
-        <div className="glass-card rounded-2xl p-4 space-y-3">
-          <div className="flex items-center justify-between text-xs border-b border-slate-800 pb-2">
-            <span className="font-bold text-slate-200 flex items-center gap-1.5">
-              <MapPin className="w-4 h-4 text-emerald-400" />
-              {activeCorridor.name}
-            </span>
-            <span className="text-slate-400">Next: Stop 2</span>
-          </div>
-
-          <div className="space-y-2.5 text-xs">
-            <div className="flex items-center gap-3 text-slate-400">
-              <div className="w-2.5 h-2.5 rounded-full bg-slate-600"></div>
-              <span className="line-through">Campus Main Gate</span>
-              <span className="ml-auto text-[10px] text-slate-500">08:00 AM</span>
-            </div>
-
-            <div className="flex items-center gap-3 font-semibold text-emerald-300">
-              <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></div>
-              <span>Transit Stop #2 (En Route)</span>
-              <span className="ml-auto text-[10px] bg-emerald-500/20 px-1.5 py-0.5 rounded text-emerald-300">
-                2 mins away
-              </span>
-            </div>
-
-            <div className="flex items-center gap-3 text-slate-400 opacity-60">
-              <div className="w-2.5 h-2.5 rounded-full border border-slate-500"></div>
-              <span>Central Hostels Terminal</span>
-              <span className="ml-auto text-[10px]">08:25 AM</span>
-            </div>
-          </div>
-        </div>
       </main>
 
       {/* ----------------------------------------------------------------------- */}
@@ -1082,60 +1069,7 @@ export const App: React.FC = () => {
         </div>
       )}
 
-      {/* ----------------------------------------------------------------------- */}
-      {/* ACTIVE CORRIDOR SELECTOR MODAL (Shift Binding)                         */}
-      {/* ----------------------------------------------------------------------- */}
-      {isCorridorModalOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in overflow-y-auto"
-          style={{ paddingBottom: 'calc(max(env(safe-area-inset-bottom, 0px), 0.75rem) + 0.5rem)' }}
-        >
-          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-5 space-y-4 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <div className="flex items-center gap-2">
-                <RouteIcon className="w-5 h-5 text-emerald-400" />
-                <h3 className="font-bold text-sm text-white">Select Active Bus Corridor</h3>
-              </div>
-              <button
-                onClick={() => setIsCorridorModalOpen(false)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-white"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
 
-            <div className="space-y-2">
-              {CAMPUS_CORRIDORS.map((corridor) => {
-                const isSelected = selectedRouteId === corridor.id;
-                return (
-                  <button
-                    key={corridor.id}
-                    type="button"
-                    onClick={() => {
-                      setSelectedRouteId(corridor.id);
-                      setIsCorridorModalOpen(false);
-                    }}
-                    style={{ minHeight: '56px' }}
-                    className={`w-full p-3 rounded-2xl text-left border flex items-center justify-between transition-all active:scale-98 ${
-                      isSelected
-                        ? 'bg-emerald-500/20 border-emerald-500/60 text-white'
-                        : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:border-slate-700'
-                    }`}
-                  >
-                    <div>
-                      <span className={`block font-extrabold text-xs ${isSelected ? 'text-emerald-300' : 'text-white'}`}>
-                        {corridor.routeNumber}
-                      </span>
-                      <span className="block text-[11px] text-slate-300 mt-0.5">{corridor.name}</span>
-                    </div>
-                    {isSelected && <Check className="w-4 h-4 text-emerald-400" />}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

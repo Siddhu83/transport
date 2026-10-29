@@ -1,0 +1,121 @@
+/* ==========================================================================
+   THEME B: NORDIC MINIMALIST FLEET (Polestar / Volvo Commercial Automotive)
+   Aesthetic: Contemporary Scandinavian design. Calm dark titanium surfaces,
+              electric cobalt blue accents, quiet night-driving ergonomics.
+   ========================================================================== */
+
+:root, [data-theme="nordic"], body {
+  --b1: #121214;          /* Canvas: Warm Dark Titanium */
+  --b2: #18181b;          /* Cards: Refined Zinc Grey */
+  --b3: #27272a;          /* Elevated: Dark Zinc */
+  --bc: #ffffff;          /* Primary Text: Pure White */
+  --bc-muted: #a1a1aa;    /* Secondary: Soft Zinc */
+  --bc-subtle: #71717a;   /* Muted: Neutral Slate */
+  --b-border: #27272a;    /* 1px Soft Micro-border */
+
+  --p: #2563eb;           /* Primary Action: Electric Cobalt Blue */
+  --p-hover: #1d4ed8;
+  --pc: #ffffff;
+  --p-bg: #1e293b;
+  --p-border: #3b82f6;
+
+  --su: #10b981;          /* Duty Online: Clean Emerald */
+  --su-bg: #064e3b;
+  --su-border: #059669;
+
+  --wa: #eab308;          /* Caution Amber */
+  --wa-bg: #713f12;
+  --wa-border: #ca8a04;
+
+  --er: #e11d48;          /* Emergency SOS: Rose Crimson */
+  --er-bg: #881337;
+  --er-border: #f43f5e;
+
+  background-color: var(--b1) !important;
+  color: var(--bc) !important;
+}
+
+/* Background & Header Opaque Overrides */
+body, #root, .min-h-screen {
+  background-color: #121214 !important;
+}
+
+header {
+  background-color: #121214 !important;
+  border-bottom: 1px solid #27272a !important;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* Card & Surface Overrides - Clean Minimalist Surfaces */
+.glass-card,
+.kiosk-card {
+  background: #18181b !important;
+  border: 1px solid #27272a !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border-radius: 1rem !important;
+}
+
+.glass-card-rose,
+.kiosk-card-error {
+  background: #1f1418 !important;
+  border: 1.5px solid #f43f5e !important;
+  box-shadow: 0 4px 14px rgba(244, 63, 94, 0.15) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.glass-card-emerald {
+  background: #141c18 !important;
+  border: 1.5px solid #10b981 !important;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.15) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Eliminate All Neon Glows */
+.glow-emerald,
+.glow-rose {
+  box-shadow: none !important;
+}
+
+/* Buttons & Interactive Elements */
+.glass-button {
+  background: #27272a !important;
+  border: 1px solid #3f3f46 !important;
+  color: #f4f4f5 !important;
+  border-radius: 0.75rem !important;
+}
+
+.glass-button:hover {
+  background: #3f3f46 !important;
+  color: #ffffff !important;
+}
+
+/* Active Duty Button (Polestar Electric Cobalt Accent) */
+button.bg-gradient-to-r.from-emerald-500.to-teal-400 {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8) !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  border: 1px solid #3b82f6 !important;
+  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.35) !important;
+}
+
+/* Verified & Route Badges */
+.bg-emerald-500\/20,
+.bg-emerald-500\/10 {
+  background: rgba(37, 99, 235, 0.15) !important;
+  border-color: rgba(37, 99, 235, 0.35) !important;
+  color: #60a5fa !important;
+}
+
+.text-emerald-400,
+.text-emerald-300 {
+  color: #60a5fa !important;
+}
+
+.bg-emerald-600 {
+  background-color: #2563eb !important;
+}
+
