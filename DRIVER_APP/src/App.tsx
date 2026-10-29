@@ -432,7 +432,7 @@ export const App: React.FC = () => {
                 >
                   <span className="font-bold text-emerald-400 block">Driver #1</span>
                   <span className="text-slate-400 text-[10px] truncate block">driver1@transport...</span>
-                  <span className="text-slate-500 text-[9px] font-mono">Pass: Password123!</span>
+                  <span className="text-slate-500 text-[9px]  ">Pass: Password123!</span>
                 </button>
                 <button
                   type="button"
@@ -441,7 +441,7 @@ export const App: React.FC = () => {
                 >
                   <span className="font-bold text-teal-400 block">Driver #2</span>
                   <span className="text-slate-400 text-[10px] truncate block">driver2@transport...</span>
-                  <span className="text-slate-500 text-[9px] font-mono">Pass: Password123!</span>
+                  <span className="text-slate-500 text-[9px]  ">Pass: Password123!</span>
                 </button>
               </div>
             </div>
@@ -556,7 +556,7 @@ export const App: React.FC = () => {
                     <span className="text-xs font-black tracking-wider uppercase text-rose-300 bg-rose-950/80 px-2 py-0.5 rounded border border-rose-500/40">
                       INCIDENT {activeIncident.incidentId}
                     </span>
-                    <span className="text-[10px] text-rose-200 font-mono font-bold">
+                    <span className="text-[10px] text-rose-200   font-bold">
                       {Math.floor(sosElapsedSeconds / 60)}m {sosElapsedSeconds % 60}s ago
                     </span>
                   </div>
@@ -566,7 +566,7 @@ export const App: React.FC = () => {
                 </div>
               </div>
 
-              <span className="px-2.5 py-1 rounded-xl bg-rose-500/20 text-rose-300 font-mono text-[11px] font-bold border border-rose-500/30">
+              <span className="px-2.5 py-1 rounded-xl bg-rose-500/20 text-rose-300   text-[11px] font-bold border border-rose-500/30">
                 {PASSENGER_BAND_LABELS[activeIncident.strandedPassengerBand]?.label}
               </span>
             </div>
@@ -599,19 +599,14 @@ export const App: React.FC = () => {
                 Vehicle & Shift Manifest
               </span>
               <div className="flex items-center gap-2 mt-0.5">
-                <span className="text-sm font-black text-white font-mono bg-slate-950 px-2 py-0.5 rounded border border-slate-800">
+                <span className="text-sm font-black text-white   bg-slate-950 px-2 py-0.5 rounded border border-slate-800">
                   {user.busNumber || 'BUS-101'}
                 </span>
-                <span className="text-xs font-bold text-emerald-400">{activeCorridor.routeNumber}</span>
               </div>
             </div>
 
-            <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1.5 ${daemonState.isRunning
-                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                : 'bg-slate-800 text-slate-400 border border-slate-700'
-              }`}>
-              <span className={`w-2 h-2 rounded-full ${daemonState.isRunning ? 'bg-emerald-400 animate-ping' : 'bg-slate-500'}`}></span>
-              {daemonState.isRunning ? 'ON DUTY' : 'OFF DUTY'}
+            <span className={`text-[11px] font-bold px-2.5 py-1 mt-3 rounded-full flex items-center gap-1.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30`}>
+              <span className="text-xs font-bold text-emerald-400">{activeCorridor.routeNumber}</span>
             </span>
           </div>
 
@@ -627,7 +622,7 @@ export const App: React.FC = () => {
               <span className="text-slate-400 text-[11px] flex items-center justify-end gap-1">
                 <Clock className="w-3 h-3 text-slate-500" /> Shift Duration
               </span>
-              <span className="text-white font-mono font-bold text-xs block mt-0.5 tabular-nums">
+              <span className="text-white   font-bold text-xs block mt-0.5 tabular-nums">
                 {daemonState.isRunning ? formatDuration(shiftDurationSeconds) : '--:--'}
               </span>
             </div>
@@ -636,20 +631,20 @@ export const App: React.FC = () => {
           <button
             onClick={handleToggleTracking}
             style={{ minHeight: '56px' }}
-            className={`w-full py-3.5 px-4 rounded-xl font-black text-xs tracking-wider uppercase flex items-center justify-center gap-2.5 transition-all transform active:scale-98 shadow-lg ${daemonState.isRunning
-                ? 'bg-rose-600/90 hover:bg-rose-600 text-white border border-rose-500/40 shadow-rose-950/40'
-                : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-emerald-950/50'
+            className={`w-full py-3 px-4 rounded-xl font-bold text-md tracking-wider flex items-center justify-center gap-2.5 transition-all transform active:scale-98 shadow-lg ${daemonState.isRunning
+              ? 'bg-rose-600/90 hover:bg-rose-600 text-white border border-rose-500/40 shadow-rose-950/40'
+              : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-emerald-950/50'
               }`}
           >
             {daemonState.isRunning ? (
               <>
                 <Square className="w-4 h-4 fill-current" />
-                END TRANSIT SHIFT (OFFLINE)
+                END SHIFT (OFFLINE)
               </>
             ) : (
               <>
                 <Play className="w-4 h-4 fill-current ml-0.5" />
-                START TRANSIT SHIFT (ONLINE)
+                START SHIFT (ONLINE)
               </>
             )}
           </button>
@@ -657,18 +652,17 @@ export const App: React.FC = () => {
 
         {/* EMERGENCY BREAKDOWN DISPATCH (Placed after Card 1 - Smooth Slide-in on Shift Start) */}
         <div
-          className={`transition-all duration-500 ease-in-out overflow-hidden ${
-            daemonState.isRunning || activeIncident
-              ? 'max-h-96 opacity-100 transform translate-y-0 my-0'
+          className={`transition-all duration-500 ease-in-out overflow-hidden ${daemonState.isRunning || activeIncident
+              ? 'max-h-96 opacity-100 transform mb-4 translate-y-0 my-0'
               : 'max-h-0 opacity-0 transform -translate-y-2 pointer-events-none'
-          }`}
+            }`}
         >
           <div className="bg-slate-900/90 border-2 border-rose-500/50 rounded-2xl p-4 sm:p-5 space-y-3 relative overflow-hidden shadow-xl shadow-rose-950/20">
             <div className="flex items-center justify-between border-b border-slate-800/80 pb-2.5">
               <span className="text-[10px] font-black uppercase tracking-wider text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded border border-rose-500/20">
                 Active Transit Safety Safeguard
               </span>
-              <span className="text-[10px] text-slate-400 font-mono">2s Accidental Guard</span>
+              <span className="text-[10px] text-slate-400  ">2s Accidental Guard</span>
             </div>
 
             <div className="flex items-center justify-between gap-4">
@@ -710,13 +704,12 @@ export const App: React.FC = () => {
                   onPointerLeave={cancelSosHold}
                   onPointerCancel={cancelSosHold}
                   disabled={Boolean(activeIncident)}
-                  className={`absolute w-14 h-14 rounded-full flex flex-col items-center justify-center transition-all transform active:scale-95 shadow-lg ${
-                    activeIncident
+                  className={`absolute w-14 h-14 rounded-full flex flex-col items-center justify-center transition-all transform active:scale-95 shadow-md ${activeIncident
                       ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
                       : isHoldingSos
-                      ? 'bg-rose-500 text-white scale-105 shadow-rose-600/80'
-                      : 'bg-rose-600 hover:bg-rose-500 text-white shadow-rose-900/60'
-                  }`}
+                        ? 'bg-rose-500 text-white scale-105 shadow-rose-600/80'
+                        : 'bg-rose-600 hover:bg-rose-500 text-white shadow-rose-900/60'
+                    }`}
                   style={{ minWidth: '56px', minHeight: '56px' }}
                   aria-label="Hold 2 seconds to trigger SOS Breakdown"
                 >
@@ -752,7 +745,7 @@ export const App: React.FC = () => {
                 <span className="font-semibold text-slate-300 line-through block truncate">Campus Main Gate</span>
                 <span className="text-[10px] text-slate-500">Departed on schedule</span>
               </div>
-              <span className="text-[10px] font-mono text-slate-500 shrink-0">08:00 AM</span>
+              <span className="text-[10px]   text-slate-500 shrink-0">08:00 AM</span>
             </div>
 
             {/* Stop 2: Active Target */}
@@ -764,21 +757,21 @@ export const App: React.FC = () => {
                 <span className="font-extrabold text-white block truncate">Transit Stop #2</span>
                 <span className="text-[10px] text-emerald-400 font-medium">Active Geofenced Target • ~450m</span>
               </div>
-              <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-bold px-2 py-0.5 rounded font-mono shrink-0">
+              <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-bold px-2 py-0.5 rounded   shrink-0">
                 2 mins
               </span>
             </div>
 
             {/* Stop 3: Pending Terminal */}
             <div className="flex items-center gap-3 p-2.5 rounded-xl bg-slate-950/30 border border-slate-800/40 text-slate-400 opacity-60">
-              <div className="w-5 h-5 rounded-full border border-slate-600 flex items-center justify-center text-slate-500 text-[10px] font-mono shrink-0">
+              <div className="w-5 h-5 rounded-full border border-slate-600 flex items-center justify-center text-slate-500 text-[10px]   shrink-0">
                 3
               </div>
               <div className="min-w-0 flex-1">
                 <span className="font-medium text-slate-300 block truncate">Central Hostels Terminal</span>
                 <span className="text-[10px] text-slate-500">Route Destination</span>
               </div>
-              <span className="text-[10px] font-mono text-slate-500 shrink-0">08:25 AM</span>
+              <span className="text-[10px]   text-slate-500 shrink-0">08:25 AM</span>
             </div>
           </div>
         </div>
@@ -791,10 +784,10 @@ export const App: React.FC = () => {
               Passenger Load Management
             </span>
             <span className={`text-xs font-bold px-2 py-0.5 rounded border tabular-nums ${passengerCount / maxCapacity > 0.85
-                ? 'bg-rose-500/20 text-rose-300 border-rose-500/30'
-                : passengerCount / maxCapacity > 0.65
-                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/30'
-                  : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+              ? 'bg-rose-500/20 text-rose-300 border-rose-500/30'
+              : passengerCount / maxCapacity > 0.65
+                ? 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
               }`}>
               {Math.round((passengerCount / maxCapacity) * 100)}% Capacity
             </span>
@@ -842,7 +835,7 @@ export const App: React.FC = () => {
               <Gauge className="w-3.5 h-3.5 text-teal-400" />
               In-Cab Telematics & System Health
             </span>
-            <span className="text-[10px] font-mono text-slate-400">5s Live Cycle</span>
+            <span className="text-[10px]   text-slate-400">5s Live Cycle</span>
           </div>
 
           <div className="grid grid-cols-2 gap-2.5 text-xs">
@@ -853,7 +846,7 @@ export const App: React.FC = () => {
                 <span className="text-2xl font-black text-white tabular-nums">{daemonState.currentSpeed}</span>
                 <span className="text-[10px] font-bold text-emerald-400">km/h</span>
               </div>
-              <span className="text-[10px] text-slate-400 font-mono block mt-0.5 truncate">{daemonState.currentHeading}° Heading</span>
+              <span className="text-[10px] text-slate-400   block mt-0.5 truncate">{daemonState.currentHeading}° Heading</span>
             </div>
 
             {/* Pings & Buffer */}
@@ -863,7 +856,7 @@ export const App: React.FC = () => {
                 <span className="text-2xl font-black text-white tabular-nums">{daemonState.totalPingsEmitted}</span>
                 <span className="text-[10px] font-bold text-slate-400">sent</span>
               </div>
-              <span className={`text-[10px] font-mono block mt-0.5 ${daemonState.bufferedPingsCount > 0 ? 'text-amber-400' : 'text-slate-400'}`}>
+              <span className={`text-[10px]   block mt-0.5 ${daemonState.bufferedPingsCount > 0 ? 'text-amber-400' : 'text-slate-400'}`}>
                 Buffer: {daemonState.bufferedPingsCount}/20
               </span>
             </div>
@@ -934,8 +927,8 @@ export const App: React.FC = () => {
                         onClick={() => setSelectedBand(band)}
                         style={{ minHeight: '56px' }}
                         className={`p-3 rounded-2xl text-left border transition-all active:scale-95 ${isSelected
-                            ? 'bg-rose-500/20 border-rose-500 text-white shadow-md shadow-rose-950/50'
-                            : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:border-slate-700'
+                          ? 'bg-rose-500/20 border-rose-500 text-white shadow-md shadow-rose-950/50'
+                          : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:border-slate-700'
                           }`}
                       >
                         <span className={`block font-black text-sm ${isSelected ? 'text-rose-300' : 'text-slate-200'}`}>
@@ -975,8 +968,8 @@ export const App: React.FC = () => {
                       onClick={() => setSelectedReason(reason)}
                       style={{ minHeight: '48px' }}
                       className={`px-3.5 py-2.5 rounded-xl text-left border flex items-center justify-between transition-all active:scale-98 ${isSelected
-                          ? 'bg-rose-600/30 border-rose-500 text-white'
-                          : 'bg-slate-950/50 border-slate-800 text-slate-400 hover:border-slate-700'
+                        ? 'bg-rose-600/30 border-rose-500 text-white'
+                        : 'bg-slate-950/50 border-slate-800 text-slate-400 hover:border-slate-700'
                         }`}
                     >
                       <div>
