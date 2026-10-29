@@ -207,7 +207,7 @@ export const App: React.FC = () => {
           setIsFullscreen(true);
           document.documentElement.setAttribute('data-fullscreen', 'true');
         })
-        .catch(() => {});
+        .catch(() => { });
     } else {
       if (document.exitFullscreen) {
         document
@@ -216,7 +216,7 @@ export const App: React.FC = () => {
             setIsFullscreen(false);
             document.documentElement.setAttribute('data-fullscreen', 'false');
           })
-          .catch(() => {});
+          .catch(() => { });
       }
     }
   };
@@ -606,11 +606,10 @@ export const App: React.FC = () => {
               </div>
             </div>
 
-            <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1.5 ${
-              daemonState.isRunning
+            <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1.5 ${daemonState.isRunning
                 ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
                 : 'bg-slate-800 text-slate-400 border border-slate-700'
-            }`}>
+              }`}>
               <span className={`w-2 h-2 rounded-full ${daemonState.isRunning ? 'bg-emerald-400 animate-ping' : 'bg-slate-500'}`}></span>
               {daemonState.isRunning ? 'ON DUTY' : 'OFF DUTY'}
             </span>
@@ -637,11 +636,10 @@ export const App: React.FC = () => {
           <button
             onClick={handleToggleTracking}
             style={{ minHeight: '56px' }}
-            className={`w-full py-3.5 px-4 rounded-xl font-black text-xs tracking-wider uppercase flex items-center justify-center gap-2.5 transition-all transform active:scale-98 shadow-lg ${
-              daemonState.isRunning
+            className={`w-full py-3.5 px-4 rounded-xl font-black text-xs tracking-wider uppercase flex items-center justify-center gap-2.5 transition-all transform active:scale-98 shadow-lg ${daemonState.isRunning
                 ? 'bg-rose-600/90 hover:bg-rose-600 text-white border border-rose-500/40 shadow-rose-950/40'
                 : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-emerald-950/50'
-            }`}
+              }`}
           >
             {daemonState.isRunning ? (
               <>
@@ -655,6 +653,81 @@ export const App: React.FC = () => {
               </>
             )}
           </button>
+        </div>
+
+        {/* EMERGENCY BREAKDOWN DISPATCH (Placed after Card 1 - Smooth Slide-in on Shift Start) */}
+        <div
+          className={`transition-all duration-500 ease-in-out overflow-hidden ${
+            daemonState.isRunning || activeIncident
+              ? 'max-h-96 opacity-100 transform translate-y-0 my-0'
+              : 'max-h-0 opacity-0 transform -translate-y-2 pointer-events-none'
+          }`}
+        >
+          <div className="bg-slate-900/90 border-2 border-rose-500/50 rounded-2xl p-4 sm:p-5 space-y-3 relative overflow-hidden shadow-xl shadow-rose-950/20">
+            <div className="flex items-center justify-between border-b border-slate-800/80 pb-2.5">
+              <span className="text-[10px] font-black uppercase tracking-wider text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded border border-rose-500/20">
+                Active Transit Safety Safeguard
+              </span>
+              <span className="text-[10px] text-slate-400 font-mono">2s Accidental Guard</span>
+            </div>
+
+            <div className="flex items-center justify-between gap-4">
+              <div className="min-w-0 flex-1">
+                <h3 className="text-sm font-extrabold text-white">Broadcast Emergency SOS</h3>
+                <p className="text-[11px] text-slate-400 mt-0.5 leading-snug">
+                  {isHoldingSos ? (
+                    <span className="text-rose-400 font-bold animate-pulse">
+                      Hold firmly... {((2000 - (sosHoldProgress / 100) * 2000) / 1000).toFixed(1)}s
+                    </span>
+                  ) : activeIncident ? (
+                    <span className="text-rose-400 font-semibold">Incident broadcast active</span>
+                  ) : (
+                    <span>Hold 2 seconds to initiate relief bus dispatch</span>
+                  )}
+                </p>
+              </div>
+
+              <div className="relative w-20 h-20 flex items-center justify-center shrink-0 select-none touch-none">
+                <svg className="w-20 h-20 -rotate-90 transform" viewBox="0 0 100 100">
+                  <circle cx="50" cy="50" r={RADIUS} className="stroke-slate-800/80" strokeWidth="6" fill="transparent" />
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r={RADIUS}
+                    className="stroke-rose-500 transition-all duration-75 ease-linear"
+                    strokeWidth="6"
+                    strokeDasharray={CIRCUMFERENCE}
+                    strokeDashoffset={strokeDashoffset}
+                    strokeLinecap="round"
+                    fill="transparent"
+                  />
+                </svg>
+
+                <button
+                  type="button"
+                  onPointerDown={startSosHold}
+                  onPointerUp={cancelSosHold}
+                  onPointerLeave={cancelSosHold}
+                  onPointerCancel={cancelSosHold}
+                  disabled={Boolean(activeIncident)}
+                  className={`absolute w-14 h-14 rounded-full flex flex-col items-center justify-center transition-all transform active:scale-95 shadow-lg ${
+                    activeIncident
+                      ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
+                      : isHoldingSos
+                      ? 'bg-rose-500 text-white scale-105 shadow-rose-600/80'
+                      : 'bg-rose-600 hover:bg-rose-500 text-white shadow-rose-900/60'
+                  }`}
+                  style={{ minWidth: '56px', minHeight: '56px' }}
+                  aria-label="Hold 2 seconds to trigger SOS Breakdown"
+                >
+                  <AlertOctagon className={`w-6 h-6 ${isHoldingSos ? 'animate-bounce' : ''}`} />
+                  <span className="text-[9px] font-black tracking-wider uppercase mt-0.5">
+                    {isHoldingSos ? `${sosHoldProgress}%` : 'SOS'}
+                  </span>
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* CARD 2: ROUTE MANIFEST & STOP SEQUENCE (Samsara Driver Style) */}
@@ -717,13 +790,12 @@ export const App: React.FC = () => {
               <Users className="w-3.5 h-3.5 text-emerald-400" />
               Passenger Load Management
             </span>
-            <span className={`text-xs font-bold px-2 py-0.5 rounded border tabular-nums ${
-              passengerCount / maxCapacity > 0.85
+            <span className={`text-xs font-bold px-2 py-0.5 rounded border tabular-nums ${passengerCount / maxCapacity > 0.85
                 ? 'bg-rose-500/20 text-rose-300 border-rose-500/30'
                 : passengerCount / maxCapacity > 0.65
-                ? 'bg-amber-500/20 text-amber-300 border-amber-500/30'
-                : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
-            }`}>
+                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                  : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+              }`}>
               {Math.round((passengerCount / maxCapacity) * 100)}% Capacity
             </span>
           </div>
@@ -731,9 +803,8 @@ export const App: React.FC = () => {
           {/* Segmented Capacity Progress Bar */}
           <div className="w-full bg-slate-950 rounded-full h-2 overflow-hidden border border-slate-800 flex">
             <div
-              className={`h-full transition-all duration-300 ${
-                passengerCount / maxCapacity > 0.85 ? 'bg-rose-500' : passengerCount / maxCapacity > 0.65 ? 'bg-amber-500' : 'bg-emerald-500'
-              }`}
+              className={`h-full transition-all duration-300 ${passengerCount / maxCapacity > 0.85 ? 'bg-rose-500' : passengerCount / maxCapacity > 0.65 ? 'bg-amber-500' : 'bg-emerald-500'
+                }`}
               style={{ width: `${Math.min(100, Math.round((passengerCount / maxCapacity) * 100))}%` }}
             ></div>
           </div>
@@ -815,75 +886,7 @@ export const App: React.FC = () => {
             </div>
           </div>
         </div>
-
-        {/* CARD 5: EMERGENCY BREAKDOWN & RELIEF SAFEGUARD (Samsara Safety Station) */}
-        <div className="bg-slate-900/90 border-2 border-rose-500/40 rounded-2xl p-4 sm:p-5 space-y-3 relative overflow-hidden shadow-xl">
-          <div className="flex items-center justify-between border-b border-slate-800/80 pb-2.5">
-            <span className="text-[10px] font-black uppercase tracking-wider text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded border border-rose-500/20">
-              Emergency Breakdown Dispatch
-            </span>
-            <span className="text-[10px] text-slate-400 font-mono">2s Accidental Guard</span>
-          </div>
-
-          <div className="flex items-center justify-between gap-4">
-            <div className="min-w-0 flex-1">
-              <h3 className="text-sm font-extrabold text-white">Broadcast Emergency SOS</h3>
-              <p className="text-[11px] text-slate-400 mt-0.5 leading-snug">
-                {isHoldingSos ? (
-                  <span className="text-rose-400 font-bold animate-pulse">
-                    Hold firmly... {((2000 - (sosHoldProgress / 100) * 2000) / 1000).toFixed(1)}s
-                  </span>
-                ) : activeIncident ? (
-                  <span className="text-rose-400 font-semibold">Incident broadcast active</span>
-                ) : (
-                  <span>Hold 2 seconds to initiate relief bus dispatch</span>
-                )}
-              </p>
-            </div>
-
-            <div className="relative w-20 h-20 flex items-center justify-center shrink-0 select-none touch-none">
-              <svg className="w-20 h-20 -rotate-90 transform" viewBox="0 0 100 100">
-                <circle cx="50" cy="50" r={RADIUS} className="stroke-slate-800/80" strokeWidth="6" fill="transparent" />
-                <circle
-                  cx="50"
-                  cy="50"
-                  r={RADIUS}
-                  className="stroke-rose-500 transition-all duration-75 ease-linear"
-                  strokeWidth="6"
-                  strokeDasharray={CIRCUMFERENCE}
-                  strokeDashoffset={strokeDashoffset}
-                  strokeLinecap="round"
-                  fill="transparent"
-                />
-              </svg>
-
-              <button
-                type="button"
-                onPointerDown={startSosHold}
-                onPointerUp={cancelSosHold}
-                onPointerLeave={cancelSosHold}
-                onPointerCancel={cancelSosHold}
-                disabled={Boolean(activeIncident)}
-                className={`absolute w-14 h-14 rounded-full flex flex-col items-center justify-center transition-all transform active:scale-95 shadow-lg ${
-                  activeIncident
-                    ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
-                    : isHoldingSos
-                    ? 'bg-rose-500 text-white scale-105 shadow-rose-600/80'
-                    : 'bg-rose-600 hover:bg-rose-500 text-white shadow-rose-900/60'
-                }`}
-                style={{ minWidth: '56px', minHeight: '56px' }}
-                aria-label="Hold 2 seconds to trigger SOS Breakdown"
-              >
-                <AlertOctagon className={`w-6 h-6 ${isHoldingSos ? 'animate-bounce' : ''}`} />
-                <span className="text-[9px] font-black tracking-wider uppercase mt-0.5">
-                  {isHoldingSos ? `${sosHoldProgress}%` : 'SOS'}
-                </span>
-              </button>
-            </div>
-          </div>
-        </div>
       </main>
-
       {/* ----------------------------------------------------------------------- */}
       {/* 1-TAP SOS BREAKDOWN CONFIRMATION MODAL (Sprint 9 Task 3)               */}
       {/* ----------------------------------------------------------------------- */}
@@ -930,11 +933,10 @@ export const App: React.FC = () => {
                         type="button"
                         onClick={() => setSelectedBand(band)}
                         style={{ minHeight: '56px' }}
-                        className={`p-3 rounded-2xl text-left border transition-all active:scale-95 ${
-                          isSelected
+                        className={`p-3 rounded-2xl text-left border transition-all active:scale-95 ${isSelected
                             ? 'bg-rose-500/20 border-rose-500 text-white shadow-md shadow-rose-950/50'
                             : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:border-slate-700'
-                        }`}
+                          }`}
                       >
                         <span className={`block font-black text-sm ${isSelected ? 'text-rose-300' : 'text-slate-200'}`}>
                           {info.label}
@@ -972,11 +974,10 @@ export const App: React.FC = () => {
                       type="button"
                       onClick={() => setSelectedReason(reason)}
                       style={{ minHeight: '48px' }}
-                      className={`px-3.5 py-2.5 rounded-xl text-left border flex items-center justify-between transition-all active:scale-98 ${
-                        isSelected
+                      className={`px-3.5 py-2.5 rounded-xl text-left border flex items-center justify-between transition-all active:scale-98 ${isSelected
                           ? 'bg-rose-600/30 border-rose-500 text-white'
                           : 'bg-slate-950/50 border-slate-800 text-slate-400 hover:border-slate-700'
-                      }`}
+                        }`}
                     >
                       <div>
                         <span className={`block font-bold text-xs ${isSelected ? 'text-rose-200' : 'text-slate-300'}`}>
@@ -1029,8 +1030,6 @@ export const App: React.FC = () => {
           </div>
         </div>
       )}
-
-
     </div>
   );
 };
