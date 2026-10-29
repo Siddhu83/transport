@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
-  Radio,
   Gauge,
   Users,
   BatteryCharging,
@@ -9,7 +8,6 @@ import {
   AlertTriangle,
   Play,
   Square,
-  CheckCircle2,
   Wifi,
   WifiOff,
   Bus,
@@ -23,7 +21,8 @@ import {
   AlertOctagon,
   X,
   Check,
-  Route as RouteIcon,
+  MapPin,
+  Clock,
 } from 'lucide-react';
 import { requestBatteryExemption } from './services/batteryOptimization';
 import { trackingDaemon, TrackingDaemonState } from './services/trackingDaemon';
@@ -589,184 +588,135 @@ export const App: React.FC = () => {
         )}
 
         {/* ======================================================================= */}
-        {/* REFERENCE A: SEGMENTED MISSION COCKPIT (Motive & Garmin AVL Inspired)   */}
+        {/* REFERENCE B: SAMSARA CARD-STACK KIOSK (Modular Fleet Manifest)         */}
         {/* ======================================================================= */}
 
-        {/* 1. TOP SPLIT HERO COCKPIT (Mission Controller + Guarded SOS Station) */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {/* Card A1: Duty Controller & Active Shift Telemetrics */}
-          <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 flex flex-col justify-between space-y-3 shadow-lg">
-            <div className="space-y-1">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
-                  Mission Status
+        {/* CARD 1: COMMAND & SHIFT MANIFEST (The Shift Controller Card) */}
+        <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 sm:p-5 space-y-4 shadow-xl">
+          <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
+            <div>
+              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">
+                Vehicle & Shift Manifest
+              </span>
+              <div className="flex items-center gap-2 mt-0.5">
+                <span className="text-sm font-black text-white font-mono bg-slate-950 px-2 py-0.5 rounded border border-slate-800">
+                  {user.busNumber || 'BUS-101'}
                 </span>
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 ${
-                  daemonState.isRunning
-                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                    : 'bg-slate-800 text-slate-400 border border-slate-700'
-                }`}>
-                  <span className={`w-1.5 h-1.5 rounded-full ${daemonState.isRunning ? 'bg-emerald-400 animate-ping' : 'bg-slate-500'}`}></span>
-                  {daemonState.isRunning ? 'ACTIVE SHIFT' : 'STANDBY'}
-                </span>
+                <span className="text-xs font-bold text-emerald-400">{activeCorridor.routeNumber}</span>
               </div>
-              <div className="flex items-baseline gap-2 pt-0.5">
-                <span className="text-2xl font-black text-white font-mono tracking-tight tabular-nums">
-                  {formatDuration(shiftDurationSeconds)}
-                </span>
-                <span className="text-[11px] text-slate-400 font-medium">Elapsed</span>
-              </div>
-              <p className="text-[11px] text-slate-400 truncate">
-                Unit: <span className="text-white font-bold font-mono">{user.busNumber || 'BUS-101'}</span> • {activeCorridor.routeNumber}
-              </p>
             </div>
 
-            <button
-              onClick={handleToggleTracking}
-              style={{ minHeight: '52px' }}
-              className={`w-full py-3 px-4 rounded-xl font-black text-xs tracking-wider uppercase flex items-center justify-center gap-2 transition-all transform active:scale-95 shadow-md ${
-                daemonState.isRunning
-                  ? 'bg-rose-600/90 hover:bg-rose-600 text-white border border-rose-500/40 shadow-rose-950/40'
-                  : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-emerald-950/40'
-              }`}
-            >
-              {daemonState.isRunning ? (
-                <>
-                  <Square className="w-4 h-4 fill-current" />
-                  END TRANSIT SHIFT
-                </>
-              ) : (
-                <>
-                  <Play className="w-4 h-4 fill-current ml-0.5" />
-                  START TRANSIT SHIFT
-                </>
-              )}
-            </button>
+            <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1.5 ${
+              daemonState.isRunning
+                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                : 'bg-slate-800 text-slate-400 border border-slate-700'
+            }`}>
+              <span className={`w-2 h-2 rounded-full ${daemonState.isRunning ? 'bg-emerald-400 animate-ping' : 'bg-slate-500'}`}></span>
+              {daemonState.isRunning ? 'ON DUTY' : 'OFF DUTY'}
+            </span>
           </div>
 
-          {/* Card A2: Emergency Breakdown Guard Station */}
-          <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 flex flex-col justify-between space-y-3 shadow-lg relative overflow-hidden">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-black uppercase tracking-wider text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded border border-rose-500/20">
-                Safety Safeguard
+          <div className="flex items-center justify-between text-xs">
+            <div>
+              <span className="text-slate-400 text-[11px] block">Assigned Corridor</span>
+              <span className="text-white font-medium text-xs truncate max-w-[220px] block mt-0.5">
+                {activeCorridor.name}
               </span>
-              <span className="text-[10px] text-slate-500 font-mono">2s Guard</span>
             </div>
 
-            <div className="flex items-center gap-3">
-              {/* Circular SVG Press-and-Hold Target */}
-              <div className="relative w-16 h-16 flex items-center justify-center shrink-0 select-none touch-none">
-                <svg className="w-16 h-16 -rotate-90 transform" viewBox="0 0 100 100">
-                  <circle cx="50" cy="50" r={RADIUS} className="stroke-slate-800" strokeWidth="7" fill="transparent" />
-                  <circle
-                    cx="50"
-                    cy="50"
-                    r={RADIUS}
-                    className="stroke-rose-500 transition-all duration-75 ease-linear"
-                    strokeWidth="7"
-                    strokeDasharray={CIRCUMFERENCE}
-                    strokeDashoffset={strokeDashoffset}
-                    strokeLinecap="round"
-                    fill="transparent"
-                  />
-                </svg>
+            <div className="text-right">
+              <span className="text-slate-400 text-[11px] flex items-center justify-end gap-1">
+                <Clock className="w-3 h-3 text-slate-500" /> Shift Duration
+              </span>
+              <span className="text-white font-mono font-bold text-xs block mt-0.5 tabular-nums">
+                {daemonState.isRunning ? formatDuration(shiftDurationSeconds) : '--:--'}
+              </span>
+            </div>
+          </div>
 
-                <button
-                  type="button"
-                  onPointerDown={startSosHold}
-                  onPointerUp={cancelSosHold}
-                  onPointerLeave={cancelSosHold}
-                  onPointerCancel={cancelSosHold}
-                  disabled={Boolean(activeIncident)}
-                  className={`absolute w-12 h-12 rounded-full flex flex-col items-center justify-center transition-all transform active:scale-95 shadow-md ${
-                    activeIncident
-                      ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
-                      : isHoldingSos
-                      ? 'bg-rose-500 text-white scale-105 shadow-rose-600/80'
-                      : 'bg-rose-600 hover:bg-rose-500 text-white shadow-rose-900/60'
-                  }`}
-                  style={{ minWidth: '48px', minHeight: '48px' }}
-                  aria-label="Hold 2 seconds to trigger SOS Breakdown"
-                >
-                  <AlertOctagon className={`w-5 h-5 ${isHoldingSos ? 'animate-bounce' : ''}`} />
-                  <span className="text-[8px] font-black tracking-wider uppercase mt-0.5">
-                    {isHoldingSos ? `${sosHoldProgress}%` : 'SOS'}
-                  </span>
-                </button>
+          <button
+            onClick={handleToggleTracking}
+            style={{ minHeight: '56px' }}
+            className={`w-full py-3.5 px-4 rounded-xl font-black text-xs tracking-wider uppercase flex items-center justify-center gap-2.5 transition-all transform active:scale-98 shadow-lg ${
+              daemonState.isRunning
+                ? 'bg-rose-600/90 hover:bg-rose-600 text-white border border-rose-500/40 shadow-rose-950/40'
+                : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-emerald-950/50'
+            }`}
+          >
+            {daemonState.isRunning ? (
+              <>
+                <Square className="w-4 h-4 fill-current" />
+                END TRANSIT SHIFT (OFFLINE)
+              </>
+            ) : (
+              <>
+                <Play className="w-4 h-4 fill-current ml-0.5" />
+                START TRANSIT SHIFT (ONLINE)
+              </>
+            )}
+          </button>
+        </div>
+
+        {/* CARD 2: ROUTE MANIFEST & STOP SEQUENCE (Samsara Driver Style) */}
+        <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 sm:p-5 space-y-3.5 shadow-xl">
+          <div className="flex items-center justify-between border-b border-slate-800/80 pb-2.5">
+            <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+              <MapPin className="w-3.5 h-3.5 text-emerald-400" />
+              Route Manifest & Stop Sequence
+            </span>
+            <span className="text-[10px] font-bold text-emerald-300 bg-emerald-500/15 px-2 py-0.5 rounded border border-emerald-500/30">
+              Next: Stop #2 (2m)
+            </span>
+          </div>
+
+          <div className="space-y-2.5 text-xs">
+            {/* Stop 1: Passed */}
+            <div className="flex items-center gap-3 p-2.5 rounded-xl bg-slate-950/40 border border-slate-800/60 text-slate-400">
+              <div className="w-5 h-5 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 shrink-0">
+                <Check className="w-3 h-3 stroke-[3]" />
               </div>
-
               <div className="min-w-0 flex-1">
-                <h3 className="text-xs font-bold text-white leading-tight">Emergency SOS</h3>
-                <p className="text-[10px] text-slate-400 mt-0.5 leading-snug">
-                  {isHoldingSos ? (
-                    <span className="text-rose-400 font-bold animate-pulse">
-                      Hold firmly... {((2000 - (sosHoldProgress / 100) * 2000) / 1000).toFixed(1)}s
-                    </span>
-                  ) : activeIncident ? (
-                    <span className="text-rose-400 font-semibold">Incident Active</span>
-                  ) : (
-                    <span>Press & hold 2s for immediate relief broadcast</span>
-                  )}
-                </p>
+                <span className="font-semibold text-slate-300 line-through block truncate">Campus Main Gate</span>
+                <span className="text-[10px] text-slate-500">Departed on schedule</span>
               </div>
+              <span className="text-[10px] font-mono text-slate-500 shrink-0">08:00 AM</span>
             </div>
 
-            <div className="text-[10px] text-slate-500 bg-slate-950/60 px-2 py-1 rounded border border-slate-800 text-center font-mono">
-              Accidental-Touch Interlock
+            {/* Stop 2: Active Target */}
+            <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-950/90 border-2 border-emerald-500/50 shadow-md">
+              <div className="w-5 h-5 rounded-full bg-emerald-500/20 border border-emerald-500/60 flex items-center justify-center text-emerald-400 shrink-0">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+              </div>
+              <div className="min-w-0 flex-1">
+                <span className="font-extrabold text-white block truncate">Transit Stop #2</span>
+                <span className="text-[10px] text-emerald-400 font-medium">Active Geofenced Target • ~450m</span>
+              </div>
+              <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-bold px-2 py-0.5 rounded font-mono shrink-0">
+                2 mins
+              </span>
+            </div>
+
+            {/* Stop 3: Pending Terminal */}
+            <div className="flex items-center gap-3 p-2.5 rounded-xl bg-slate-950/30 border border-slate-800/40 text-slate-400 opacity-60">
+              <div className="w-5 h-5 rounded-full border border-slate-600 flex items-center justify-center text-slate-500 text-[10px] font-mono shrink-0">
+                3
+              </div>
+              <div className="min-w-0 flex-1">
+                <span className="font-medium text-slate-300 block truncate">Central Hostels Terminal</span>
+                <span className="text-[10px] text-slate-500">Route Destination</span>
+              </div>
+              <span className="text-[10px] font-mono text-slate-500 shrink-0">08:25 AM</span>
             </div>
           </div>
         </div>
 
-        {/* 2. INTEGRATED 3-PILL TELEMETRY RAIL (Aviation Horizon) */}
-        <div className="grid grid-cols-3 gap-2">
-          {/* Pill 1: Speed */}
-          <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-3 flex flex-col justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center justify-between">
-              Speed <Gauge className="w-3.5 h-3.5 text-emerald-400" />
+        {/* CARD 3: PASSENGER LOAD MANAGEMENT (Large Tactile Stepper) */}
+        <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 sm:p-5 space-y-3.5 shadow-xl">
+          <div className="flex items-center justify-between border-b border-slate-800/80 pb-2.5">
+            <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+              <Users className="w-3.5 h-3.5 text-emerald-400" />
+              Passenger Load Management
             </span>
-            <div className="mt-1">
-              <div className="flex items-baseline gap-1">
-                <span className="text-2xl font-black text-white tabular-nums">{daemonState.currentSpeed}</span>
-                <span className="text-[10px] font-bold text-emerald-400">km/h</span>
-              </div>
-              <p className="text-[10px] text-slate-400 mt-0.5 font-mono truncate">{daemonState.currentHeading}° Heading</p>
-            </div>
-          </div>
-
-          {/* Pill 2: Pings Emitted */}
-          <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-3 flex flex-col justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center justify-between">
-              Telemetry <Radio className="w-3.5 h-3.5 text-teal-400" />
-            </span>
-            <div className="mt-1">
-              <span className="text-2xl font-black text-white tabular-nums">{daemonState.totalPingsEmitted}</span>
-              <p className="text-[10px] text-slate-400 mt-0.5 font-mono">Pings Sent</p>
-            </div>
-          </div>
-
-          {/* Pill 3: Link & Buffer */}
-          <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-3 flex flex-col justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center justify-between">
-              Cell Buffer <Wifi className="w-3.5 h-3.5 text-emerald-400" />
-            </span>
-            <div className="mt-1">
-              <span className={`text-2xl font-black tabular-nums ${daemonState.bufferedPingsCount > 0 ? 'text-amber-400' : 'text-white'}`}>
-                {daemonState.bufferedPingsCount}/20
-              </span>
-              <p className="text-[10px] text-slate-400 mt-0.5 font-mono">5s Rate</p>
-            </div>
-          </div>
-        </div>
-
-        {/* 3. PASSENGER OCCUPANCY MONITOR (Tactile Stepper & Multi-Segment Meter) */}
-        <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 space-y-3 shadow-lg">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Users className="w-4 h-4 text-emerald-400" />
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-200">
-                Passenger Occupancy
-              </span>
-            </div>
             <span className={`text-xs font-bold px-2 py-0.5 rounded border tabular-nums ${
               passengerCount / maxCapacity > 0.85
                 ? 'bg-rose-500/20 text-rose-300 border-rose-500/30'
@@ -814,68 +764,123 @@ export const App: React.FC = () => {
           </div>
         </div>
 
-        {/* 4. CAD/AVL CORRIDOR & NEXT STOP TIMELINE */}
-        <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 space-y-3 shadow-lg">
-          <div className="flex items-center justify-between text-xs border-b border-slate-800 pb-2.5">
-            <div className="flex items-center gap-1.5 min-w-0">
-              <RouteIcon className="w-4 h-4 text-emerald-400 shrink-0" />
-              <span className="font-extrabold text-white truncate">{activeCorridor.routeNumber}</span>
-              <span className="text-slate-400 truncate">• {activeCorridor.name}</span>
-            </div>
-            <span className="text-[10px] font-bold text-emerald-300 bg-emerald-500/20 px-2 py-0.5 rounded border border-emerald-500/30 shrink-0">
-              Next: Stop #2 (2m)
+        {/* CARD 4: VEHICLE TELEMATICS & DIAGNOSTICS (2x2 Grid) */}
+        <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 sm:p-5 space-y-3 shadow-xl">
+          <div className="flex items-center justify-between border-b border-slate-800/80 pb-2.5">
+            <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+              <Gauge className="w-3.5 h-3.5 text-teal-400" />
+              In-Cab Telematics & System Health
             </span>
+            <span className="text-[10px] font-mono text-slate-400">5s Live Cycle</span>
           </div>
 
-          <div className="space-y-2 text-xs">
-            {/* Stop 1: Passed */}
-            <div className="flex items-center gap-3 text-slate-400">
-              <div className="w-2.5 h-2.5 rounded-full bg-slate-600 shrink-0"></div>
-              <span className="line-through truncate">Campus Main Gate</span>
-              <span className="ml-auto text-[10px] text-slate-500 font-mono shrink-0">08:00 AM (Departed)</span>
+          <div className="grid grid-cols-2 gap-2.5 text-xs">
+            {/* Speedometer */}
+            <div className="bg-slate-950/70 p-3 rounded-xl border border-slate-800/80">
+              <span className="text-[10px] text-slate-400 uppercase font-semibold block">Vehicle Speed</span>
+              <div className="flex items-baseline gap-1 mt-0.5">
+                <span className="text-2xl font-black text-white tabular-nums">{daemonState.currentSpeed}</span>
+                <span className="text-[10px] font-bold text-emerald-400">km/h</span>
+              </div>
+              <span className="text-[10px] text-slate-400 font-mono block mt-0.5 truncate">{daemonState.currentHeading}° Heading</span>
             </div>
 
-            {/* Stop 2: Active Target */}
-            <div className="flex items-center gap-3 font-bold text-white bg-slate-950/80 p-2.5 rounded-xl border border-emerald-500/30">
-              <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping shrink-0"></div>
-              <div className="min-w-0 flex-1">
-                <span className="truncate block">Transit Stop #2</span>
-                <span className="text-[10px] text-emerald-400 font-normal">Next Geofenced Checkpoint</span>
+            {/* Pings & Buffer */}
+            <div className="bg-slate-950/70 p-3 rounded-xl border border-slate-800/80">
+              <span className="text-[10px] text-slate-400 uppercase font-semibold block">Telemetry Pings</span>
+              <div className="flex items-baseline gap-1 mt-0.5">
+                <span className="text-2xl font-black text-white tabular-nums">{daemonState.totalPingsEmitted}</span>
+                <span className="text-[10px] font-bold text-slate-400">sent</span>
               </div>
-              <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded font-mono shrink-0">
-                ~2 mins away
+              <span className={`text-[10px] font-mono block mt-0.5 ${daemonState.bufferedPingsCount > 0 ? 'text-amber-400' : 'text-slate-400'}`}>
+                Buffer: {daemonState.bufferedPingsCount}/20
               </span>
             </div>
 
-            {/* Stop 3: Pending Terminal */}
-            <div className="flex items-center gap-3 text-slate-400 opacity-60">
-              <div className="w-2.5 h-2.5 rounded-full border border-slate-500 shrink-0"></div>
-              <span className="truncate">Central Hostels Terminal</span>
-              <span className="ml-auto text-[10px] font-mono shrink-0">08:25 AM</span>
+            {/* Battery Shield */}
+            <div className="col-span-2 bg-slate-950/70 p-2.5 rounded-xl border border-slate-800/80 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <BatteryCharging className="w-4 h-4 text-emerald-400" />
+                <div>
+                  <span className="text-xs font-bold text-white block">Android Battery Doze Shield</span>
+                  <span className="text-[10px] text-slate-400 block">{batteryStatus}</span>
+                </div>
+              </div>
+              <button
+                onClick={handleRequestExemption}
+                className="px-2.5 py-1 rounded-lg text-xs font-semibold text-emerald-300 hover:text-emerald-200 bg-slate-800 hover:bg-slate-700 transition-colors"
+              >
+                Re-check
+              </button>
             </div>
           </div>
         </div>
 
-        {/* 5. ANDROID BATTERY DOZE SHIELD */}
-        <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-3.5 flex items-center justify-between text-xs">
-          <div className="flex items-center gap-2.5">
-            <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-              <BatteryCharging className="w-4 h-4" />
-            </div>
-            <div>
-              <p className="font-bold text-white flex items-center gap-1">
-                Battery Doze Shield
-                <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+        {/* CARD 5: EMERGENCY BREAKDOWN & RELIEF SAFEGUARD (Samsara Safety Station) */}
+        <div className="bg-slate-900/90 border-2 border-rose-500/40 rounded-2xl p-4 sm:p-5 space-y-3 relative overflow-hidden shadow-xl">
+          <div className="flex items-center justify-between border-b border-slate-800/80 pb-2.5">
+            <span className="text-[10px] font-black uppercase tracking-wider text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded border border-rose-500/20">
+              Emergency Breakdown Dispatch
+            </span>
+            <span className="text-[10px] text-slate-400 font-mono">2s Accidental Guard</span>
+          </div>
+
+          <div className="flex items-center justify-between gap-4">
+            <div className="min-w-0 flex-1">
+              <h3 className="text-sm font-extrabold text-white">Broadcast Emergency SOS</h3>
+              <p className="text-[11px] text-slate-400 mt-0.5 leading-snug">
+                {isHoldingSos ? (
+                  <span className="text-rose-400 font-bold animate-pulse">
+                    Hold firmly... {((2000 - (sosHoldProgress / 100) * 2000) / 1000).toFixed(1)}s
+                  </span>
+                ) : activeIncident ? (
+                  <span className="text-rose-400 font-semibold">Incident broadcast active</span>
+                ) : (
+                  <span>Hold 2 seconds to initiate relief bus dispatch</span>
+                )}
               </p>
-              <p className="text-[10px] text-slate-400">{batteryStatus}</p>
+            </div>
+
+            <div className="relative w-20 h-20 flex items-center justify-center shrink-0 select-none touch-none">
+              <svg className="w-20 h-20 -rotate-90 transform" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r={RADIUS} className="stroke-slate-800/80" strokeWidth="6" fill="transparent" />
+                <circle
+                  cx="50"
+                  cy="50"
+                  r={RADIUS}
+                  className="stroke-rose-500 transition-all duration-75 ease-linear"
+                  strokeWidth="6"
+                  strokeDasharray={CIRCUMFERENCE}
+                  strokeDashoffset={strokeDashoffset}
+                  strokeLinecap="round"
+                  fill="transparent"
+                />
+              </svg>
+
+              <button
+                type="button"
+                onPointerDown={startSosHold}
+                onPointerUp={cancelSosHold}
+                onPointerLeave={cancelSosHold}
+                onPointerCancel={cancelSosHold}
+                disabled={Boolean(activeIncident)}
+                className={`absolute w-14 h-14 rounded-full flex flex-col items-center justify-center transition-all transform active:scale-95 shadow-lg ${
+                  activeIncident
+                    ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
+                    : isHoldingSos
+                    ? 'bg-rose-500 text-white scale-105 shadow-rose-600/80'
+                    : 'bg-rose-600 hover:bg-rose-500 text-white shadow-rose-900/60'
+                }`}
+                style={{ minWidth: '56px', minHeight: '56px' }}
+                aria-label="Hold 2 seconds to trigger SOS Breakdown"
+              >
+                <AlertOctagon className={`w-6 h-6 ${isHoldingSos ? 'animate-bounce' : ''}`} />
+                <span className="text-[9px] font-black tracking-wider uppercase mt-0.5">
+                  {isHoldingSos ? `${sosHoldProgress}%` : 'SOS'}
+                </span>
+              </button>
             </div>
           </div>
-          <button
-            onClick={handleRequestExemption}
-            className="px-2.5 py-1 rounded-lg text-xs font-semibold text-emerald-300 hover:text-emerald-200 bg-slate-800 hover:bg-slate-700 transition-colors"
-          >
-            Re-check
-          </button>
         </div>
       </main>
 
