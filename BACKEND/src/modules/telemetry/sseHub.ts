@@ -2,6 +2,7 @@ import { ServerResponse } from 'node:http';
 import { Redis } from 'ioredis';
 import { env } from '../../config/env.js';
 import { TelemetryPing } from './telemetry.schemas.js';
+import { VehicleRouteProgress } from '../routes/routes.schemas.js';
 
 export interface GeoJSONFeature {
   type: 'Feature';
@@ -17,6 +18,7 @@ export interface GeoJSONFeature {
     passengerCount?: number;
     status: string;
     lastSeen: number;
+    progress?: VehicleRouteProgress;
   };
 }
 
@@ -127,6 +129,7 @@ export class SSEHub {
             passengerCount: ping.passengerCount ?? 0,
             status: ping.status || 'ACTIVE',
             lastSeen: timestampMs,
+            progress: (ping as any).progress,
           },
         };
 

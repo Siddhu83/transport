@@ -1,15 +1,16 @@
-# 07. 15-Sprint Engineering Roadmap & Master Execution Plan
+# 07. 17-Sprint Engineering Roadmap & Master Execution Plan
 
 ## 1. Executive Summary & Delivery Strategy
 
-This document details the **15-Sprint (30-Week)** master engineering roadmap for developing, testing, and deploying the College Transport Management System. The roadmap is structured around the **Decoupled Dual-Plane Architecture** defined in [02. System Architecture & Topology](https://github.com/Siddhu83/transport/docs/02_system_architecture.md), ensuring strict isolation between the **High-Frequency Ingestion Hot Path** (Fastify + Redis 7 + SSE) and the **Transactional Persistence Cold Path** (Prisma + Supabase PostgreSQL).
+This document details the **17-Sprint (34-Week)** master engineering roadmap for developing, testing, and deploying the College Transport Management System. The roadmap is structured around the **Decoupled Dual-Plane Architecture** defined in [02. System Architecture & Topology](https://github.com/Siddhu83/transport/docs/02_system_architecture.md), ensuring strict isolation between the **High-Frequency Ingestion Hot Path** (Fastify + Redis 7 + SSE) and the **Transactional Persistence Cold Path** (Prisma + Supabase PostgreSQL).
 
 ### Delivery Velocity & Milestones:
 - **Phase 1 (Sprints 1–3):** Foundation, Infrastructure & Telemetry Ingestion Engine
 - **Phase 2 (Sprints 4–6):** SSE Real-Time Streaming & WebGL Map Rendering
 - **Phase 3 (Sprints 7–9):** Native Driver Android Kiosk & Cellular Dead-Zone Resilience
 - **Phase 4 (Sprints 10–12):** SOS Breakdown Proximity Matching & BullMQ Alert Dispatch Engine
-- **Phase 5 (Sprints 13–15):** Student PWA, Infrastructure Hardening & Production Rollout
+- **Phase 5 (Sprints 13–15):** Student PWA & APSRTC-Inspired Dynamic Route Manifest Engine
+- **Phase 6 (Sprints 16–17):** Infrastructure Hardening, Stress Testing & Production Rollout
 
 ---
 
@@ -21,7 +22,8 @@ This document details the **15-Sprint (30-Week)** master engineering roadmap for
 | **Phase 2: Real-Time Canvas** | Sprints 4–6 | Weeks 7–12 | SSE Broadcaster & WebGL Map Engine | 60 FPS LERP Map Rendering via SSE Fanout |
 | **Phase 3: Driver Kiosk & Offline** | Sprints 7–9 | Weeks 13–18 | Android Foreground Daemon & Buffering | Native Driver App with Ring Buffer & Battery Exemption |
 | **Phase 4: Emergency SOS Engine** | Sprints 10–12 | Weeks 19–24 | Proximity Match, BullMQ & Admin HUD | Emergency Dispatch & Relief Vehicle Reroute Control Tower |
-| **Phase 5: PWA & Production** | Sprints 13–15 | Weeks 25–30 | Student PWA, Circuit Breakers & Audit | Production Launch for 100 Buses & 2,000+ Students |
+| **Phase 5: Student PWA & Linear Tracking** | Sprints 13–15 | Weeks 25–30 | Student PWA & APSRTC Stop Manifest Engine | Dynamic Geofence Snapping & Linear Timeline UI Sync |
+| **Phase 6: Hardening & Production** | Sprints 16–17 | Weeks 31–34 | System Hardening, Circuit Breakers & Audit | Production Launch for 100 Buses & 2,000+ Students |
 
 ---
 
@@ -202,7 +204,35 @@ This document details the **15-Sprint (30-Week)** master engineering roadmap for
   - Streamlined 3-tab layout (`Home`, `My Bus`, `Settings`) with zero third-party sheet dependencies; redundant public transit routes catalog view removed.
 - **Contract Mappings:** [05_frontend_guidelines.md §5.1](https://github.com/Siddhu83/transport/docs/05_frontend_guidelines.md#51-student-mobile-pwa-bottom-sheet-architecture), [01_requirements_and_roles.md §3.1](https://github.com/Siddhu83/transport/docs/01_requirements_and_roles.md#31-student-persona).
 
-#### Sprint 14: System Hardening, Circuit Breakers & Health Probes
+#### Sprint 14: Dynamic Linear Route Manifest, Polyline Snapping & Stop Geofence Engine
+- **Objective:** Build the backend spatial map-matching and geofence state engine to project live vehicle telemetry onto linear route sequences with dynamic ETA calculations.
+- **Key Tasks:**
+  1. Enhance RouteStop and Stop data models in Prisma with `distanceFromOriginKm` and `geofenceRadiusMeters` properties.
+  2. Implement spatial snap-to-polyline algorithm projecting raw vehicle coordinates `(lat, lng)` to nearest route polyline index and calculating cumulative linear distance covered.
+  3. Build 3-state Stop Geofence State Machine (`APPROACHING` \(\le 400\text{m}\), `AT_STOP` \(\le 50\text{m}\), `DEPARTED` \(> 100\text{m}\)) with departure timestamp tracking.
+  4. Implement `GET /api/v1/routes/:id/manifest` and enrich SSE telemetry payload with live stop progression metadata (`currentStopOrder`, `nextStopName`, `etaSeconds`, `status`).
+- **Deliverables & Definition of Done (DoD):**
+  - Sub-3ms linear progress and ETA computation on active telemetry pings.
+  - Zero database writes on the telemetry hot path; live route progression cached in Redis hash `bus:<busId>:progress`.
+- **Contract Mappings:** [03_telemetry_and_realtime_protocol.md §2](https://github.com/Siddhu83/transport/docs/03_telemetry_and_realtime_protocol.md#2-ingestion-interface-contract-driver--backend), [02_system_architecture.md §2](https://github.com/Siddhu83/transport/docs/02_system_architecture.md#2-telemetry-processing-pipeline-the-hot-path).
+
+#### Sprint 15: APSRTC-Style Linear Stop Sequence UI & Real-Time Sync
+- **Objective:** Replace static and hardcoded stop components in the Student Portal and Driver Kiosk with live, synchronized linear route sequence visualizers.
+- **Key Tasks:**
+  1. In Student Portal `RideStatusSheet.tsx`: replace hardcoded mock stops (`STOPS_TIMELINE`) and mock next stop labels with dynamic `<LinearRouteManifest />`.
+  2. Build animated Bus Glider indicator smoothly advancing down the vertical connector line between completed and upcoming stops based on live progress.
+  3. In Driver Console `Card 2`: bind live stop sequence auto-advancing checkmarks upon geofence detection, with 1-tap manual override (`[Confirm Arrival]` / `[Skip Stop]`).
+  4. Ensure end-to-end sync: when driver starts transit duty and enters a stop geofence, both Driver Console and Student Portal update simultaneously via SSE.
+- **Deliverables & Definition of Done (DoD):**
+  - Elimination of all hardcoded stop arrays in `RideStatusSheet.tsx` and `DRIVER_APP/src/App.tsx`.
+  - Fluid vertical timeline visualization displaying accurate past departures, live en-route target, and arrival countdown.
+- **Contract Mappings:** [05_frontend_guidelines.md §5.1](https://github.com/Siddhu83/transport/docs/05_frontend_guidelines.md#51-student-mobile-pwa-bottom-sheet-architecture), [05_frontend_guidelines.md §5.2](https://github.com/Siddhu83/transport/docs/05_frontend_guidelines.md#52-driver-tracking-console-distraction-free-kiosk).
+
+---
+
+### 3.6 Phase 6: System Hardening, Stress Testing & Production Rollout
+
+#### Sprint 16: System Hardening, Circuit Breakers & Health Probes
 - **Objective:** Enforce infrastructure resilience, database statement timeouts, circuit breaker fallbacks, and health checks.
 - **Key Tasks:**
   1. Implement Fastify circuit breakers tripping at \(> 50\%\) failure rate within 10s window (returning HTTP 503).
@@ -214,7 +244,7 @@ This document details the **15-Sprint (30-Week)** master engineering roadmap for
   - Health probes integrated for Docker container orchestrator monitoring.
 - **Contract Mappings:** [06_resilience_and_failure_modes.md §4](https://github.com/Siddhu83/transport/docs/06_resilience_and_failure_modes.md#4-database--cache-circuit-breakers), [06_resilience_and_failure_modes.md §5](https://github.com/Siddhu83/transport/docs/06_resilience_and_failure_modes.md#5-health-probes--disaster-triage-matrix).
 
-#### Sprint 15: End-to-End Stress Testing, Security Audit & Production Launch
+#### Sprint 17: End-to-End Stress Testing, Security Audit & Production Launch
 - **Objective:** Conduct high-throughput load testing, security penetration testing, 5-bus pilot field test, and deploy to production environment.
 - **Key Tasks:**
   1. Conduct K6 load test simulating 100 concurrent drivers emitting telemetry at 2-second intervals while 2,000 student SSE streams run concurrently.
@@ -247,7 +277,11 @@ This document details the **15-Sprint (30-Week)** master engineering roadmap for
                                                                                            │
   ┌────────────────────────────────────────────────────────────────────────────────────────┘
   ▼
-[Sprint 13: Student PWA] ──▶ [Sprint 14: Circuit Breakers & Probes] ──▶ [Sprint 15: Load Testing & Production Launch]
+[Sprint 13: Student PWA Bottom Sheet] ──▶ [Sprint 14: Stop Geofence Engine] ──▶ [Sprint 15: APSRTC Linear UI Sync]
+                                                                                           │
+  ┌────────────────────────────────────────────────────────────────────────────────────────┘
+  ▼
+[Sprint 16: Circuit Breakers & Probes] ──▶ [Sprint 17: Load Testing & Production Launch]
 ```
 
 ### Technical Component Mapping Matrix
@@ -267,8 +301,10 @@ This document details the **15-Sprint (30-Week)** master engineering roadmap for
 | **Sprint 11** | Sprint 10 | `src/queues/sosQueue.ts`, `src/workers/sosWorker.ts` | SOS §4, AGENT §1.4 | Medium |
 | **Sprint 12** | Sprint 6, 11 | `frontend/src/pages/admin/ControlTower.tsx` | Frontend §5.3, SOS §1 | Medium |
 | **Sprint 13** | Sprint 6 | `frontend/src/components/mobile/RideStatusSheet.tsx`, `public/sw.js` | Frontend §5.1, Req §3.1 | Low |
-| **Sprint 14** | Sprint 3, 11 | `src/infrastructure/circuitBreaker.ts`, `src/modules/health/*` | Resilience §4, Resilience §5 | High |
-| **Sprint 15** | All (1–14) | `tests/load/k6-telemetry.js`, Deployment configs | Req §4, Arch §5 | Critical |
+| **Sprint 14** | Sprint 3, 13 | `src/modules/routes/manifest.ts`, `src/services/geofenceEngine.ts` | Protocol §2, Arch §2 | High |
+| **Sprint 15** | Sprint 14 | `RideStatusSheet.tsx`, `DRIVER_APP/src/App.tsx` (Card 2) | Frontend §5.1, Frontend §5.2 | Medium |
+| **Sprint 16** | Sprint 3, 11 | `src/infrastructure/circuitBreaker.ts`, `src/modules/health/*` | Resilience §4, Resilience §5 | High |
+| **Sprint 17** | All (1–16) | `tests/load/k6-telemetry.js`, Deployment configs | Req §4, Arch §5 | Critical |
 
 ---
 
