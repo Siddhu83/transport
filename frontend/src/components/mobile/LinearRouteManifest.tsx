@@ -106,7 +106,6 @@ export const LinearRouteManifest: React.FC<LinearRouteManifestProps> = ({
             const isLast = index === totalStops - 1;
             const isPassed = index < targetIndex;
             const isTarget = index === targetIndex;
-            const isUpcoming = index > targetIndex;
 
             // Formulate ETA / Status text
             let etaBadge = `+${stop.estimatedMinutesFromStart}m`;
