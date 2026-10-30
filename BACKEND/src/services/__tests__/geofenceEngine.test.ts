@@ -138,6 +138,9 @@ describe('Geofence & Polyline Snapping Engine (Sprint 14)', () => {
       assert.equal(progress.nextStopId, 'stop-1');
       assert.equal(progress.status, 'AT_STOP');
       assert.equal(progress.etaSeconds, 0);
+      assert.equal(progress.window?.busPosition, 'TOP');
+      assert.equal(progress.window?.previousStop, null);
+      assert.equal(progress.window?.nextStop?.name, 'Transit Junction #2');
     });
 
     it('should detect APPROACHING when vehicle is within 400m of Stop 2', async () => {
@@ -161,6 +164,9 @@ describe('Geofence & Polyline Snapping Engine (Sprint 14)', () => {
       assert.equal(progress.status, 'APPROACHING');
       assert.ok(progress.distanceToNextStopMeters <= 400);
       assert.ok(progress.etaSeconds > 0 && progress.etaSeconds <= 60);
+      assert.equal(progress.window?.busPosition, 'MIDDLE');
+      assert.equal(progress.window?.previousStop?.name, 'Campus Main Gate');
+      assert.equal(progress.window?.nextStop?.name, 'Central Hostels Terminal');
     });
 
     it('should detect EN_ROUTE when vehicle is cruising between Stop 1 and Stop 2 (>400m away)', async () => {
