@@ -23,10 +23,14 @@ import {
   Check,
   MapPin,
   Clock,
+  SkipForward,
+  Flag,
 } from 'lucide-react';
 import { requestBatteryExemption } from './services/batteryOptimization';
 import { trackingDaemon, TrackingDaemonState } from './services/trackingDaemon';
 import { AuthService, AuthSession } from './services/auth';
+import { RouteManifest, ManifestStop } from './types/route';
+import { ENDPOINTS } from './config/api';
 import {
   SosService,
   PassengerBand,
@@ -73,6 +77,12 @@ export const App: React.FC = () => {
   const [sosElapsedSeconds, setSosElapsedSeconds] = useState<number>(0);
   const [shiftDurationSeconds, setShiftDurationSeconds] = useState<number>(0);
 
+  // Dynamic Route Manifest & APSRTC Stop Sequence State
+  const [routeManifest, setRouteManifest] = useState<RouteManifest | null>(null);
+  const [activeStopIndex, setActiveStopIndex] = useState<number>(0);
+  const [completedStopIds, setCompletedStopIds] = useState<Set<string>>(new Set());
+  const [, setLoadingManifest] = useState<boolean>(false);
+
   const holdTimerRef = useRef<NodeJS.Timeout | null>(null);
   const holdStartRef = useRef<number>(0);
 
@@ -106,6 +116,138 @@ export const App: React.FC = () => {
     }, 1000);
     return () => clearInterval(interval);
   }, [session]);
+
+  // Fetch Route Manifest for assigned route with offline fallback
+  useEffect(() => {
+    const routeId = session?.user?.assignedRouteId || CAMPUS_CORRIDORS[0]!.id;
+    let isMounted = true;
+
+    const fetchManifest = async () => {
+      setLoadingManifest(true);
+      try {
+        const res = await fetch(ENDPOINTS.ROUTE_MANIFEST(routeId));
+        if (res.ok) {
+          const body = await res.json();
+          if (isMounted && body?.data) {
+            setRouteManifest(body.data);
+            setLoadingManifest(false);
+            return;
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to fetch route manifest from backend, using corridor fallback:', err);
+      }
+
+      if (isMounted) {
+        setRouteManifest({
+          routeId,
+          routeNumber: session?.user?.routeNumber || 'R-101',
+          name: session?.user?.routeName || 'Sector 1 Express Corridor',
+          totalDistanceKm: 14.5,
+          estimatedDurationMinutes: 35,
+          polylineCoordinates: [],
+          stops: [
+            {
+              id: 'rs-1',
+              stopId: 'stop-1',
+              name: 'Campus Main Gate Terminal',
+              code: 'STOP-101',
+              stopOrder: 1,
+              latitude: 17.9045,
+              longitude: 83.4215,
+              estimatedMinutesFromStart: 0,
+              distanceFromOriginKm: 0.0,
+              geofenceRadiusMeters: 50,
+            },
+            {
+              id: 'rs-2',
+              stopId: 'stop-2',
+              name: 'Tagarapuvalasa Junction',
+              code: 'STOP-102',
+              stopOrder: 2,
+              latitude: 17.912,
+              longitude: 83.428,
+              estimatedMinutesFromStart: 8,
+              distanceFromOriginKm: 3.8,
+              geofenceRadiusMeters: 50,
+            },
+            {
+              id: 'rs-3',
+              stopId: 'stop-3',
+              name: 'Anandapuram Toll Gate',
+              code: 'STOP-103',
+              stopOrder: 3,
+              latitude: 17.925,
+              longitude: 83.442,
+              estimatedMinutesFromStart: 20,
+              distanceFromOriginKm: 9.2,
+              geofenceRadiusMeters: 50,
+            },
+            {
+              id: 'rs-4',
+              stopId: 'stop-4',
+              name: 'ANITS Central Campus Terminal',
+              code: 'STOP-104',
+              stopOrder: 4,
+              latitude: 17.935,
+              longitude: 83.456,
+              estimatedMinutesFromStart: 35,
+              distanceFromOriginKm: 14.5,
+              geofenceRadiusMeters: 60,
+            },
+          ],
+        });
+        setLoadingManifest(false);
+      }
+    };
+
+    fetchManifest();
+    return () => {
+      isMounted = false;
+    };
+  }, [session?.user?.assignedRouteId, session?.user?.routeNumber, session?.user?.routeName]);
+
+  // Automated Geofence Engine (Haversine Stop Arrival Evaluation)
+  useEffect(() => {
+    if (!daemonState.isRunning || !routeManifest || routeManifest.stops.length === 0) return;
+    const lat = daemonState.lastKnownLatitude;
+    const lng = daemonState.lastKnownLongitude;
+    if (lat === null || lng === null) return;
+
+    const currentTarget = routeManifest.stops[activeStopIndex];
+    if (!currentTarget) return;
+
+    const R = 6371e3;
+    const dLat = ((currentTarget.latitude - lat) * Math.PI) / 180;
+    const dLon = ((currentTarget.longitude - lng) * Math.PI) / 180;
+    const a =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos((lat * Math.PI) / 180) *
+        Math.cos((currentTarget.latitude * Math.PI) / 180) *
+        Math.sin(dLon / 2) ** 2;
+    const distMeters = Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+
+    // Auto-advance if within stop geofence radius (<= 50m) or stopped at location (< 5 km/h within 75m)
+    if (distMeters <= currentTarget.geofenceRadiusMeters || (daemonState.currentSpeed < 5 && distMeters <= 75)) {
+      setCompletedStopIds((prev) => new Set([...prev, currentTarget.stopId]));
+      if (activeStopIndex < routeManifest.stops.length - 1) {
+        setActiveStopIndex((prev) => prev + 1);
+      }
+    }
+  }, [daemonState.lastKnownLatitude, daemonState.lastKnownLongitude, daemonState.currentSpeed, daemonState.isRunning, activeStopIndex, routeManifest]);
+
+  const handleConfirmArrival = (stop: ManifestStop) => {
+    setCompletedStopIds((prev) => new Set([...prev, stop.stopId]));
+    if (routeManifest && activeStopIndex < routeManifest.stops.length - 1) {
+      setActiveStopIndex((prev) => prev + 1);
+    }
+  };
+
+  const handleSkipStop = () => {
+    if (routeManifest && activeStopIndex < routeManifest.stops.length - 1) {
+      setActiveStopIndex((prev) => prev + 1);
+    }
+  };
 
   // Elapsed time tracker for active SOS incident
   useEffect(() => {
@@ -723,7 +865,7 @@ export const App: React.FC = () => {
           </div>
         </div>
 
-        {/* CARD 2: ROUTE MANIFEST & STOP SEQUENCE (Samsara Driver Style) */}
+        {/* CARD 2: DYNAMIC ROUTE MANIFEST & STOP SEQUENCE (APSRTC Style with Glider) */}
         <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 sm:p-5 space-y-3.5 shadow-xl">
           <div className="flex items-center justify-between border-b border-slate-800/80 pb-2.5">
             <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
@@ -731,48 +873,135 @@ export const App: React.FC = () => {
               Route Manifest & Stop Sequence
             </span>
             <span className="text-[10px] font-bold text-emerald-300 bg-emerald-500/15 px-2 py-0.5 rounded border border-emerald-500/30">
-              Next: Stop #2 (2m)
+              {routeManifest?.stops[activeStopIndex]
+                ? `Next: Stop #${activeStopIndex + 1}`
+                : 'Corridor Complete'}
             </span>
           </div>
 
-          <div className="space-y-2.5 text-xs">
-            {/* Stop 1: Passed */}
-            <div className="flex items-center gap-3 p-2.5 rounded-xl bg-slate-950/40 border border-slate-800/60 text-slate-400">
-              <div className="w-5 h-5 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 shrink-0">
-                <Check className="w-3 h-3 stroke-[3]" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <span className="font-semibold text-slate-300 line-through block truncate">Campus Main Gate</span>
-                <span className="text-[10px] text-slate-500">Departed on schedule</span>
-              </div>
-              <span className="text-[10px]   text-slate-500 shrink-0">08:00 AM</span>
-            </div>
+          <div className="relative space-y-2.5 text-xs">
+            {/* Continuous Vertical Route Track */}
+            {routeManifest && routeManifest.stops.length > 1 && (
+              <div className="absolute left-[18px] top-[20px] bottom-[20px] w-[2px] bg-slate-800 rounded-full z-0" />
+            )}
 
-            {/* Stop 2: Active Target */}
-            <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-950/90 border-2 border-emerald-500/50 shadow-md">
-              <div className="w-5 h-5 rounded-full bg-emerald-500/20 border border-emerald-500/60 flex items-center justify-center text-emerald-400 shrink-0">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+            {/* Moving Bus Glider on the vertical line */}
+            {routeManifest && routeManifest.stops.length > 1 && (
+              <div
+                className="absolute left-[18px] transition-all duration-500 ease-out z-20 pointer-events-none"
+                style={{
+                  top: `calc(20px + (100% - 40px) * ${activeStopIndex / Math.max(1, routeManifest.stops.length - 1)})`,
+                  transform: 'translate(-50%, -50%)',
+                }}
+              >
+                <div className="w-6 h-6 rounded-full bg-emerald-500 text-slate-950 flex items-center justify-center shadow-lg shadow-emerald-500/50 border border-slate-950">
+                  <Bus className="w-3 h-3 fill-current" />
+                </div>
               </div>
-              <div className="min-w-0 flex-1">
-                <span className="font-extrabold text-white block truncate">Transit Stop #2</span>
-                <span className="text-[10px] text-emerald-400 font-medium">Active Geofenced Target • ~450m</span>
-              </div>
-              <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-bold px-2 py-0.5 rounded   shrink-0">
-                2 mins
-              </span>
-            </div>
+            )}
 
-            {/* Stop 3: Pending Terminal */}
-            <div className="flex items-center gap-3 p-2.5 rounded-xl bg-slate-950/30 border border-slate-800/40 text-slate-400 opacity-60">
-              <div className="w-5 h-5 rounded-full border border-slate-600 flex items-center justify-center text-slate-500 text-[10px]   shrink-0">
-                3
-              </div>
-              <div className="min-w-0 flex-1">
-                <span className="font-medium text-slate-300 block truncate">Central Hostels Terminal</span>
-                <span className="text-[10px] text-slate-500">Route Destination</span>
-              </div>
-              <span className="text-[10px]   text-slate-500 shrink-0">08:25 AM</span>
-            </div>
+            {routeManifest?.stops.map((stop, index) => {
+              const isCompleted = completedStopIds.has(stop.stopId) || index < activeStopIndex;
+              const isActive = index === activeStopIndex;
+              const isLast = index === (routeManifest.stops.length - 1);
+
+              if (isCompleted) {
+                return (
+                  <div
+                    key={stop.id || stop.stopId}
+                    className="flex items-center gap-3 p-2.5 rounded-xl bg-slate-950/40 border border-slate-800/60 text-slate-400 relative z-10"
+                  >
+                    <div className="w-5 h-5 rounded-full bg-slate-800 flex items-center justify-center text-emerald-400 border border-slate-700 shrink-0">
+                      <Check className="w-3 h-3 stroke-[3]" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <span className="font-semibold text-slate-400 line-through block truncate">
+                        {stop.name}
+                      </span>
+                      <span className="text-[10px] text-slate-500">
+                        {stop.code} • Departed
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-slate-500 shrink-0">
+                      +{stop.estimatedMinutesFromStart}m
+                    </span>
+                  </div>
+                );
+              }
+
+              if (isActive) {
+                return (
+                  <div
+                    key={stop.id || stop.stopId}
+                    className="p-3 rounded-xl bg-slate-950/95 border-2 border-emerald-500/60 shadow-lg shadow-emerald-950/30 space-y-2.5 relative z-10"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-5 h-5 rounded-full bg-emerald-500/20 border border-emerald-500/60 flex items-center justify-center text-emerald-400 shrink-0">
+                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-extrabold text-white block truncate text-xs">
+                            {stop.name}
+                          </span>
+                          <span className="bg-emerald-500/20 text-emerald-300 text-[9px] font-black px-1.5 py-0.2 rounded border border-emerald-500/30">
+                            ACTIVE
+                          </span>
+                        </div>
+                        <span className="text-[10px] text-emerald-400 font-medium block mt-0.5">
+                          Geofenced Target • ~{stop.geofenceRadiusMeters}m Zone
+                        </span>
+                      </div>
+                      <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-bold px-2 py-0.5 rounded shrink-0">
+                        Stop #{stop.stopOrder}
+                      </span>
+                    </div>
+
+                    {/* 1-Tap Manual Override Buttons (Confirm Arrival / Skip Stop) */}
+                    <div className="flex items-center gap-2 pt-1 border-t border-slate-800/80">
+                      <button
+                        onClick={() => handleConfirmArrival(stop)}
+                        className="flex-1 py-1.5 px-3 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all active:scale-95"
+                      >
+                        <Check className="w-3.5 h-3.5 stroke-[3]" />
+                        Confirm Arrival
+                      </button>
+                      <button
+                        onClick={handleSkipStop}
+                        className="py-1.5 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 border border-slate-700 text-[11px] font-medium flex items-center justify-center gap-1 transition-all active:scale-95"
+                        title="Skip this stop"
+                      >
+                        <SkipForward className="w-3.5 h-3.5" />
+                        Skip
+                      </button>
+                    </div>
+                  </div>
+                );
+              }
+
+              // Upcoming Stops
+              return (
+                <div
+                  key={stop.id || stop.stopId}
+                  className="flex items-center gap-3 p-2.5 rounded-xl bg-slate-950/30 border border-slate-800/40 text-slate-400 opacity-70 relative z-10"
+                >
+                  <div className="w-5 h-5 rounded-full border border-slate-600 flex items-center justify-center text-slate-500 text-[10px] shrink-0">
+                    {isLast ? <Flag className="w-2.5 h-2.5 text-amber-500" /> : stop.stopOrder}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <span className="font-medium text-slate-300 block truncate">
+                      {stop.name}
+                    </span>
+                    <span className="text-[10px] text-slate-500">
+                      {isLast ? 'Route Terminus' : `${stop.code} • Scheduled Stop`}
+                    </span>
+                  </div>
+                  <span className="text-[10px] text-slate-500 shrink-0">
+                    +{stop.estimatedMinutesFromStart}m
+                  </span>
+                </div>
+              );
+            })}
           </div>
         </div>
 
