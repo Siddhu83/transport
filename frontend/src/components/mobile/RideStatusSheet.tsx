@@ -136,12 +136,13 @@ export const RideStatusSheet: React.FC<RideStatusSheetProps> = ({
   const occupancyPct = Math.round((passengerCount / capacity) * 100);
 
   // Dynamic ETA estimation synced with live geofence engine (sub-minute accurate)
-  const etaMinutes = vehicle.progress && vehicle.progress.etaSeconds > 0
-    ? Math.max(1, Math.round(vehicle.progress.etaSeconds / 60))
+  const currentStop = vehicle.progress?.window?.currentStop;
+  const etaMinutes = currentStop?.etaSeconds !== undefined && currentStop.etaSeconds > 0
+    ? Math.max(1, Math.round(currentStop.etaSeconds / 60))
     : (speed > 40 ? 5 : speed > 20 ? 8 : 12);
 
   // Active Next Stop Name synced with live geofence engine
-  const nextStopName = vehicle.progress?.nextStopName
+  const nextStopName = currentStop?.name
     || (manifest?.stops && manifest.stops.length > 0 ? manifest.stops[Math.min(1, manifest.stops.length - 1)]?.name : null)
     || 'Tagarapuvalasa Junction';
 

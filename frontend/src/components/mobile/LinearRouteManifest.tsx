@@ -1,6 +1,6 @@
 import React from 'react';
 import { Check, MapPin, Bus, AlertTriangle, Flag } from 'lucide-react';
-import { RouteManifest, VehicleRouteProgress, SlidingStopWindow } from '../../types/route';
+import { RouteManifest, VehicleRouteProgress, SlidingStopWindow, StopProgressStatus } from '../../types/route';
 
 interface LinearRouteManifestProps {
   manifest: RouteManifest | null;
@@ -48,19 +48,10 @@ export const LinearRouteManifest: React.FC<LinearRouteManifestProps> = ({
     window = progress.window;
   } else {
     // Derive window based on targetIndex
-    let targetIndex = 0;
-    if (progress) {
-      const foundIdx = stops.findIndex((s) => s.stopId === progress.nextStopId);
-      if (foundIdx !== -1) {
-        targetIndex = foundIdx;
-      } else if (progress.currentStopOrder > 0) {
-        targetIndex = Math.min(totalStopsCount - 1, progress.currentStopOrder);
-      }
-    }
-
-    const currentStatus = progress?.status || 'EN_ROUTE';
-    const distanceMeters = progress?.distanceToNextStopMeters;
-    const etaSeconds = progress?.etaSeconds;
+    const targetIndex = progress?.currentStopOrder ? Math.min(totalStopsCount - 1, progress.currentStopOrder) : 0;
+    const currentStatus: StopProgressStatus = 'EN_ROUTE';
+    const distanceMeters = undefined;
+    const etaSeconds = undefined;
 
     if (targetIndex === 0) {
       window = {
@@ -86,7 +77,7 @@ export const LinearRouteManifest: React.FC<LinearRouteManifestProps> = ({
         } : null,
         totalStopsCount,
       };
-    } else if (targetIndex >= totalStopsCount - 1 && (currentStatus === 'AT_STOP' || currentStatus === 'DEPARTED')) {
+    } else if (targetIndex >= totalStopsCount - 1) {
       window = {
         busPosition: 'BOTTOM',
         previousStop: totalStopsCount > 1 ? {
