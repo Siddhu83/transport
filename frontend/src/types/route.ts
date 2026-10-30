@@ -48,11 +48,6 @@ export interface VehicleRouteProgress {
   busId: string;
   routeId: string;
   currentStopOrder: number;
-  nextStopId: string;
-  nextStopName: string;
-  distanceToNextStopMeters: number;
-  etaSeconds: number;
-  status: StopProgressStatus;
   linearDistanceCoveredKm: number;
   totalRouteDistanceKm: number;
   progressPercent: number;
