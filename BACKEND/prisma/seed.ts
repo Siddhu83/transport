@@ -32,6 +32,7 @@ async function main() {
         code: `STOP-${1000 + i}`,
         latitude: baseLat + latOffset,
         longitude: baseLng + lngOffset,
+        geofenceRadiusMeters: 50,
       },
     });
     stops.push(stop);
@@ -67,6 +68,7 @@ async function main() {
             stopId: stop.id,
             stopOrder: order + 1,
             estimatedMinutesFromStart: (order + 1) * 10,
+            distanceFromOriginKm: Number((order * 3.5).toFixed(2)),
           },
         });
       }

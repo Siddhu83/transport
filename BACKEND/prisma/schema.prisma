@@ -119,13 +119,14 @@ model Route {
 }
 
 model Stop {
-  id               String   @id @default(uuid())
-  name             String
-  code             String   @unique
-  latitude         Float
-  longitude        Float
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  id                   String   @id @default(uuid())
+  name                 String
+  code                 String   @unique
+  latitude             Float
+  longitude            Float
+  geofenceRadiusMeters Int      @default(50)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 
   routeStops       RouteStop[]
 
@@ -138,6 +139,7 @@ model RouteStop {
   stopId                   String
   stopOrder                Int
   estimatedMinutesFromStart Int      @default(0)
+  distanceFromOriginKm     Float    @default(0.0)
 
   route                    Route    @relation(fields: [routeId], references: [id], onDelete: Cascade)
   stop                     Stop     @relation(fields: [stopId], references: [id], onDelete: Cascade)
