@@ -135,9 +135,9 @@ describe('Geofence & Polyline Snapping Engine (Sprint 14)', () => {
       const progress = await evaluateVehicleProgress(ping, mockManifest);
       assert.ok(progress !== null);
       assert.equal(progress.currentStopOrder, 1);
-      assert.equal(progress.nextStopId, 'stop-1');
-      assert.equal(progress.status, 'AT_STOP');
-      assert.equal(progress.etaSeconds, 0);
+      assert.equal(progress.window?.currentStop.stopId, 'stop-1');
+      assert.equal(progress.window?.currentStop.status, 'AT_STOP');
+      assert.equal(progress.window?.currentStop.etaSeconds, 0);
       assert.equal(progress.window?.busPosition, 'TOP');
       assert.equal(progress.window?.previousStop, null);
       assert.equal(progress.window?.nextStop?.name, 'Transit Junction #2');
@@ -160,10 +160,10 @@ describe('Geofence & Polyline Snapping Engine (Sprint 14)', () => {
 
       const progress = await evaluateVehicleProgress(ping, mockManifest);
       assert.ok(progress !== null);
-      assert.equal(progress.nextStopName, 'Transit Junction #2');
-      assert.equal(progress.status, 'APPROACHING');
-      assert.ok(progress.distanceToNextStopMeters <= 400);
-      assert.ok(progress.etaSeconds > 0 && progress.etaSeconds <= 60);
+      assert.equal(progress.window?.currentStop.name, 'Transit Junction #2');
+      assert.equal(progress.window?.currentStop.status, 'APPROACHING');
+      assert.ok((progress.window?.currentStop.distanceMeters ?? 0) <= 400);
+      assert.ok((progress.window?.currentStop.etaSeconds ?? 0) > 0 && (progress.window?.currentStop.etaSeconds ?? 0) <= 60);
       assert.equal(progress.window?.busPosition, 'MIDDLE');
       assert.equal(progress.window?.previousStop?.name, 'Campus Main Gate');
       assert.equal(progress.window?.nextStop?.name, 'Central Hostels Terminal');
@@ -185,9 +185,9 @@ describe('Geofence & Polyline Snapping Engine (Sprint 14)', () => {
 
       const progress = await evaluateVehicleProgress(ping, mockManifest);
       assert.ok(progress !== null);
-      assert.equal(progress.nextStopName, 'Transit Junction #2');
-      assert.equal(progress.status, 'EN_ROUTE');
-      assert.ok(progress.distanceToNextStopMeters > 400);
+      assert.equal(progress.window?.currentStop.name, 'Transit Junction #2');
+      assert.equal(progress.window?.currentStop.status, 'EN_ROUTE');
+      assert.ok((progress.window?.currentStop.distanceMeters ?? 0) > 400);
       assert.ok(progress.progressPercent > 10 && progress.progressPercent < 40);
     });
   });

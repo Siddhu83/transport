@@ -218,8 +218,6 @@ export async function evaluateVehicleProgress(
     status = distToLast <= lastStop.geofenceRadiusMeters ? 'AT_STOP' : 'DEPARTED';
   }
 
-  const nextStop = stops[nextStopIndex] || stops[stops.length - 1]!;
-
   // 5. Dynamic ETA Calculation
   // Effective speed: use moving speed if > 8 km/h; fallback to 25 km/h (transit corridor average)
   const speedKmh = ping.speed > 8 ? ping.speed : 25;
@@ -348,12 +346,6 @@ export async function evaluateVehicleProgress(
         window: JSON.stringify(window),
         updatedAt: progress.updatedAt.toString(),
       });
-      pipeline.expire(`bus:${ping.busId}:progress`, 60);
-      await pipeline.exec();
-    } catch (err) {
-      console.warn(`[GeofenceEngine] Failed to write progress to Redis for bus ${ping.busId}:`, err);
-    }
-  }
       pipeline.expire(`bus:${ping.busId}:progress`, 60);
       await pipeline.exec();
     } catch (err) {
