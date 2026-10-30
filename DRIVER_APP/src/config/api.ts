@@ -11,6 +11,7 @@ export const ENDPOINTS = {
   TELEMETRY_PING: `${API_BASE_URL}/telemetry/ping`,
   TELEMETRY_BATCH_DRAIN: `${API_BASE_URL}/telemetry/batch-drain`,
   TELEMETRY_STREAM: `${API_BASE_URL}/telemetry/stream`,
+  ROUTE_MANIFEST: (id: string) => `${API_BASE_URL}/routes/${id}/manifest`,
   AUTH_LOGIN: `${API_BASE_URL}/auth/login`,
   SOS_TRIGGER: `${API_BASE_URL}/sos/trigger`,
 } as const;
