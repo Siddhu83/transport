@@ -23,13 +23,12 @@ import {
   Check,
   MapPin,
   Clock,
-  SkipForward,
   Flag,
 } from 'lucide-react';
 import { requestBatteryExemption } from './services/batteryOptimization';
 import { trackingDaemon, TrackingDaemonState } from './services/trackingDaemon';
 import { AuthService, AuthSession } from './services/auth';
-import { RouteManifest, ManifestStop } from './types/route';
+import { RouteManifest } from './types/route';
 import { ENDPOINTS } from './config/api';
 import {
   SosService,
@@ -80,7 +79,6 @@ export const App: React.FC = () => {
   // Dynamic Route Manifest & APSRTC Stop Sequence State
   const [routeManifest, setRouteManifest] = useState<RouteManifest | null>(null);
   const [activeStopIndex, setActiveStopIndex] = useState<number>(0);
-  const [completedStopIds, setCompletedStopIds] = useState<Set<string>>(new Set());
   const [, setLoadingManifest] = useState<boolean>(false);
 
   const holdTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -229,25 +227,11 @@ export const App: React.FC = () => {
 
     // Auto-advance if within stop geofence radius (<= 50m) or stopped at location (< 5 km/h within 75m)
     if (distMeters <= currentTarget.geofenceRadiusMeters || (daemonState.currentSpeed < 5 && distMeters <= 75)) {
-      setCompletedStopIds((prev) => new Set([...prev, currentTarget.stopId]));
       if (activeStopIndex < routeManifest.stops.length - 1) {
         setActiveStopIndex((prev) => prev + 1);
       }
     }
   }, [daemonState.lastKnownLatitude, daemonState.lastKnownLongitude, daemonState.currentSpeed, daemonState.isRunning, activeStopIndex, routeManifest]);
-
-  const handleConfirmArrival = (stop: ManifestStop) => {
-    setCompletedStopIds((prev) => new Set([...prev, stop.stopId]));
-    if (routeManifest && activeStopIndex < routeManifest.stops.length - 1) {
-      setActiveStopIndex((prev) => prev + 1);
-    }
-  };
-
-  const handleSkipStop = () => {
-    if (routeManifest && activeStopIndex < routeManifest.stops.length - 1) {
-      setActiveStopIndex((prev) => prev + 1);
-    }
-  };
 
   // Elapsed time tracker for active SOS incident
   useEffect(() => {
@@ -865,145 +849,228 @@ export const App: React.FC = () => {
           </div>
         </div>
 
-        {/* CARD 2: DYNAMIC ROUTE MANIFEST & STOP SEQUENCE (APSRTC Style with Glider) */}
-        <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 sm:p-5 space-y-3.5 shadow-xl">
-          <div className="flex items-center justify-between border-b border-slate-800/80 pb-2.5">
-            <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-              <MapPin className="w-3.5 h-3.5 text-emerald-400" />
-              Route Manifest & Stop Sequence
-            </span>
-            <span className="text-[10px] font-bold text-emerald-300 bg-emerald-500/15 px-2 py-0.5 rounded border border-emerald-500/30">
-              {routeManifest?.stops[activeStopIndex]
-                ? `Next: Stop #${activeStopIndex + 1}`
-                : 'Corridor Complete'}
-            </span>
-          </div>
+        {/* CARD 2: DYNAMIC ROUTE MANIFEST & STOP SEQUENCE (APSRTC 3-Stop Sliding Window) */}
+        {(() => {
+          const totalStops = routeManifest?.stops.length || 0;
+          const stops = routeManifest?.stops || [];
 
-          <div className="relative space-y-2.5 text-xs">
-            {/* Continuous Vertical Route Track */}
-            {routeManifest && routeManifest.stops.length > 1 && (
-              <div className="absolute left-[18px] top-[20px] bottom-[20px] w-[2px] bg-slate-800 rounded-full z-0" />
-            )}
+          interface DisplayRow {
+            stopId: string;
+            name: string;
+            code: string;
+            stopOrder: number;
+            hasBus: boolean;
+            isPassed: boolean;
+            isTerminus: boolean;
+            statusText: string;
+          }
 
-            {/* Moving Bus Glider on the vertical line */}
-            {routeManifest && routeManifest.stops.length > 1 && (
-              <div
-                className="absolute left-[18px] transition-all duration-500 ease-out z-20 pointer-events-none"
-                style={{
-                  top: `calc(20px + (100% - 40px) * ${activeStopIndex / Math.max(1, routeManifest.stops.length - 1)})`,
-                  transform: 'translate(-50%, -50%)',
-                }}
-              >
-                <div className="w-6 h-6 rounded-full bg-emerald-500 text-slate-950 flex items-center justify-center shadow-lg shadow-emerald-500/50 border border-slate-950">
-                  <Bus className="w-3 h-3 fill-current" />
-                </div>
+          const displayRows: DisplayRow[] = [];
+
+          if (stops.length > 0) {
+            if (activeStopIndex === 0) {
+              displayRows.push({
+                stopId: stops[0]!.stopId,
+                name: stops[0]!.name,
+                code: stops[0]!.code,
+                stopOrder: 1,
+                hasBus: true,
+                isPassed: false,
+                isTerminus: false,
+                statusText: 'Origin Terminal • Current Stop',
+              });
+              if (stops.length > 1) {
+                displayRows.push({
+                  stopId: stops[1]!.stopId,
+                  name: stops[1]!.name,
+                  code: stops[1]!.code,
+                  stopOrder: 2,
+                  hasBus: false,
+                  isPassed: false,
+                  isTerminus: stops.length === 2,
+                  statusText: `+${stops[1]!.estimatedMinutesFromStart}m Scheduled`,
+                });
+              }
+              if (stops.length > 2) {
+                displayRows.push({
+                  stopId: stops[2]!.stopId,
+                  name: stops[2]!.name,
+                  code: stops[2]!.code,
+                  stopOrder: 3,
+                  hasBus: false,
+                  isPassed: false,
+                  isTerminus: stops.length === 3,
+                  statusText: `+${stops[2]!.estimatedMinutesFromStart}m Scheduled`,
+                });
+              }
+            } else if (activeStopIndex >= totalStops - 1) {
+              if (totalStops > 2) {
+                const p2 = stops[totalStops - 3]!;
+                displayRows.push({
+                  stopId: p2.stopId,
+                  name: p2.name,
+                  code: p2.code,
+                  stopOrder: p2.stopOrder,
+                  hasBus: false,
+                  isPassed: true,
+                  isTerminus: false,
+                  statusText: 'Departed',
+                });
+              }
+              if (totalStops > 1) {
+                const p1 = stops[totalStops - 2]!;
+                displayRows.push({
+                  stopId: p1.stopId,
+                  name: p1.name,
+                  code: p1.code,
+                  stopOrder: p1.stopOrder,
+                  hasBus: false,
+                  isPassed: true,
+                  isTerminus: false,
+                  statusText: 'Departed',
+                });
+              }
+              const cur = stops[totalStops - 1]!;
+              displayRows.push({
+                stopId: cur.stopId,
+                name: cur.name,
+                code: cur.code,
+                stopOrder: cur.stopOrder,
+                hasBus: true,
+                isPassed: false,
+                isTerminus: true,
+                statusText: 'Route Terminus • Destination Reached',
+              });
+            } else {
+              const prev = stops[activeStopIndex - 1]!;
+              const cur = stops[activeStopIndex]!;
+              const next = stops[activeStopIndex + 1]!;
+
+              displayRows.push({
+                stopId: prev.stopId,
+                name: prev.name,
+                code: prev.code,
+                stopOrder: prev.stopOrder,
+                hasBus: false,
+                isPassed: true,
+                isTerminus: false,
+                statusText: 'Departed',
+              });
+              displayRows.push({
+                stopId: cur.stopId,
+                name: cur.name,
+                code: cur.code,
+                stopOrder: cur.stopOrder,
+                hasBus: true,
+                isPassed: false,
+                isTerminus: false,
+                statusText: `Active Geofenced Target • ~${cur.geofenceRadiusMeters}m Zone`,
+              });
+              displayRows.push({
+                stopId: next.stopId,
+                name: next.name,
+                code: next.code,
+                stopOrder: next.stopOrder,
+                hasBus: false,
+                isPassed: false,
+                isTerminus: activeStopIndex + 1 === totalStops - 1,
+                statusText: `+${next.estimatedMinutesFromStart}m Scheduled`,
+              });
+            }
+          }
+
+          return (
+            <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 sm:p-5 space-y-3.5 shadow-xl">
+              <div className="flex items-center justify-between border-b border-slate-800/80 pb-2.5">
+                <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                  <MapPin className="w-3.5 h-3.5 text-emerald-400" />
+                  Route Manifest (3-Stop Window)
+                </span>
+                <span className="text-[10px] font-bold text-emerald-300 bg-emerald-500/15 px-2 py-0.5 rounded border border-emerald-500/30">
+                  Stop {activeStopIndex + 1} of {totalStops}
+                </span>
               </div>
-            )}
 
-            {routeManifest?.stops.map((stop, index) => {
-              const isCompleted = completedStopIds.has(stop.stopId) || index < activeStopIndex;
-              const isActive = index === activeStopIndex;
-              const isLast = index === (routeManifest.stops.length - 1);
+              <div className="relative space-y-3 text-xs">
+                {displayRows.length > 1 && (
+                  <div className="absolute left-[18px] top-[20px] bottom-[20px] w-[2px] bg-slate-800 rounded-full z-0" />
+                )}
 
-              if (isCompleted) {
-                return (
+                {displayRows.map((row) => (
                   <div
-                    key={stop.id || stop.stopId}
-                    className="flex items-center gap-3 p-2.5 rounded-xl bg-slate-950/40 border border-slate-800/60 text-slate-400 relative z-10"
+                    key={row.stopId}
+                    className={`flex items-center gap-3 p-3 rounded-xl border relative z-10 transition-all ${
+                      row.hasBus
+                        ? 'bg-slate-950/95 border-emerald-500/60 shadow-lg shadow-emerald-950/30'
+                        : row.isPassed
+                        ? 'bg-slate-950/40 border-slate-800/60 text-slate-400'
+                        : 'bg-slate-950/30 border-slate-800/40 text-slate-400 opacity-70'
+                    }`}
                   >
-                    <div className="w-5 h-5 rounded-full bg-slate-800 flex items-center justify-center text-emerald-400 border border-slate-700 shrink-0">
-                      <Check className="w-3 h-3 stroke-[3]" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <span className="font-semibold text-slate-400 line-through block truncate">
-                        {stop.name}
-                      </span>
-                      <span className="text-[10px] text-slate-500">
-                        {stop.code} • Departed
-                      </span>
-                    </div>
-                    <span className="text-[10px] text-slate-500 shrink-0">
-                      +{stop.estimatedMinutesFromStart}m
-                    </span>
-                  </div>
-                );
-              }
-
-              if (isActive) {
-                return (
-                  <div
-                    key={stop.id || stop.stopId}
-                    className="p-3 rounded-xl bg-slate-950/95 border-2 border-emerald-500/60 shadow-lg shadow-emerald-950/30 space-y-2.5 relative z-10"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-5 h-5 rounded-full bg-emerald-500/20 border border-emerald-500/60 flex items-center justify-center text-emerald-400 shrink-0">
-                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-extrabold text-white block truncate text-xs">
-                            {stop.name}
-                          </span>
-                          <span className="bg-emerald-500/20 text-emerald-300 text-[9px] font-black px-1.5 py-0.2 rounded border border-emerald-500/30">
-                            ACTIVE
-                          </span>
+                    <div className="w-6 h-6 flex items-center justify-center shrink-0">
+                      {row.hasBus ? (
+                        <div
+                          className="w-7 h-7 rounded-full bg-emerald-500 text-slate-950 flex items-center justify-center shadow-lg shadow-emerald-500/50 border border-slate-950 scale-105"
+                          title="Bus Current Position"
+                        >
+                          <Bus className="w-3.5 h-3.5 fill-current" />
                         </div>
-                        <span className="text-[10px] text-emerald-400 font-medium block mt-0.5">
-                          Geofenced Target • ~{stop.geofenceRadiusMeters}m Zone
+                      ) : row.isPassed ? (
+                        <div className="w-5 h-5 rounded-full bg-slate-800 flex items-center justify-center text-emerald-400 border border-slate-700">
+                          <Check className="w-3 h-3 stroke-[3]" />
+                        </div>
+                      ) : row.isTerminus ? (
+                        <div className="w-5 h-5 rounded-full border border-amber-500/50 bg-amber-500/10 flex items-center justify-center text-amber-400">
+                          <Flag className="w-2.5 h-2.5" />
+                        </div>
+                      ) : (
+                        <div className="w-5 h-5 rounded-full border border-slate-700 bg-slate-900 flex items-center justify-center text-[10px] text-slate-400 font-mono">
+                          {row.stopOrder}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5">
+                        <span
+                          className={`truncate text-xs ${
+                            row.hasBus
+                              ? 'font-extrabold text-white text-sm'
+                              : row.isPassed
+                              ? 'font-semibold text-slate-400 line-through'
+                              : 'font-medium text-slate-300'
+                          }`}
+                        >
+                          {row.name}
                         </span>
+                        {row.hasBus && (
+                          <span className="bg-emerald-500/20 text-emerald-300 text-[9px] font-black px-1.5 py-0.2 rounded border border-emerald-500/30">
+                            CURRENT
+                          </span>
+                        )}
                       </div>
-                      <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-bold px-2 py-0.5 rounded shrink-0">
-                        Stop #{stop.stopOrder}
+                      <span className="text-[10px] text-slate-400 font-mono block mt-0.5">
+                        {row.code} • {row.statusText}
                       </span>
                     </div>
 
-                    {/* 1-Tap Manual Override Buttons (Confirm Arrival / Skip Stop) */}
-                    <div className="flex items-center gap-2 pt-1 border-t border-slate-800/80">
-                      <button
-                        onClick={() => handleConfirmArrival(stop)}
-                        className="flex-1 py-1.5 px-3 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all active:scale-95"
-                      >
-                        <Check className="w-3.5 h-3.5 stroke-[3]" />
-                        Confirm Arrival
-                      </button>
-                      <button
-                        onClick={handleSkipStop}
-                        className="py-1.5 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 border border-slate-700 text-[11px] font-medium flex items-center justify-center gap-1 transition-all active:scale-95"
-                        title="Skip this stop"
-                      >
-                        <SkipForward className="w-3.5 h-3.5" />
-                        Skip
-                      </button>
-                    </div>
-                  </div>
-                );
-              }
-
-              // Upcoming Stops
-              return (
-                <div
-                  key={stop.id || stop.stopId}
-                  className="flex items-center gap-3 p-2.5 rounded-xl bg-slate-950/30 border border-slate-800/40 text-slate-400 opacity-70 relative z-10"
-                >
-                  <div className="w-5 h-5 rounded-full border border-slate-600 flex items-center justify-center text-slate-500 text-[10px] shrink-0">
-                    {isLast ? <Flag className="w-2.5 h-2.5 text-amber-500" /> : stop.stopOrder}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <span className="font-medium text-slate-300 block truncate">
-                      {stop.name}
-                    </span>
-                    <span className="text-[10px] text-slate-500">
-                      {isLast ? 'Route Terminus' : `${stop.code} • Scheduled Stop`}
+                    <span
+                      className={`text-[10px] font-mono px-2 py-0.5 rounded font-bold shrink-0 tabular-nums ${
+                        row.hasBus
+                          ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                          : row.isPassed
+                          ? 'bg-slate-900 text-slate-500'
+                          : 'bg-slate-900 text-slate-400 border border-slate-800'
+                      }`}
+                    >
+                      {row.hasBus ? 'Active Target' : row.isPassed ? 'Departed' : `Stop #${row.stopOrder}`}
                     </span>
                   </div>
-                  <span className="text-[10px] text-slate-500 shrink-0">
-                    +{stop.estimatedMinutesFromStart}m
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* CARD 3: PASSENGER LOAD MANAGEMENT (Large Tactile Stepper) */}
         <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 sm:p-5 space-y-3.5 shadow-xl">
