@@ -3,6 +3,7 @@ import maplibregl from 'maplibre-gl';
 import { AlertCircle, Locate, Plus, Minus, RotateCcw, X } from 'lucide-react';
 import { ThinkingOrb } from 'thinking-orbs';
 import { FleetDropdown } from './FleetDropdown';
+import { VehicleRouteProgress } from '../../types/route';
 
 export interface VehicleFeatureProperties {
   busId: string;
@@ -16,6 +17,7 @@ export interface VehicleFeatureProperties {
   capacity?: number;
   lastPing: string;
   lastSeen?: number | string;
+  progress?: VehicleRouteProgress;
 }
 
 export interface FleetCanvasProps {

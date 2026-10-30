@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   MapPin,
   Users,
@@ -13,6 +13,9 @@ import {
   LifeBuoy,
 } from 'lucide-react';
 import { VehicleFeatureProperties } from '../map/FleetCanvas';
+import { LinearRouteManifest } from './LinearRouteManifest';
+import { RouteManifest } from '../../types/route';
+import { ENDPOINTS } from '../../config/api';
 
 interface RideStatusSheetProps {
   vehicle: VehicleFeatureProperties | null;
@@ -25,6 +28,98 @@ export const RideStatusSheet: React.FC<RideStatusSheetProps> = ({
   onClose,
 }) => {
   const [isExpanded, setIsExpanded] = useState<boolean>(false);
+  const [manifest, setManifest] = useState<RouteManifest | null>(null);
+  const [loadingManifest, setLoadingManifest] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (!vehicle?.routeId) return;
+
+    let isMounted = true;
+    const fetchManifest = async () => {
+      setLoadingManifest(true);
+      try {
+        const res = await fetch(ENDPOINTS.ROUTE_MANIFEST(vehicle.routeId));
+        if (res.ok) {
+          const body = await res.json();
+          if (isMounted && body?.data) {
+            setManifest(body.data);
+            setLoadingManifest(false);
+            return;
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to fetch remote route manifest, building local fallback:', err);
+      }
+
+      // Dynamic fallback for mock or offline routes
+      if (isMounted) {
+        setManifest({
+          routeId: vehicle.routeId,
+          routeNumber: vehicle.routeName?.split(' ')[0] || 'R-101',
+          name: vehicle.routeName || 'Express Campus Corridor',
+          totalDistanceKm: 14.5,
+          estimatedDurationMinutes: 35,
+          polylineCoordinates: [],
+          stops: [
+            {
+              id: 'fallback-1',
+              stopId: 'stop-1',
+              name: 'Tagarapuvalasa Main Gate',
+              code: 'STOP-101',
+              stopOrder: 1,
+              latitude: 17.9045,
+              longitude: 83.4215,
+              estimatedMinutesFromStart: 0,
+              distanceFromOriginKm: 0.0,
+              geofenceRadiusMeters: 50,
+            },
+            {
+              id: 'fallback-2',
+              stopId: 'stop-2',
+              name: 'Tagarapuvalasa Junction',
+              code: 'STOP-102',
+              stopOrder: 2,
+              latitude: 17.912,
+              longitude: 83.428,
+              estimatedMinutesFromStart: 8,
+              distanceFromOriginKm: 3.8,
+              geofenceRadiusMeters: 50,
+            },
+            {
+              id: 'fallback-3',
+              stopId: 'stop-3',
+              name: 'Anandapuram Toll Gate',
+              code: 'STOP-103',
+              stopOrder: 3,
+              latitude: 17.925,
+              longitude: 83.442,
+              estimatedMinutesFromStart: 20,
+              distanceFromOriginKm: 9.2,
+              geofenceRadiusMeters: 50,
+            },
+            {
+              id: 'fallback-4',
+              stopId: 'stop-4',
+              name: 'ANITS Central Campus Terminal',
+              code: 'STOP-104',
+              stopOrder: 4,
+              latitude: 17.935,
+              longitude: 83.456,
+              estimatedMinutesFromStart: 35,
+              distanceFromOriginKm: 14.5,
+              geofenceRadiusMeters: 60,
+            },
+          ],
+        });
+        setLoadingManifest(false);
+      }
+    };
+
+    fetchManifest();
+    return () => {
+      isMounted = false;
+    };
+  }, [vehicle?.routeId, vehicle?.routeName]);
 
   if (!vehicle) return null;
 
@@ -32,7 +127,7 @@ export const RideStatusSheet: React.FC<RideStatusSheetProps> = ({
 
   // Derive realistic operational metrics
   const busNumber = vehicle.plateNumber || `BUS-${vehicle.busId.slice(0, 4).toUpperCase()}`;
-  const routeName = vehicle.routeName || 'Sector 1 Express Corridor';
+  const routeName = vehicle.routeName || manifest?.name || 'Sector 1 Express Corridor';
   const speed = vehicle.speed || 34;
   const heading = vehicle.heading || 75;
   const capacity = vehicle.capacity || 55;
@@ -40,23 +135,15 @@ export const RideStatusSheet: React.FC<RideStatusSheetProps> = ({
   const seatsLeft = Math.max(0, capacity - passengerCount);
   const occupancyPct = Math.round((passengerCount / capacity) * 100);
 
-  // Dynamic ETA estimation (derived glanceably: 4-12 mins away)
-  const etaMinutes = speed > 40 ? 5 : speed > 20 ? 8 : 12;
+  // Dynamic ETA estimation synced with live geofence engine (sub-minute accurate)
+  const etaMinutes = vehicle.progress && vehicle.progress.etaSeconds > 0
+    ? Math.max(1, Math.round(vehicle.progress.etaSeconds / 60))
+    : (speed > 40 ? 5 : speed > 20 ? 8 : 12);
 
-  // Realistic Campus Stops Timeline for this route
-  const STOPS_TIMELINE = isEmergency
-    ? [
-        { name: 'Tagarapuvalasa Main Gate', time: '08:00 AM', status: 'COMPLETED' },
-        { name: 'Tagarapuvalasa Junction (Breakdown Site)', time: 'STOPPED', status: 'BREAKDOWN' },
-        { name: 'Anandapuram Toll Gate', time: 'Relief Bus ~6 min', status: 'RELIEF' },
-        { name: 'ANITS Central Campus Terminal', time: 'Delayed ~15 min', status: 'DESTINATION' },
-      ]
-    : [
-        { name: 'Tagarapuvalasa Main Gate', time: '08:00 AM', status: 'COMPLETED' },
-        { name: 'Tagarapuvalasa Junction', time: `In ${etaMinutes} mins`, status: 'EN_ROUTE' },
-        { name: 'Anandapuram Toll Gate', time: '08:22 AM', status: 'UPCOMING' },
-        { name: 'ANITS Central Campus Terminal', time: '08:35 AM', status: 'DESTINATION' },
-      ];
+  // Active Next Stop Name synced with live geofence engine
+  const nextStopName = vehicle.progress?.nextStopName
+    || (manifest?.stops && manifest.stops.length > 0 ? manifest.stops[Math.min(1, manifest.stops.length - 1)]?.name : null)
+    || 'Tagarapuvalasa Junction';
 
   return (
     <div
@@ -160,7 +247,7 @@ export const RideStatusSheet: React.FC<RideStatusSheetProps> = ({
               <MapPin className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400 shrink-0" />
               <span className="text-[11px] text-theme-muted">Next Stop:</span>
               <span className="text-theme-main font-semibold truncate text-[11px]">
-                Tagarapuvalasa Junction
+                {nextStopName}
               </span>
             </div>
 
@@ -245,85 +332,13 @@ export const RideStatusSheet: React.FC<RideStatusSheetProps> = ({
                   </div>
                 </div>
 
-                {/* Vertical Route Stops Timeline */}
-                <div className="space-y-1.5">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-theme-muted px-1 flex items-center justify-between">
-                    <span>Route Stop Timeline</span>
-                    <span className="text-emerald-600 dark:text-emerald-400 font-mono text-[9px]">4 Stops Total</span>
-                  </p>
-
-                  <div className="bg-theme-card-subtle rounded-2xl p-3 border border-theme-border space-y-3 text-xs">
-                    {STOPS_TIMELINE.map((stop, index) => {
-                      const isCompleted = stop.status === 'COMPLETED';
-                      const isEnRoute = stop.status === 'EN_ROUTE';
-                      const isDestination = stop.status === 'DESTINATION';
-                      const isBreakdown = stop.status === 'BREAKDOWN';
-                      const isRelief = stop.status === 'RELIEF';
-
-                      return (
-                        <div key={stop.name} className="flex items-center gap-2.5">
-                          {/* Dot / Indicator */}
-                          <div className="flex flex-col items-center">
-                            <div
-                              className={`w-2.5 h-2.5 rounded-full ${
-                                isBreakdown
-                                  ? 'bg-rose-500 ring-4 ring-rose-500/20 animate-pulse'
-                                  : isRelief
-                                  ? 'bg-amber-500 ring-4 ring-amber-500/20'
-                                  : isCompleted
-                                  ? 'bg-slate-400 dark:bg-slate-600'
-                                  : isEnRoute
-                                  ? 'bg-emerald-500 dark:bg-emerald-400 ring-4 ring-emerald-500/20 animate-pulse'
-                                  : isDestination
-                                  ? 'border-2 border-amber-500 dark:border-amber-400 bg-transparent'
-                                  : 'bg-slate-300 dark:bg-slate-700'
-                              }`}
-                            />
-                            {index < STOPS_TIMELINE.length - 1 && (
-                              <div className="w-0.5 h-4 bg-theme-border mt-1" />
-                            )}
-                          </div>
-
-                          {/* Stop Name */}
-                          <span
-                            className={`flex-1 truncate ${
-                              isBreakdown
-                                ? 'text-rose-500 dark:text-rose-400 font-bold'
-                                : isRelief
-                                ? 'text-amber-500 dark:text-amber-300 font-bold'
-                                : isCompleted
-                                ? 'text-theme-muted line-through opacity-70'
-                                : isEnRoute
-                                ? 'text-emerald-600 dark:text-emerald-300 font-bold'
-                                : isDestination
-                                ? 'text-amber-600 dark:text-amber-300 font-bold'
-                                : 'text-theme-muted'
-                            }`}
-                          >
-                            {stop.name}
-                          </span>
-
-                          {/* Timestamp Pill */}
-                          <span
-                            className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${
-                              isBreakdown
-                                ? 'bg-rose-500/20 text-rose-400 font-bold'
-                                : isRelief
-                                ? 'bg-amber-500/20 text-amber-400 font-bold'
-                                : isEnRoute
-                                ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 font-bold'
-                                : isDestination
-                                ? 'bg-amber-500/10 text-amber-600 dark:text-amber-300'
-                                : 'text-theme-muted'
-                            }`}
-                          >
-                            {stop.time}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
+                {/* Dynamic APSRTC-Style Linear Route Stops Timeline */}
+                <LinearRouteManifest
+                  manifest={manifest}
+                  progress={vehicle.progress}
+                  isEmergency={isEmergency}
+                  isLoading={loadingManifest}
+                />
               </div>
             )}
           </div>
