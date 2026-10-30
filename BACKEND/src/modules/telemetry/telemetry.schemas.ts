@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { VehicleRouteProgress } from '../routes/routes.schemas.js';
 
 export const TelemetryPingSchema = z.object({
   busId: z.string().uuid().or(z.string().min(1)),
@@ -14,6 +15,10 @@ export const TelemetryPingSchema = z.object({
 });
 
 export type TelemetryPing = z.infer<typeof TelemetryPingSchema>;
+
+export interface BroadcastTelemetryPayload extends TelemetryPing {
+  progress?: VehicleRouteProgress;
+}
 
 export const BatchDrainSchema = z.object({
   pings: z.array(TelemetryPingSchema).min(1).max(50),

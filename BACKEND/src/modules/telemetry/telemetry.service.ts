@@ -1,5 +1,6 @@
 import { redis } from '../../infrastructure/redis.js';
 import { TelemetryPing, IngestionResult, IngestionStatus } from './telemetry.schemas.js';
+import { evaluateVehicleProgress } from '../../services/geofenceEngine.js';
 
 /**
  * Calculates distance in km between two lat/lng points using Haversine formula
@@ -35,6 +36,7 @@ export async function processTelemetryPing(ping: TelemetryPing): Promise<Ingesti
     const pipeline = redis.pipeline();
     pipeline.zrem('buses:live', ping.busId);
     pipeline.del(`bus:${ping.busId}:state`);
+    pipeline.del(`bus:${ping.busId}:progress`);
     pipeline.publish('telemetry:broadcast', JSON.stringify({
       busId: ping.busId,
       routeId: routeIdStr,
@@ -99,6 +101,16 @@ export async function processTelemetryPing(ping: TelemetryPing): Promise<Ingesti
     }
   }
 
+  // Evaluate Dynamic Stop Sequence Progress & Polyline Geofence (Sub-3ms in-memory execution)
+  let progress = null;
+  if (routeIdStr && routeIdStr !== '00000000-0000-0000-0000-000000000000') {
+    try {
+      progress = await evaluateVehicleProgress(ping);
+    } catch (progErr) {
+      console.warn(`[TelemetryService] Progress evaluation failed for bus ${ping.busId}:`, progErr);
+    }
+  }
+
   // Atomic Redis Pipeline Transaction
   const pipeline = redis.pipeline();
 
@@ -126,6 +138,7 @@ export async function processTelemetryPing(ping: TelemetryPing): Promise<Ingesti
     accuracy: pingAccuracy,
     passengerCount,
     status: busStatus,
+    progress: progress ?? undefined,
   }));
 
   await pipeline.exec();
