@@ -36,6 +36,31 @@ export const RouteManifestSchema = z.object({
 
 export type RouteManifest = z.infer<typeof RouteManifestSchema>;
 
+export const SlidingWindowStopSchema = z.object({
+  stopId: z.string(),
+  name: z.string(),
+  code: z.string(),
+  stopOrder: z.number().int(),
+  status: z.enum(['DEPARTED', 'AT_STOP', 'APPROACHING', 'EN_ROUTE', 'UPCOMING']),
+  distanceMeters: z.number().optional(),
+  etaSeconds: z.number().optional(),
+  timeLabel: z.string().optional(),
+  isOrigin: z.boolean().optional(),
+  isTerminus: z.boolean().optional(),
+});
+
+export type SlidingWindowStop = z.infer<typeof SlidingWindowStopSchema>;
+
+export const SlidingStopWindowSchema = z.object({
+  previousStop: SlidingWindowStopSchema.nullable(),
+  currentStop: SlidingWindowStopSchema,
+  nextStop: SlidingWindowStopSchema.nullable(),
+  totalStopsCount: z.number().int(),
+  busPosition: z.enum(['TOP', 'MIDDLE', 'BOTTOM']),
+});
+
+export type SlidingStopWindow = z.infer<typeof SlidingStopWindowSchema>;
+
 export const VehicleRouteProgressSchema = z.object({
   busId: z.string(),
   routeId: z.string(),
@@ -48,6 +73,7 @@ export const VehicleRouteProgressSchema = z.object({
   linearDistanceCoveredKm: z.number().nonnegative(),
   totalRouteDistanceKm: z.number().nonnegative(),
   progressPercent: z.number().min(0).max(100),
+  window: SlidingStopWindowSchema.optional(),
   updatedAt: z.number(),
 });
 

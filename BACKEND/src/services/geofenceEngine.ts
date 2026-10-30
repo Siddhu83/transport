@@ -1,6 +1,6 @@
 import { redis } from '../infrastructure/redis.js';
 import { getRouteManifest, haversineKm } from '../modules/routes/routes.service.js';
-import { RouteManifest, VehicleRouteProgress, StopProgressStatus } from '../modules/routes/routes.schemas.js';
+import { RouteManifest, VehicleRouteProgress, StopProgressStatus, SlidingStopWindow } from '../modules/routes/routes.schemas.js';
 import { TelemetryPing } from '../modules/telemetry/telemetry.schemas.js';
 
 export interface SnappedPoint {
@@ -232,6 +232,98 @@ export async function evaluateVehicleProgress(
   const effectiveTotalKm = totalDistanceKm > 0 ? totalDistanceKm : 1;
   const progressPercent = Math.min(100, Math.max(0, Number(((busLinearKm / effectiveTotalKm) * 100).toFixed(1))));
 
+  // 7. Build Compact 3-Stop Sliding Window (Last Stop, Current/Target, and Next Stop)
+  // Keeps Redis hash lightweight and eliminates 30+ stop UI overflows
+  let window: SlidingStopWindow;
+  const totalStopsCount = stops.length;
+
+  if (nextStopIndex === 0) {
+    // Bus is at initial terminus / Stop 1
+    window = {
+      busPosition: 'TOP',
+      previousStop: null,
+      currentStop: {
+        stopId: stops[0]!.stopId,
+        name: stops[0]!.name,
+        code: stops[0]!.code,
+        stopOrder: stops[0]!.stopOrder,
+        status: status,
+        distanceMeters: distanceToNextStopMeters,
+        etaSeconds,
+        isOrigin: true,
+      },
+      nextStop: totalStopsCount > 1 ? {
+        stopId: stops[1]!.stopId,
+        name: stops[1]!.name,
+        code: stops[1]!.code,
+        stopOrder: stops[1]!.stopOrder,
+        status: 'UPCOMING',
+        isTerminus: totalStopsCount === 2,
+      } : null,
+      totalStopsCount,
+    };
+  } else if (nextStopIndex >= totalStopsCount - 1 && (status === 'AT_STOP' || status === 'DEPARTED')) {
+    // Bus has reached or departed the final destination
+    window = {
+      busPosition: 'BOTTOM',
+      previousStop: totalStopsCount > 1 ? {
+        stopId: stops[totalStopsCount - 2]!.stopId,
+        name: stops[totalStopsCount - 2]!.name,
+        code: stops[totalStopsCount - 2]!.code,
+        stopOrder: stops[totalStopsCount - 2]!.stopOrder,
+        status: 'DEPARTED',
+        isOrigin: totalStopsCount - 2 === 0,
+      } : null,
+      currentStop: {
+        stopId: stops[totalStopsCount - 1]!.stopId,
+        name: stops[totalStopsCount - 1]!.name,
+        code: stops[totalStopsCount - 1]!.code,
+        stopOrder: stops[totalStopsCount - 1]!.stopOrder,
+        status,
+        distanceMeters: distanceToNextStopMeters,
+        etaSeconds: 0,
+        isTerminus: true,
+      },
+      nextStop: null,
+      totalStopsCount,
+    };
+  } else {
+    // Bus is en-route between stops (Bus icon sits anchored at MIDDLE position)
+    const prevIdx = Math.max(0, nextStopIndex - 1);
+    const nextIdx = nextStopIndex + 1 < totalStopsCount ? nextStopIndex + 1 : null;
+
+    window = {
+      busPosition: 'MIDDLE',
+      previousStop: {
+        stopId: stops[prevIdx]!.stopId,
+        name: stops[prevIdx]!.name,
+        code: stops[prevIdx]!.code,
+        stopOrder: stops[prevIdx]!.stopOrder,
+        status: 'DEPARTED',
+        isOrigin: prevIdx === 0,
+      },
+      currentStop: {
+        stopId: stops[nextStopIndex]!.stopId,
+        name: stops[nextStopIndex]!.name,
+        code: stops[nextStopIndex]!.code,
+        stopOrder: stops[nextStopIndex]!.stopOrder,
+        status,
+        distanceMeters: distanceToNextStopMeters,
+        etaSeconds,
+        isTerminus: nextStopIndex === totalStopsCount - 1,
+      },
+      nextStop: nextIdx !== null ? {
+        stopId: stops[nextIdx]!.stopId,
+        name: stops[nextIdx]!.name,
+        code: stops[nextIdx]!.code,
+        stopOrder: stops[nextIdx]!.stopOrder,
+        status: 'UPCOMING',
+        isTerminus: nextIdx === totalStopsCount - 1,
+      } : null,
+      totalStopsCount,
+    };
+  }
+
   const progress: VehicleRouteProgress = {
     busId: ping.busId,
     routeId,
@@ -244,10 +336,11 @@ export async function evaluateVehicleProgress(
     linearDistanceCoveredKm: busLinearKm,
     totalRouteDistanceKm: totalDistanceKm,
     progressPercent,
+    window,
     updatedAt: Date.now(),
   };
 
-  // 7. Atomic Cache Update to Redis hash (60-second TTL, ZERO database writes)
+  // 8. Atomic Cache Update to Redis hash (60-second TTL, ZERO database writes)
   if (redis.status === 'ready' || redis.status === 'connect') {
     try {
       const pipeline = redis.pipeline();
@@ -262,6 +355,7 @@ export async function evaluateVehicleProgress(
         linearDistanceCoveredKm: progress.linearDistanceCoveredKm.toString(),
         totalRouteDistanceKm: progress.totalRouteDistanceKm.toString(),
         progressPercent: progress.progressPercent.toString(),
+        window: JSON.stringify(window),
         updatedAt: progress.updatedAt.toString(),
       });
       pipeline.expire(`bus:${ping.busId}:progress`, 60);
