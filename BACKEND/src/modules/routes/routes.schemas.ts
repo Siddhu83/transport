@@ -65,15 +65,10 @@ export const VehicleRouteProgressSchema = z.object({
   busId: z.string(),
   routeId: z.string(),
   currentStopOrder: z.number().int(),
-  nextStopId: z.string(),
-  nextStopName: z.string(),
-  distanceToNextStopMeters: z.number().nonnegative(),
-  etaSeconds: z.number().int().nonnegative(),
-  status: StopProgressStatusSchema,
   linearDistanceCoveredKm: z.number().nonnegative(),
   totalRouteDistanceKm: z.number().nonnegative(),
   progressPercent: z.number().min(0).max(100),
-  window: SlidingStopWindowSchema.optional(),
+  window: SlidingStopWindowSchema,
   updatedAt: z.number(),
 });
 

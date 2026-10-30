@@ -328,11 +328,6 @@ export async function evaluateVehicleProgress(
     busId: ping.busId,
     routeId,
     currentStopOrder,
-    nextStopId: nextStop.stopId,
-    nextStopName: nextStop.name,
-    distanceToNextStopMeters,
-    etaSeconds,
-    status,
     linearDistanceCoveredKm: busLinearKm,
     totalRouteDistanceKm: totalDistanceKm,
     progressPercent,
@@ -347,17 +342,18 @@ export async function evaluateVehicleProgress(
       pipeline.hset(`bus:${ping.busId}:progress`, {
         routeId,
         currentStopOrder: progress.currentStopOrder.toString(),
-        nextStopId: progress.nextStopId,
-        nextStopName: progress.nextStopName,
-        distanceToNextStopMeters: progress.distanceToNextStopMeters.toString(),
-        etaSeconds: progress.etaSeconds.toString(),
-        status: progress.status,
         linearDistanceCoveredKm: progress.linearDistanceCoveredKm.toString(),
         totalRouteDistanceKm: progress.totalRouteDistanceKm.toString(),
         progressPercent: progress.progressPercent.toString(),
         window: JSON.stringify(window),
         updatedAt: progress.updatedAt.toString(),
       });
+      pipeline.expire(`bus:${ping.busId}:progress`, 60);
+      await pipeline.exec();
+    } catch (err) {
+      console.warn(`[GeofenceEngine] Failed to write progress to Redis for bus ${ping.busId}:`, err);
+    }
+  }
       pipeline.expire(`bus:${ping.busId}:progress`, 60);
       await pipeline.exec();
     } catch (err) {
