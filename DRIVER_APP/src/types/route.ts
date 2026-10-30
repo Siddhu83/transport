@@ -1,5 +1,26 @@
 export type StopProgressStatus = 'EN_ROUTE' | 'APPROACHING' | 'AT_STOP' | 'DEPARTED';
 
+export interface SlidingWindowStop {
+  stopId: string;
+  name: string;
+  code: string;
+  stopOrder: number;
+  status: 'DEPARTED' | 'AT_STOP' | 'APPROACHING' | 'EN_ROUTE' | 'UPCOMING';
+  distanceMeters?: number;
+  etaSeconds?: number;
+  timeLabel?: string;
+  isOrigin?: boolean;
+  isTerminus?: boolean;
+}
+
+export interface SlidingStopWindow {
+  previousStop: SlidingWindowStop | null;
+  currentStop: SlidingWindowStop;
+  nextStop: SlidingWindowStop | null;
+  totalStopsCount: number;
+  busPosition: 'TOP' | 'MIDDLE' | 'BOTTOM';
+}
+
 export interface ManifestStop {
   id: string;
   stopId: string;
@@ -35,5 +56,7 @@ export interface VehicleRouteProgress {
   linearDistanceCoveredKm: number;
   totalRouteDistanceKm: number;
   progressPercent: number;
+  window?: SlidingStopWindow;
   updatedAt: number;
 }
+
