@@ -2,6 +2,7 @@ import { FastifyInstance } from 'fastify';
 import { randomUUID } from 'node:crypto';
 import { Role } from '@prisma/client';
 import { authenticate, requireRoles } from '../auth/rbac.middleware.js';
+import { isDelegationRevoked } from '../auth/delegation.service.js';
 import { TelemetryPingSchema, BatchDrainSchema, IngestionStatus } from './telemetry.schemas.js';
 import { processTelemetryPing } from './telemetry.service.js';
 import { sseHub } from './sseHub.js';
@@ -51,12 +52,24 @@ export async function telemetryRoutes(fastify: FastifyInstance) {
   /**
    * POST /api/v1/telemetry/ping
    * High-frequency ingestion endpoint for driver GPS telemetry
-   * Protected: Required Role = DRIVER
+   * Protected: Required Role = DRIVER or DELEGATED_DRIVER
    */
   fastify.post(
     '/ping',
-    { preHandler: [authenticate, requireRoles(Role.DRIVER)] },
+    { preHandler: [authenticate, requireRoles(Role.DRIVER, 'DELEGATED_DRIVER')] },
     async (request, reply) => {
+      // Hot-path in-memory verification for delegated sessions (<0.1ms)
+      if (request.user.role === 'DELEGATED_DRIVER') {
+        const isRevoked = await isDelegationRevoked(request.user.jti);
+        if (isRevoked) {
+          return reply.code(401).send({
+            statusCode: 401,
+            error: 'Unauthorized',
+            message: 'Delegated driver session has been revoked or expired',
+          });
+        }
+      }
+
       const parseResult = TelemetryPingSchema.safeParse(request.body);
       if (!parseResult.success) {
         return reply.code(400).send({
@@ -117,8 +130,20 @@ export async function telemetryRoutes(fastify: FastifyInstance) {
    */
   fastify.post(
     '/batch-drain',
-    { preHandler: [authenticate, requireRoles(Role.DRIVER)] },
+    { preHandler: [authenticate, requireRoles(Role.DRIVER, 'DELEGATED_DRIVER')] },
     async (request, reply) => {
+      // Hot-path in-memory verification for delegated sessions (<0.1ms)
+      if (request.user.role === 'DELEGATED_DRIVER') {
+        const isRevoked = await isDelegationRevoked(request.user.jti);
+        if (isRevoked) {
+          return reply.code(401).send({
+            statusCode: 401,
+            error: 'Unauthorized',
+            message: 'Delegated driver session has been revoked or expired',
+          });
+        }
+      }
+
       const parseResult = BatchDrainSchema.safeParse(request.body);
       if (!parseResult.success) {
         return reply.code(400).send({

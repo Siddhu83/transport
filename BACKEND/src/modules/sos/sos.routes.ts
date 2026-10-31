@@ -1,6 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import { Role } from '@prisma/client';
 import { authenticate, requireRoles } from '../auth/rbac.middleware.js';
+import { isDelegationRevoked } from '../auth/delegation.service.js';
 import {
   SosTriggerSchema,
   SosDispatchSchema,
@@ -22,12 +23,24 @@ export async function sosRoutes(fastify: FastifyInstance) {
   /**
    * POST /api/v1/sos/trigger
    * Emergency breakdown trigger initiated by Captain or Bus In-Charge
-   * Protected: DRIVER, BUS_INCHARGE, SUPER_ADMIN
+   * Protected: DRIVER, BUS_INCHARGE, SUPER_ADMIN, DELEGATED_DRIVER
    */
   fastify.post(
     '/trigger',
-    { preHandler: [authenticate, requireRoles(Role.DRIVER, Role.BUS_INCHARGE, Role.SUPER_ADMIN)] },
+    { preHandler: [authenticate, requireRoles(Role.DRIVER, Role.BUS_INCHARGE, Role.SUPER_ADMIN, 'DELEGATED_DRIVER')] },
     async (request, reply) => {
+      // Hot-path in-memory verification for delegated sessions (<0.1ms)
+      if (request.user.role === 'DELEGATED_DRIVER') {
+        const isRevoked = await isDelegationRevoked(request.user.jti);
+        if (isRevoked) {
+          return reply.code(401).send({
+            statusCode: 401,
+            error: 'Unauthorized',
+            message: 'Delegated driver session has been revoked or expired',
+          });
+        }
+      }
+
       const parseResult = SosTriggerSchema.safeParse(request.body);
       if (!parseResult.success) {
         return reply.code(400).send({
@@ -38,7 +51,7 @@ export async function sosRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const driverId = request.user.userId;
+      const driverId = request.user.parentDriverId || request.user.userId;
 
       try {
         const result = await triggerSosIncident(parseResult.data, driverId);
