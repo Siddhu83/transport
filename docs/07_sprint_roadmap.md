@@ -1,8 +1,8 @@
-# 07. 17-Sprint Engineering Roadmap & Master Execution Plan
+# 07. 19-Sprint Engineering Roadmap & Master Execution Plan
 
 ## 1. Executive Summary & Delivery Strategy
 
-This document details the **17-Sprint (34-Week)** master engineering roadmap for developing, testing, and deploying the College Transport Management System. The roadmap is structured around the **Decoupled Dual-Plane Architecture** defined in [02. System Architecture & Topology](https://github.com/Siddhu83/transport/docs/02_system_architecture.md), ensuring strict isolation between the **High-Frequency Ingestion Hot Path** (Fastify + Redis 7 + SSE) and the **Transactional Persistence Cold Path** (Prisma + Supabase PostgreSQL).
+This document details the **19-Sprint (38-Week)** master engineering roadmap for developing, testing, and deploying the College Transport Management System. The roadmap is structured around the **Decoupled Dual-Plane Architecture** defined in [02. System Architecture & Topology](https://github.com/Siddhu83/transport/docs/02_system_architecture.md), ensuring strict isolation between the **High-Frequency Ingestion Hot Path** (Fastify + Redis 7 + SSE) and the **Transactional Persistence Cold Path** (Prisma + Supabase PostgreSQL).
 
 ### Delivery Velocity & Milestones:
 - **Phase 1 (Sprints 1–3):** Foundation, Infrastructure & Telemetry Ingestion Engine
@@ -10,7 +10,8 @@ This document details the **17-Sprint (34-Week)** master engineering roadmap for
 - **Phase 3 (Sprints 7–9):** Native Driver Android Kiosk & Cellular Dead-Zone Resilience
 - **Phase 4 (Sprints 10–12):** SOS Breakdown Proximity Matching & BullMQ Alert Dispatch Engine
 - **Phase 5 (Sprints 13–15):** Student PWA & APSRTC-Inspired Dynamic Route Manifest Engine
-- **Phase 6 (Sprints 16–17):** Infrastructure Hardening, Stress Testing & Production Rollout
+- **Phase 6 (Sprints 16–17):** Shift Continuity & Ephemeral QR Delegation Engine
+- **Phase 7 (Sprints 18–19):** Infrastructure Hardening, Stress Testing & Production Rollout
 
 ---
 
@@ -23,7 +24,8 @@ This document details the **17-Sprint (34-Week)** master engineering roadmap for
 | **Phase 3: Driver Kiosk & Offline** | Sprints 7–9 | Weeks 13–18 | Android Foreground Daemon & Buffering | Native Driver App with Ring Buffer & Battery Exemption |
 | **Phase 4: Emergency SOS Engine** | Sprints 10–12 | Weeks 19–24 | Proximity Match, BullMQ & Admin HUD | Emergency Dispatch & Relief Vehicle Reroute Control Tower |
 | **Phase 5: Student PWA & Linear Tracking** | Sprints 13–15 | Weeks 25–30 | Student PWA & APSRTC Stop Manifest Engine | Dynamic Geofence Snapping & Linear Timeline UI Sync |
-| **Phase 6: Hardening & Production** | Sprints 16–17 | Weeks 31–34 | System Hardening, Circuit Breakers & Audit | Production Launch for 100 Buses & 2,000+ Students |
+| **Phase 6: Shift Continuity & QR Delegation** | Sprints 16–17 | Weeks 31–34 | Delegated QR Session & Relief Driver Portal | Zero-PII 4-Hour Shift Delegation & Real-Time Telemetry Audit |
+| **Phase 7: Hardening & Production** | Sprints 18–19 | Weeks 35–38 | System Hardening, Circuit Breakers & Audit | Production Launch for 100 Buses & 2,000+ Students |
 
 ---
 
@@ -230,9 +232,39 @@ This document details the **17-Sprint (34-Week)** master engineering roadmap for
 
 ---
 
-### 3.6 Phase 6: System Hardening, Stress Testing & Production Rollout
+### 3.6 Phase 6: Shift Continuity & Ephemeral QR Delegation Engine
 
-#### Sprint 16: System Hardening, Circuit Breakers & Health Probes
+#### Sprint 16: Delegated Ephemeral QR Session Engine & Security Contracts
+- **Objective:** Provide secure, zero-PII delegation of driver duties to substitute drivers or bus in-charges via cryptographically sealed, single-use QR tickets and 4-hour max sessions with instant revocation.
+- **Key Tasks:**
+  1. Extend RBAC middleware and JWT payload schemas with `DELEGATED_DRIVER` role claims (`parentDriverId`, `parentDriverName`, `busId`, `routeId`, `delegateName`, `jti`).
+  2. Implement `POST /api/v1/auth/delegation/create` with Redis 15-minute claim TTL (`delegation:ticket:<ticketId>`), high-entropy UUIDv4 ticket ID, and optional delegate metadata.
+  3. Implement `POST /api/v1/auth/delegation/claim` using atomic `GETDEL` redemption to prevent replay attacks, issuing a strictly non-renewable 4-hour JWT.
+  4. Implement `POST /api/v1/auth/delegation/revoke` and `GET /api/v1/auth/delegation/active`, blacklisting the session `jti` in Redis (`delegation:revoked:<jti>`).
+  5. Integrate delegation session validation into `POST /api/v1/telemetry/ping` and `POST /api/v1/sos/trigger` hot paths, checking the Redis revocation blacklist and tagging SSE broadcast with `isDelegated: true` without querying PostgreSQL.
+- **Deliverables & Definition of Done (DoD):**
+  - Automated unit tests covering: single-use claim guarantees, 410 Gone for expired tickets, instant 401 Unauthorized upon revocation, and hot-path ping latency remaining $< 2\text{ms}$.
+  - Zero database queries on the hot path for delegation validity or revocation checks.
+- **Contract Mappings:** [01_requirements_and_roles.md §2.2](https://github.com/Siddhu83/transport/docs/01_requirements_and_roles.md#22-user-personas--functional-requirements), [03_telemetry_and_realtime_protocol.md §2](https://github.com/Siddhu83/transport/docs/03_telemetry_and_realtime_protocol.md#2-ingestion-interface-contract-driver--backend), [02_system_architecture.md §2](https://github.com/Siddhu83/transport/docs/02_system_architecture.md#2-telemetry-processing-pipeline-the-hot-path).
+
+#### Sprint 17: Driver QR Delegation UI, QR Scanner/Deep-Link Portal & Admin HUD
+- **Objective:** Deliver an intuitive, distraction-free shift handover interface in the Driver Console and a friction-free browser claim portal for relief drivers.
+- **Key Tasks:**
+  1. In `DRIVER_APP`: Build "Delegate Shift" card in Driver Console with duration selector (1–4 hrs), delegate name/phone input, dynamic QR code generator (`qrcode.react`), countdown progress bar, and "Share Link via WhatsApp" deep-link utility.
+  2. In `DRIVER_APP`: Implement mobile-first claim route `/delegate?ticket=<id>` automatically claiming the ticket, persisting the 4-hour session into `localStorage`, and redirecting to the active driver console.
+  3. In `DRIVER_APP`: Render high-visibility amber delegation HUD banner (*"Delegated Shift (Expires in 3h 48m) • Acting on behalf of Captain Raju"*) with 1-tap "End Shift & Release Bus" button.
+  4. In Super Admin `ControlTower.tsx`: Display amber delegation status icon on fleet cards and enable 1-tap administrative revocation if unauthorized transmission is detected.
+- **Deliverables & Definition of Done (DoD):**
+  - Primary driver can generate delegation QR in $< 3$ seconds.
+  - Substitute can scan or tap link to claim duty in $< 5$ seconds with zero password entry required.
+  - Complete end-to-end telemetry propagation verified from delegated session to student live tracking canvas.
+- **Contract Mappings:** [05_frontend_guidelines.md §5.2](https://github.com/Siddhu83/transport/docs/05_frontend_guidelines.md#52-driver-tracking-console-distraction-free-kiosk), [05_frontend_guidelines.md §5.3](https://github.com/Siddhu83/transport/docs/05_frontend_guidelines.md#53-control-tower-super-admin-fids-dashboard).
+
+---
+
+### 3.7 Phase 7: System Hardening, Stress Testing & Production Rollout
+
+#### Sprint 18: System Hardening, Circuit Breakers & Health Probes
 - **Objective:** Enforce infrastructure resilience, database statement timeouts, circuit breaker fallbacks, and health checks.
 - **Key Tasks:**
   1. Implement Fastify circuit breakers tripping at \(> 50\%\) failure rate within 10s window (returning HTTP 503).
@@ -244,7 +276,7 @@ This document details the **17-Sprint (34-Week)** master engineering roadmap for
   - Health probes integrated for Docker container orchestrator monitoring.
 - **Contract Mappings:** [06_resilience_and_failure_modes.md §4](https://github.com/Siddhu83/transport/docs/06_resilience_and_failure_modes.md#4-database--cache-circuit-breakers), [06_resilience_and_failure_modes.md §5](https://github.com/Siddhu83/transport/docs/06_resilience_and_failure_modes.md#5-health-probes--disaster-triage-matrix).
 
-#### Sprint 17: End-to-End Stress Testing, Security Audit & Production Launch
+#### Sprint 19: End-to-End Stress Testing, Security Audit & Production Launch
 - **Objective:** Conduct high-throughput load testing, security penetration testing, 5-bus pilot field test, and deploy to production environment.
 - **Key Tasks:**
   1. Conduct K6 load test simulating 100 concurrent drivers emitting telemetry at 2-second intervals while 2,000 student SSE streams run concurrently.
@@ -281,7 +313,11 @@ This document details the **17-Sprint (34-Week)** master engineering roadmap for
                                                                                            │
   ┌────────────────────────────────────────────────────────────────────────────────────────┘
   ▼
-[Sprint 16: Circuit Breakers & Probes] ──▶ [Sprint 17: Load Testing & Production Launch]
+[Sprint 16: QR Delegation Engine] ──▶ [Sprint 17: Driver UI & Claim Portal]
+                                                   │
+  ┌────────────────────────────────────────────────┘
+  ▼
+[Sprint 18: Circuit Breakers & Probes] ──▶ [Sprint 19: Load Testing & Production Launch]
 ```
 
 ### Technical Component Mapping Matrix
@@ -303,8 +339,10 @@ This document details the **17-Sprint (34-Week)** master engineering roadmap for
 | **Sprint 13** | Sprint 6 | `frontend/src/components/mobile/RideStatusSheet.tsx`, `public/sw.js` | Frontend §5.1, Req §3.1 | Low |
 | **Sprint 14** | Sprint 3, 13 | `src/modules/routes/manifest.ts`, `src/services/geofenceEngine.ts` | Protocol §2, Arch §2 | High |
 | **Sprint 15** | Sprint 14 | `RideStatusSheet.tsx`, `DRIVER_APP/src/App.tsx` (Card 2) | Frontend §5.1, Frontend §5.2 | Medium |
-| **Sprint 16** | Sprint 3, 11 | `src/infrastructure/circuitBreaker.ts`, `src/modules/health/*` | Resilience §4, Resilience §5 | High |
-| **Sprint 17** | All (1–16) | `tests/load/k6-telemetry.js`, Deployment configs | Req §4, Arch §5 | Critical |
+| **Sprint 16** | Sprint 2, 3 | `src/modules/auth/delegation.routes.ts`, `redis.ts` | Req §2.2, Protocol §2 | Medium |
+| **Sprint 17** | Sprint 16 | `DRIVER_APP/src/pages/DelegatePortal.tsx`, `Console.tsx` | Frontend §5.2, Frontend §5.3 | Medium |
+| **Sprint 18** | Sprint 3, 11 | `src/infrastructure/circuitBreaker.ts`, `src/modules/health/*` | Resilience §4, Resilience §5 | High |
+| **Sprint 19** | All (1–18) | `tests/load/k6-telemetry.js`, Deployment configs | Req §4, Arch §5 | Critical |
 
 ---
 
