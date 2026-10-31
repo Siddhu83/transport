@@ -18,12 +18,22 @@ export const RegisterUserSchema = z.object({
 export type LoginInput = z.infer<typeof LoginSchema>;
 export type RegisterUserInput = z.infer<typeof RegisterUserSchema>;
 
+export type ExtendedRole = Role | 'DELEGATED_DRIVER';
+
 export interface TokenPayload {
   userId: string;
   email: string;
-  role: Role;
+  role: ExtendedRole;
+  name?: string;
   assignedBusId?: string | null;
   assignedRouteId?: string | null;
+  // Ephemeral Shift Delegation Claims (Sprint 16)
+  isDelegated?: boolean;
+  delegationId?: string;
+  parentDriverId?: string;
+  parentDriverName?: string;
+  delegateName?: string;
+  jti?: string;
 }
 
 // Declaration merging for Fastify JWT request user object

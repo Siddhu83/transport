@@ -1,5 +1,5 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
-import { Role } from '@prisma/client';
+import { ExtendedRole } from './auth.schemas.js';
 
 /**
  * Authentication Hook: Verifies Bearer JWT Token in headers
@@ -19,7 +19,7 @@ export async function authenticate(request: FastifyRequest, reply: FastifyReply)
 /**
  * RBAC Guard Middleware: Ensures user role matches allowed roles matrix
  */
-export function requireRoles(...allowedRoles: Role[]) {
+export function requireRoles(...allowedRoles: ExtendedRole[]) {
   return async (request: FastifyRequest, reply: FastifyReply) => {
     // First ensure request is authenticated
     if (!request.user) {
