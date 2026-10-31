@@ -33,22 +33,28 @@ export async function processTelemetryPing(ping: TelemetryPing): Promise<Ingesti
 
   // Handle explicit OFF_DUTY signal when Captain taps "END DUTY"
   if (busStatus === 'OFF_DUTY') {
-    const pipeline = redis.pipeline();
-    pipeline.zrem('buses:live', ping.busId);
-    pipeline.del(`bus:${ping.busId}:state`);
-    pipeline.del(`bus:${ping.busId}:progress`);
-    pipeline.publish('telemetry:broadcast', JSON.stringify({
-      busId: ping.busId,
-      routeId: routeIdStr,
-      latitude: ping.latitude,
-      longitude: ping.longitude,
-      speed: 0,
-      heading: ping.heading,
-      passengerCount: 0,
-      status: 'OFF_DUTY',
-      timestamp: pingTimestampMs,
-    }));
-    await pipeline.exec();
+    if (redis.status === 'ready' || redis.status === 'connect') {
+      try {
+        const pipeline = redis.pipeline();
+        pipeline.zrem('buses:live', ping.busId);
+        pipeline.del(`bus:${ping.busId}:state`);
+        pipeline.del(`bus:${ping.busId}:progress`);
+        pipeline.publish('telemetry:broadcast', JSON.stringify({
+          busId: ping.busId,
+          routeId: routeIdStr,
+          latitude: ping.latitude,
+          longitude: ping.longitude,
+          speed: 0,
+          heading: ping.heading,
+          passengerCount: 0,
+          status: 'OFF_DUTY',
+          timestamp: pingTimestampMs,
+        }));
+        await pipeline.exec();
+      } catch (err) {
+        console.warn(`[TelemetryService] Failed to publish OFF_DUTY to Redis for bus ${ping.busId}:`, err);
+      }
+    }
 
     return {
       status: IngestionStatus.OFF_DUTY_CLEANED,
@@ -76,28 +82,34 @@ export async function processTelemetryPing(ping: TelemetryPing): Promise<Ingesti
   }
 
   // Guard 3: Speed Spike Suppression (Verify against previous cached position)
-  const existingState = await redis.hgetall(`bus:${ping.busId}:state`);
-  if (existingState && existingState.lastSeen) {
-    const prevTimeMs = parseInt(existingState.lastSeen, 10);
-    const timeDeltaHours = (pingTimestampMs - prevTimeMs) / 3600000;
+  if (redis.status === 'ready' || redis.status === 'connect') {
+    try {
+      const existingState = await redis.hgetall(`bus:${ping.busId}:state`);
+      if (existingState && existingState.lastSeen) {
+        const prevTimeMs = parseInt(existingState.lastSeen, 10);
+        const timeDeltaHours = (pingTimestampMs - prevTimeMs) / 3600000;
 
-    if (timeDeltaHours > 0) {
-      // Fetch previous coordinates from GEO set
-      const pos = await redis.geopos('buses:live', ping.busId);
-      if (pos && pos[0] && pos[0][0] !== null && pos[0][1] !== null) {
-        const prevLng = parseFloat(pos[0][0]);
-        const prevLat = parseFloat(pos[0][1]);
-        const distanceKm = haversineDistanceKm(prevLat, prevLng, ping.latitude, ping.longitude);
-        const calculatedSpeed = distanceKm / timeDeltaHours;
+        if (timeDeltaHours > 0) {
+          // Fetch previous coordinates from GEO set
+          const pos = await redis.geopos('buses:live', ping.busId);
+          if (pos && pos[0] && pos[0][0] !== null && pos[0][1] !== null) {
+            const prevLng = parseFloat(pos[0][0]);
+            const prevLat = parseFloat(pos[0][1]);
+            const distanceKm = haversineDistanceKm(prevLat, prevLng, ping.latitude, ping.longitude);
+            const calculatedSpeed = distanceKm / timeDeltaHours;
 
-        if (calculatedSpeed > 140) {
-          return {
-            status: IngestionStatus.SPEED_SPIKE_DROPPED,
-            message: `Coordinate dropped as speed spike (${calculatedSpeed.toFixed(1)} km/h) exceeds max threshold`,
-            busId: ping.busId,
-          };
+            if (calculatedSpeed > 140) {
+              return {
+                status: IngestionStatus.SPEED_SPIKE_DROPPED,
+                message: `Coordinate dropped as speed spike (${calculatedSpeed.toFixed(1)} km/h) exceeds max threshold`,
+                busId: ping.busId,
+              };
+            }
+          }
         }
       }
+    } catch (err) {
+      console.warn(`[TelemetryService] Redis speed check failed for bus ${ping.busId}:`, err);
     }
   }
 
@@ -112,36 +124,42 @@ export async function processTelemetryPing(ping: TelemetryPing): Promise<Ingesti
   }
 
   // Atomic Redis Pipeline Transaction
-  const pipeline = redis.pipeline();
+  if (redis.status === 'ready' || redis.status === 'connect') {
+    try {
+      const pipeline = redis.pipeline();
 
-  // 1. Update Spatial Geospatial Index (GEOADD buses:live <lng> <lat> <busId>)
-  pipeline.geoadd('buses:live', ping.longitude, ping.latitude, ping.busId);
+      // 1. Update Spatial Geospatial Index (GEOADD buses:live <lng> <lat> <busId>)
+      pipeline.geoadd('buses:live', ping.longitude, ping.latitude, ping.busId);
 
-  // 2. Update Dynamic Bus Metadata Hash
-  pipeline.hset(`bus:${ping.busId}:state`, {
-    routeId: routeIdStr,
-    speed: ping.speed.toString(),
-    heading: ping.heading.toString(),
-    passengerCount: passengerCount.toString(),
-    status: busStatus,
-    lastSeen: pingTimestampMs.toString(),
-  });
+      // 2. Update Dynamic Bus Metadata Hash
+      pipeline.hset(`bus:${ping.busId}:state`, {
+        routeId: routeIdStr,
+        speed: ping.speed.toString(),
+        heading: ping.heading.toString(),
+        passengerCount: passengerCount.toString(),
+        status: busStatus,
+        lastSeen: pingTimestampMs.toString(),
+      });
 
-  // 3. Set short-lived TTL to auto-expire orphaned / disconnected vehicles after 30s
-  pipeline.expire(`bus:${ping.busId}:state`, 30);
+      // 3. Set short-lived TTL to auto-expire orphaned / disconnected vehicles after 30s
+      pipeline.expire(`bus:${ping.busId}:state`, 30);
 
-  // 4. Publish to internal real-time telemetry message bus channel
-  pipeline.publish('telemetry:broadcast', JSON.stringify({
-    ...ping,
-    timestamp: pingTimestampMs,
-    routeId: routeIdStr,
-    accuracy: pingAccuracy,
-    passengerCount,
-    status: busStatus,
-    progress: progress ?? undefined,
-  }));
+      // 4. Publish to internal real-time telemetry message bus channel
+      pipeline.publish('telemetry:broadcast', JSON.stringify({
+        ...ping,
+        timestamp: pingTimestampMs,
+        routeId: routeIdStr,
+        accuracy: pingAccuracy,
+        passengerCount,
+        status: busStatus,
+        progress: progress ?? undefined,
+      }));
 
-  await pipeline.exec();
+      await pipeline.exec();
+    } catch (err) {
+      console.warn(`[TelemetryService] Redis telemetry broadcast failed for bus ${ping.busId}:`, err);
+    }
+  }
 
   return {
     status: IngestionStatus.SUCCESS,

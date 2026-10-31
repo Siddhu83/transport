@@ -11,6 +11,13 @@ import {
 const TICKET_TTL_SECONDS = 900; // 15-minute claim window
 const MAX_SESSION_SECONDS = 14400; // 4 hours
 
+// In-Memory Fallback Cache when Redis is offline (e.g. CI or unit test runner without Docker)
+const memoryStore = new Map<string, { value: any; expiresAt: number }>();
+
+function isRedisReady(): boolean {
+  return redis.status === 'ready' || redis.status === 'connect';
+}
+
 /**
  * Generates an ephemeral single-use delegation QR ticket
  */
@@ -62,11 +69,22 @@ export async function createDelegationTicket(
     expiresAt: expiresAt.toString(),
   };
 
-  const pipeline = redis.pipeline();
-  pipeline.hset(`delegation:ticket:${ticketId}`, ticketData);
-  pipeline.expire(`delegation:ticket:${ticketId}`, TICKET_TTL_SECONDS);
-  pipeline.set(`delegation:driver_pending:${user.userId}`, ticketId, 'EX', TICKET_TTL_SECONDS);
-  await pipeline.exec();
+  if (isRedisReady()) {
+    try {
+      const pipeline = redis.pipeline();
+      pipeline.hset(`delegation:ticket:${ticketId}`, ticketData);
+      pipeline.expire(`delegation:ticket:${ticketId}`, TICKET_TTL_SECONDS);
+      pipeline.set(`delegation:driver_pending:${user.userId}`, ticketId, 'EX', TICKET_TTL_SECONDS);
+      await pipeline.exec();
+    } catch (err) {
+      console.warn('[DelegationService] Redis pipeline failed, falling back to memory store:', err);
+      memoryStore.set(`delegation:ticket:${ticketId}`, { value: ticketData, expiresAt });
+      memoryStore.set(`delegation:driver_pending:${user.userId}`, { value: ticketId, expiresAt });
+    }
+  } else {
+    memoryStore.set(`delegation:ticket:${ticketId}`, { value: ticketData, expiresAt });
+    memoryStore.set(`delegation:driver_pending:${user.userId}`, { value: ticketId, expiresAt });
+  }
 
   const claimUrl = `/delegate?ticket=${ticketId}`;
   const qrData = `ATS:DELEGATE:${ticketId}`;
@@ -99,19 +117,34 @@ export async function claimDelegationTicket(
   };
 } | null> {
   const ticketKey = `delegation:ticket:${ticketId}`;
+  let rawTicket: Record<string, string> | null = null;
 
-  // Atomic fetch and delete to prevent replay attacks
-  const pipeline = redis.pipeline();
-  pipeline.hgetall(ticketKey);
-  pipeline.del(ticketKey);
-  const results = await pipeline.exec();
+  if (isRedisReady()) {
+    try {
+      const pipeline = redis.pipeline();
+      pipeline.hgetall(ticketKey);
+      pipeline.del(ticketKey);
+      const results = await pipeline.exec();
 
-  if (!results || !results[0] || !results[0][1]) {
-    return null;
+      if (results && results[0] && results[0][1]) {
+        rawTicket = results[0][1] as Record<string, string>;
+      }
+    } catch (err) {
+      console.warn('[DelegationService] Redis claim failed, falling back to memory store:', err);
+    }
   }
 
-  const rawTicket = results[0][1] as Record<string, string>;
-  if (!rawTicket.ticketId || !rawTicket.busId || !rawTicket.parentDriverId) {
+  if (!rawTicket) {
+    const entry = memoryStore.get(ticketKey);
+    if (entry) {
+      memoryStore.delete(ticketKey);
+      if (Date.now() <= entry.expiresAt) {
+        rawTicket = entry.value;
+      }
+    }
+  }
+
+  if (!rawTicket || !rawTicket.ticketId || !rawTicket.busId || !rawTicket.parentDriverId) {
     return null;
   }
 
@@ -164,16 +197,29 @@ export async function claimDelegationTicket(
     expiresAt: sessionExpiresAt,
   };
 
-  const sessionPipeline = redis.pipeline();
-  sessionPipeline.hset(`delegation:session:${jti}`, {
-    ...sessionData,
-    claimedAt: sessionData.claimedAt.toString(),
-    expiresAt: sessionData.expiresAt.toString(),
-  });
-  sessionPipeline.expire(`delegation:session:${jti}`, durationSeconds);
-  sessionPipeline.set(`delegation:active_for_driver:${parentDriverId}`, jti, 'EX', durationSeconds);
-  sessionPipeline.del(`delegation:driver_pending:${parentDriverId}`);
-  await sessionPipeline.exec();
+  if (isRedisReady()) {
+    try {
+      const sessionPipeline = redis.pipeline();
+      sessionPipeline.hset(`delegation:session:${jti}`, {
+        ...sessionData,
+        claimedAt: sessionData.claimedAt.toString(),
+        expiresAt: sessionData.expiresAt.toString(),
+      });
+      sessionPipeline.expire(`delegation:session:${jti}`, durationSeconds);
+      sessionPipeline.set(`delegation:active_for_driver:${parentDriverId}`, jti, 'EX', durationSeconds);
+      sessionPipeline.del(`delegation:driver_pending:${parentDriverId}`);
+      await sessionPipeline.exec();
+    } catch (err) {
+      console.warn('[DelegationService] Redis session save failed, falling back to memory store:', err);
+      memoryStore.set(`delegation:session:${jti}`, { value: sessionData, expiresAt: sessionExpiresAt });
+      memoryStore.set(`delegation:active_for_driver:${parentDriverId}`, { value: jti, expiresAt: sessionExpiresAt });
+      memoryStore.delete(`delegation:driver_pending:${parentDriverId}`);
+    }
+  } else {
+    memoryStore.set(`delegation:session:${jti}`, { value: sessionData, expiresAt: sessionExpiresAt });
+    memoryStore.set(`delegation:active_for_driver:${parentDriverId}`, { value: jti, expiresAt: sessionExpiresAt });
+    memoryStore.delete(`delegation:driver_pending:${parentDriverId}`);
+  }
 
   return {
     token,
@@ -200,31 +246,66 @@ export async function revokeDelegation(
   let jti = targetJti;
 
   if (!jti) {
-    const activeJti = await redis.get(`delegation:active_for_driver:${parentDriverId}`);
-    if (activeJti) {
-      jti = activeJti;
+    if (isRedisReady()) {
+      try {
+        const activeJti = await redis.get(`delegation:active_for_driver:${parentDriverId}`);
+        if (activeJti) {
+          jti = activeJti;
+        }
+      } catch {
+        // Fallback to memory
+      }
+    }
+    if (!jti) {
+      const activeEntry = memoryStore.get(`delegation:active_for_driver:${parentDriverId}`);
+      if (activeEntry && Date.now() <= activeEntry.expiresAt) {
+        jti = activeEntry.value;
+      }
     }
   }
 
-  const pipeline = redis.pipeline();
-  if (jti) {
-    pipeline.set(`delegation:revoked:${jti}`, '1', 'EX', MAX_SESSION_SECONDS);
-    pipeline.del(`delegation:session:${jti}`);
+  if (isRedisReady()) {
+    try {
+      const pipeline = redis.pipeline();
+      if (jti) {
+        pipeline.set(`delegation:revoked:${jti}`, '1', 'EX', MAX_SESSION_SECONDS);
+        pipeline.del(`delegation:session:${jti}`);
+      }
+      pipeline.del(`delegation:active_for_driver:${parentDriverId}`);
+      pipeline.del(`delegation:driver_pending:${parentDriverId}`);
+      await pipeline.exec();
+    } catch (err) {
+      console.warn('[DelegationService] Redis revoke failed, falling back to memory store:', err);
+    }
   }
-  pipeline.del(`delegation:active_for_driver:${parentDriverId}`);
-  pipeline.del(`delegation:driver_pending:${parentDriverId}`);
-  await pipeline.exec();
+
+  if (jti) {
+    memoryStore.set(`delegation:revoked:${jti}`, { value: '1', expiresAt: Date.now() + MAX_SESSION_SECONDS * 1000 });
+    memoryStore.delete(`delegation:session:${jti}`);
+  }
+  memoryStore.delete(`delegation:active_for_driver:${parentDriverId}`);
+  memoryStore.delete(`delegation:driver_pending:${parentDriverId}`);
 
   return { revoked: true, jti };
 }
 
 /**
- * Checks if a delegation session JTI is currently blacklisted in Redis (<0.1ms hot path check)
+ * Checks if a delegation session JTI is currently blacklisted (<0.1ms hot path check)
  */
 export async function isDelegationRevoked(jti?: string): Promise<boolean> {
   if (!jti) return true;
-  const exists = await redis.exists(`delegation:revoked:${jti}`);
-  return exists === 1;
+
+  if (isRedisReady()) {
+    try {
+      const exists = await redis.exists(`delegation:revoked:${jti}`);
+      return exists === 1;
+    } catch {
+      // Fallback to memory
+    }
+  }
+
+  const entry = memoryStore.get(`delegation:revoked:${jti}`);
+  return !!entry && Date.now() <= entry.expiresAt;
 }
 
 /**
@@ -234,21 +315,46 @@ export async function getActiveDelegationForDriver(parentDriverId: string): Prom
   pendingTicket: Record<string, string> | null;
   activeSession: Record<string, string> | null;
 }> {
-  const pendingTicketId = await redis.get(`delegation:driver_pending:${parentDriverId}`);
   let pendingTicket: Record<string, string> | null = null;
-  if (pendingTicketId) {
-    const data = await redis.hgetall(`delegation:ticket:${pendingTicketId}`);
-    if (data && data.ticketId) {
-      pendingTicket = data;
+  let activeSession: Record<string, string> | null = null;
+
+  if (isRedisReady()) {
+    try {
+      const pendingTicketId = await redis.get(`delegation:driver_pending:${parentDriverId}`);
+      if (pendingTicketId) {
+        const data = await redis.hgetall(`delegation:ticket:${pendingTicketId}`);
+        if (data && data.ticketId) {
+          pendingTicket = data;
+        }
+      }
+
+      const activeJti = await redis.get(`delegation:active_for_driver:${parentDriverId}`);
+      if (activeJti) {
+        const data = await redis.hgetall(`delegation:session:${activeJti}`);
+        if (data && data.jti) {
+          activeSession = data;
+        }
+      }
+      return { pendingTicket, activeSession };
+    } catch (err) {
+      console.warn('[DelegationService] Redis getActive failed, falling back to memory store:', err);
     }
   }
 
-  const activeJti = await redis.get(`delegation:active_for_driver:${parentDriverId}`);
-  let activeSession: Record<string, string> | null = null;
-  if (activeJti) {
-    const data = await redis.hgetall(`delegation:session:${activeJti}`);
-    if (data && data.jti) {
-      activeSession = data;
+  // Memory store fallback
+  const pendingEntry = memoryStore.get(`delegation:driver_pending:${parentDriverId}`);
+  if (pendingEntry && Date.now() <= pendingEntry.expiresAt) {
+    const ticketEntry = memoryStore.get(`delegation:ticket:${pendingEntry.value}`);
+    if (ticketEntry && Date.now() <= ticketEntry.expiresAt) {
+      pendingTicket = ticketEntry.value;
+    }
+  }
+
+  const activeEntry = memoryStore.get(`delegation:active_for_driver:${parentDriverId}`);
+  if (activeEntry && Date.now() <= activeEntry.expiresAt) {
+    const sessEntry = memoryStore.get(`delegation:session:${activeEntry.value}`);
+    if (sessEntry && Date.now() <= sessEntry.expiresAt) {
+      activeSession = sessEntry.value;
     }
   }
 
