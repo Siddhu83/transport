@@ -3,9 +3,13 @@ import { prisma } from '../../infrastructure/prisma.js';
 import { LoginSchema, RegisterUserSchema } from './auth.schemas.js';
 import { hashPassword, verifyPassword } from './crypto.utils.js';
 import { authenticate, requireRoles } from './rbac.middleware.js';
+import { delegationRoutes } from './delegation.routes.js';
 import { Role } from '@prisma/client';
 
 export async function authRoutes(fastify: FastifyInstance) {
+  // Register Ephemeral Shift Delegation Sub-Plugin (Sprint 16)
+  fastify.register(delegationRoutes, { prefix: '/delegation' });
+
   /**
    * POST /api/v1/auth/login
    * Authenticates user and issues JWT signed token with role claims
@@ -49,6 +53,7 @@ export async function authRoutes(fastify: FastifyInstance) {
     const token = fastify.jwt.sign({
       userId: user.id,
       email: user.email,
+      name: user.name,
       role: user.role,
       assignedBusId: user.assignedBusId,
       assignedRouteId: user.assignedRouteId,
@@ -114,7 +119,7 @@ export async function authRoutes(fastify: FastifyInstance) {
         },
       });
 
-      return reply.code(210).send({
+      return reply.code(201).send({
         statusCode: 201,
         message: 'User created successfully',
         user: {
@@ -134,6 +139,24 @@ export async function authRoutes(fastify: FastifyInstance) {
    * Returns details of currently authenticated user token holder
    */
   fastify.get('/me', { preHandler: [authenticate] }, async (request, reply) => {
+    // If delegated session, return in-memory claims directly without hitting cold database
+    if (request.user.role === 'DELEGATED_DRIVER') {
+      return reply.code(200).send({
+        statusCode: 200,
+        user: {
+          id: request.user.userId,
+          email: request.user.email,
+          name: request.user.delegateName || request.user.name || 'Relief Driver',
+          role: request.user.role,
+          assignedBusId: request.user.assignedBusId,
+          assignedRouteId: request.user.assignedRouteId,
+          isDelegated: true,
+          parentDriverId: request.user.parentDriverId,
+          parentDriverName: request.user.parentDriverName,
+        },
+      });
+    }
+
     const user = await prisma.user.findUnique({
       where: { id: request.user.userId },
       select: {
