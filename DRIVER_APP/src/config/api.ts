@@ -14,6 +14,10 @@ export const ENDPOINTS = {
   ROUTE_MANIFEST: (id: string) => `${API_BASE_URL}/routes/${id}/manifest`,
   AUTH_LOGIN: `${API_BASE_URL}/auth/login`,
   SOS_TRIGGER: `${API_BASE_URL}/sos/trigger`,
+  DELEGATION_CREATE: `${API_BASE_URL}/auth/delegation/create`,
+  DELEGATION_CLAIM: `${API_BASE_URL}/auth/delegation/claim`,
+  DELEGATION_REVOKE: `${API_BASE_URL}/auth/delegation/revoke`,
+  DELEGATION_ACTIVE: `${API_BASE_URL}/auth/delegation/active`,
 } as const;
 
 export type ApiEndpoints = typeof ENDPOINTS;
