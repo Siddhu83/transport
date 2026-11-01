@@ -784,17 +784,24 @@ export const ControlTower: React.FC = () => {
                       </span>
                     </div>
 
-                    <span
-                      className={`text-[9px] font-black px-1.5 py-0.5 rounded tracking-wide ${
-                        isIncidentBus || bus.status === 'SOS'
-                          ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
-                          : bus.status === 'DELAYED'
-                          ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-                          : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                      }`}
-                    >
-                      {isIncidentBus ? 'SOS BREAKDOWN' : bus.status}
-                    </span>
+                    <div className="flex items-center gap-1">
+                      {bus.isDelegated && (
+                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 tracking-tight">
+                          DELEGATED
+                        </span>
+                      )}
+                      <span
+                        className={`text-[9px] font-black px-1.5 py-0.5 rounded tracking-wide ${
+                          isIncidentBus || bus.status === 'SOS'
+                            ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                            : bus.status === 'DELAYED'
+                            ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                            : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                        }`}
+                      >
+                        {isIncidentBus ? 'SOS BREAKDOWN' : bus.status}
+                      </span>
+                    </div>
                   </div>
 
                   <p className="text-[11px] text-slate-400 truncate mb-2">

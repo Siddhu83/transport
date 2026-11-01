@@ -18,6 +18,8 @@ export interface VehicleFeatureProperties {
   lastPing: string;
   lastSeen?: number | string;
   progress?: VehicleRouteProgress;
+  isDelegated?: boolean;
+  delegateName?: string;
 }
 
 export interface FleetCanvasProps {
