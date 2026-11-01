@@ -24,10 +24,12 @@ import {
   MapPin,
   Clock,
   Flag,
+  QrCode,
 } from 'lucide-react';
 import { requestBatteryExemption } from './services/batteryOptimization';
 import { trackingDaemon, TrackingDaemonState } from './services/trackingDaemon';
 import { AuthService, AuthSession } from './services/auth';
+import { DelegateShiftModal } from './components/DelegateShiftModal';
 import { RouteManifest } from './types/route';
 import { ENDPOINTS } from './config/api';
 import {
@@ -80,6 +82,41 @@ export const App: React.FC = () => {
   const [routeManifest, setRouteManifest] = useState<RouteManifest | null>(null);
   const [activeStopIndex, setActiveStopIndex] = useState<number>(0);
   const [, setLoadingManifest] = useState<boolean>(false);
+
+  // Ephemeral Shift Delegation State (Sprint 17)
+  const [isDelegateModalOpen, setIsDelegateModalOpen] = useState<boolean>(false);
+  const [isClaimingTicket, setIsClaimingTicket] = useState<boolean>(false);
+  const [claimError, setClaimError] = useState<string | null>(null);
+
+  // Deep-Link Ticket Redemption Handler (?ticket=del_...)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const ticketId = params.get('ticket');
+    if (!ticketId) return;
+
+    let isMounted = true;
+    const redeemTicket = async () => {
+      setIsClaimingTicket(true);
+      setClaimError(null);
+      try {
+        const newSession = await AuthService.claimDelegation(ticketId);
+        if (!isMounted) return;
+        setSession(newSession);
+        // Clear ticket query from browser URL without reloading
+        window.history.replaceState({}, document.title, window.location.pathname);
+      } catch (err: unknown) {
+        if (!isMounted) return;
+        setClaimError(err instanceof Error ? err.message : 'Invalid or expired delegation ticket');
+      } finally {
+        if (isMounted) setIsClaimingTicket(false);
+      }
+    };
+
+    redeemTicket();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const holdTimerRef = useRef<NodeJS.Timeout | null>(null);
   const holdStartRef = useRef<number>(0);
@@ -290,6 +327,25 @@ export const App: React.FC = () => {
     setSession(null);
   };
 
+  const handleEndDelegatedShift = async () => {
+    if (!confirm('Are you sure you want to end this delegated shift and release the vehicle?')) return;
+    try {
+      if (session?.token) {
+        await AuthService.revokeDelegation(session.token, session.user.jti);
+      }
+    } catch (err) {
+      console.warn('Revoke delegation error:', err);
+    } finally {
+      if (daemonState.isRunning) {
+        trackingDaemon.stopTracking();
+      }
+      trackingDaemon.setEmergencyStatus(false);
+      setActiveIncident(null);
+      AuthService.clearSession();
+      setSession(null);
+    }
+  };
+
   const handleRequestExemption = async () => {
     const status = await requestBatteryExemption();
     setBatteryStatus(status.message);
@@ -491,6 +547,32 @@ export const App: React.FC = () => {
           </div>
 
           {/* Login Glass Card */}
+          {/* Claiming Delegated Pass Loading Banner */}
+          {isClaimingTicket && (
+            <div className="glass-card rounded-3xl p-5 border border-cyan-500/40 bg-cyan-950/40 flex items-center gap-3 text-cyan-300">
+              <div className="w-5 h-5 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin shrink-0" />
+              <div>
+                <p className="font-bold text-xs text-white">Validating Shift Handover Pass...</p>
+                <p className="text-[11px] text-cyan-300/80">Claiming temporary driver credentials from QR ticket</p>
+              </div>
+            </div>
+          )}
+
+          {claimError && (
+            <div className="bg-rose-500/10 border border-rose-500/30 rounded-2xl p-4 text-xs text-rose-300 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+                <span>{claimError}</span>
+              </div>
+              <button
+                onClick={() => setClaimError(null)}
+                className="text-rose-400 hover:text-white text-xs font-bold cursor-pointer"
+              >
+                Dismiss
+              </button>
+            </div>
+          )}
+
           <div className="glass-card rounded-3xl p-6 space-y-5 border border-slate-800">
             <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
               <Lock className="w-4 h-4 text-emerald-400" />
@@ -635,6 +717,17 @@ export const App: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          {!user.isDelegated && (
+            <button
+              onClick={() => setIsDelegateModalOpen(true)}
+              className="glass-button p-2 sm:p-2.5 rounded-xl text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 border border-amber-500/30 flex items-center gap-1.5 text-xs font-semibold active:scale-95 cursor-pointer"
+              title="Handover Bus / Generate QR Pass"
+            >
+              <QrCode className="w-4 h-4" />
+              <span className="hidden sm:inline">Handover</span>
+            </button>
+          )}
+
           <button
             onClick={toggleFullscreen}
             className="glass-button p-2 sm:p-2.5 rounded-xl text-slate-300 hover:text-white flex items-center gap-1.5 text-xs font-medium active:scale-95"
@@ -660,6 +753,29 @@ export const App: React.FC = () => {
         className="max-w-md mx-auto px-4 pt-4 space-y-4"
         style={{ paddingBottom: 'calc(max(env(safe-area-inset-bottom, 0px), 1rem) + 2rem)' }}
       >
+        {/* Amber Delegated Shift Active HUD Banner */}
+        {user.isDelegated && (
+          <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/40 text-amber-300 text-xs flex items-center justify-between gap-3 shadow-lg shadow-amber-950/20">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="p-1.5 rounded-xl bg-amber-500/20 border border-amber-500/30 text-amber-400 shrink-0">
+                <UserCheck className="w-4 h-4" />
+              </div>
+              <div className="min-w-0">
+                <p className="font-bold text-amber-200 truncate">Delegated Shift Active</p>
+                <p className="text-[11px] text-amber-400/80 truncate">
+                  Acting for {user.parentDriverName || 'Primary Captain'} • Auto-expires in 4 hrs
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={handleEndDelegatedShift}
+              className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-[11px] tracking-wide uppercase transition-colors shrink-0 shadow cursor-pointer active:scale-95"
+            >
+              Release Bus
+            </button>
+          </div>
+        )}
+
         {/* Status Bar */}
         <div className="flex items-center justify-between px-1">
           {getStatusBadge()}
@@ -1318,6 +1434,17 @@ export const App: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Ephemeral Delegation QR Modal */}
+      {session && !session.user.isDelegated && (
+        <DelegateShiftModal
+          token={session.token}
+          driverName={session.user.name}
+          busNumber={session.user.licensePlate || session.user.busNumber || 'CAMPUS-01'}
+          isOpen={isDelegateModalOpen}
+          onClose={() => setIsDelegateModalOpen(false)}
+        />
       )}
     </div>
   );
