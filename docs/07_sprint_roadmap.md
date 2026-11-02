@@ -1,8 +1,8 @@
-# 07. 19-Sprint Engineering Roadmap & Master Execution Plan
+# 07. 20-Sprint Engineering Roadmap & Master Execution Plan
 
 ## 1. Executive Summary & Delivery Strategy
 
-This document details the **19-Sprint (38-Week)** master engineering roadmap for developing, testing, and deploying the College Transport Management System. The roadmap is structured around the **Decoupled Dual-Plane Architecture** defined in [02. System Architecture & Topology](https://github.com/Siddhu83/transport/docs/02_system_architecture.md), ensuring strict isolation between the **High-Frequency Ingestion Hot Path** (Fastify + Redis 7 + SSE) and the **Transactional Persistence Cold Path** (Prisma + Supabase PostgreSQL).
+This document details the **20-Sprint (40-Week)** master engineering roadmap for developing, testing, and deploying the College Transport Management System. The roadmap is structured around the **Decoupled Dual-Plane Architecture** defined in [02. System Architecture & Topology](https://github.com/Siddhu83/transport/docs/02_system_architecture.md), ensuring strict isolation between the **High-Frequency Ingestion Hot Path** (Fastify + Redis 7 + SSE) and the **Transactional Persistence Cold Path** (Prisma + Supabase PostgreSQL).
 
 ### Delivery Velocity & Milestones:
 - **Phase 1 (Sprints 1–3):** Foundation, Infrastructure & Telemetry Ingestion Engine
@@ -11,7 +11,8 @@ This document details the **19-Sprint (38-Week)** master engineering roadmap for
 - **Phase 4 (Sprints 10–12):** SOS Breakdown Proximity Matching & BullMQ Alert Dispatch Engine
 - **Phase 5 (Sprints 13–15):** Student PWA & APSRTC-Inspired Dynamic Route Manifest Engine
 - **Phase 6 (Sprints 16–17):** Shift Continuity & Ephemeral QR Delegation Engine
-- **Phase 7 (Sprints 18–19):** Infrastructure Hardening, Stress Testing & Production Rollout
+- **Phase 7 (Sprint 18):** Spatial Safety & Off-Route Detour Detection Engine
+- **Phase 8 (Sprints 19–20):** Infrastructure Hardening, Stress Testing & Production Rollout
 
 ---
 
@@ -25,7 +26,8 @@ This document details the **19-Sprint (38-Week)** master engineering roadmap for
 | **Phase 4: Emergency SOS Engine** | Sprints 10–12 | Weeks 19–24 | Proximity Match, BullMQ & Admin HUD | Emergency Dispatch & Relief Vehicle Reroute Control Tower |
 | **Phase 5: Student PWA & Linear Tracking** | Sprints 13–15 | Weeks 25–30 | Student PWA & APSRTC Stop Manifest Engine | Dynamic Geofence Snapping & Linear Timeline UI Sync |
 | **Phase 6: Shift Continuity & QR Delegation** | Sprints 16–17 | Weeks 31–34 | Delegated QR Session & Relief Driver Portal | Zero-PII 4-Hour Shift Delegation & Real-Time Telemetry Audit |
-| **Phase 7: Hardening & Production** | Sprints 18–19 | Weeks 35–38 | System Hardening, Circuit Breakers & Audit | Production Launch for 100 Buses & 2,000+ Students |
+| **Phase 7: Spatial Safety & Detour Engine** | Sprint 18 | Weeks 35–36 | Spatial Detour Tracking & Warning Engine | Zero-DB Orthogonal Divergence Detection ($>300\text{m}$) & Live Detour Broadcasts |
+| **Phase 8: Hardening & Production** | Sprints 19–20 | Weeks 37–40 | System Hardening, Circuit Breakers & Audit | Production Launch for 100 Buses & 2,000+ Students |
 
 ---
 
@@ -262,9 +264,28 @@ This document details the **19-Sprint (38-Week)** master engineering roadmap for
 
 ---
 
-### 3.7 Phase 7: System Hardening, Stress Testing & Production Rollout
+### 3.7 Phase 7: Spatial Safety & Off-Route Detour Detection Engine
 
-#### Sprint 18: System Hardening, Circuit Breakers & Health Probes
+#### Sprint 18: Off-Route Spatial Deviation Engine & Real-Time Detour Alerts
+- **Objective:** Detect when vehicles diverge $> 300\text{m}$ from the designated route polyline for $> 45\text{ seconds}$, broadcast live detour warnings, pause inaccurate stop ETAs, and notify the Driver Console, Student Sheet, and Control Tower.
+- **Key Tasks:**
+  1. In `snapToPolyline` (`geofenceEngine.ts`): evaluate perpendicular divergence distance (`minDistKm * 1000`) and test against a 300-meter deviation threshold.
+  2. Implement temporal detour state machine in Redis (`bus:<busId>:detour`) tracking initial divergence timestamp, sustained duration, and max deviation distance.
+  3. Enforce spatial hysteresis: trigger `OFF_ROUTE / DEVIATED` status after 45s of sustained divergence; automatically recover to `NOMINAL` only when vehicle returns within $150\text{m}$ of the corridor (preventing status flicker at intersections).
+  4. Enrich live SSE telemetry broadcast payload with `isOffRoute: boolean` and `deviationMeters: number`.
+  5. In Driver Console: display prominent amber notification banner (*"⚠️ Off-Route Detour Detected (~420m away from corridor) • Stop ETAs Paused"*).
+  6. In Student PWA (`RideStatusSheet.tsx` & `FleetCanvas.tsx`): display detour advisory notice (*"Vehicle is taking an alternate detour due to road conditions"*) and render an amber detour indicator on the map canvas.
+  7. In Super Admin `ControlTower.tsx`: add `DETOUR` filter tab and visual detour badge on fleet roster.
+- **Deliverables & Definition of Done (DoD):**
+  - Sub-3ms hot path execution; zero PostgreSQL queries during detour tracking or recovery.
+  - Automated unit tests proving: divergence $>300\text{m}$ for $<45\text{s}$ remains nominal; sustained divergence $>45\text{s}$ transitions to `DEVIATED`; returning within $150\text{m}$ restores nominal state.
+- **Contract Mappings:** [03_telemetry_and_realtime_protocol.md §2](https://github.com/Siddhu83/transport/docs/03_telemetry_and_realtime_protocol.md#2-ingestion-interface-contract-driver--backend), [05_frontend_guidelines.md §5.1](https://github.com/Siddhu83/transport/docs/05_frontend_guidelines.md#51-student-mobile-pwa-bottom-sheet-architecture), [05_frontend_guidelines.md §5.2](https://github.com/Siddhu83/transport/docs/05_frontend_guidelines.md#52-driver-tracking-console-distraction-free-kiosk).
+
+---
+
+### 3.8 Phase 8: System Hardening, Stress Testing & Production Rollout
+
+#### Sprint 19: System Hardening, Circuit Breakers & Health Probes
 - **Objective:** Enforce infrastructure resilience, database statement timeouts, circuit breaker fallbacks, and health checks.
 - **Key Tasks:**
   1. Implement Fastify circuit breakers tripping at \(> 50\%\) failure rate within 10s window (returning HTTP 503).
@@ -276,7 +297,7 @@ This document details the **19-Sprint (38-Week)** master engineering roadmap for
   - Health probes integrated for Docker container orchestrator monitoring.
 - **Contract Mappings:** [06_resilience_and_failure_modes.md §4](https://github.com/Siddhu83/transport/docs/06_resilience_and_failure_modes.md#4-database--cache-circuit-breakers), [06_resilience_and_failure_modes.md §5](https://github.com/Siddhu83/transport/docs/06_resilience_and_failure_modes.md#5-health-probes--disaster-triage-matrix).
 
-#### Sprint 19: End-to-End Stress Testing, Security Audit & Production Launch
+#### Sprint 20: End-to-End Stress Testing, Security Audit & Production Launch
 - **Objective:** Conduct high-throughput load testing, security penetration testing, 5-bus pilot field test, and deploy to production environment.
 - **Key Tasks:**
   1. Conduct K6 load test simulating 100 concurrent drivers emitting telemetry at 2-second intervals while 2,000 student SSE streams run concurrently.
@@ -317,7 +338,11 @@ This document details the **19-Sprint (38-Week)** master engineering roadmap for
                                                    │
   ┌────────────────────────────────────────────────┘
   ▼
-[Sprint 18: Circuit Breakers & Probes] ──▶ [Sprint 19: Load Testing & Production Launch]
+[Sprint 18: Off-Route Detour Engine]
+         │
+  ┌──────┘
+  ▼
+[Sprint 19: Circuit Breakers & Probes] ──▶ [Sprint 20: Load Testing & Production Launch]
 ```
 
 ### Technical Component Mapping Matrix
@@ -341,8 +366,9 @@ This document details the **19-Sprint (38-Week)** master engineering roadmap for
 | **Sprint 15** | Sprint 14 | `RideStatusSheet.tsx`, `DRIVER_APP/src/App.tsx` (Card 2) | Frontend §5.1, Frontend §5.2 | Medium |
 | **Sprint 16** | Sprint 2, 3 | `src/modules/auth/delegation.routes.ts`, `redis.ts` | Req §2.2, Protocol §2 | Medium |
 | **Sprint 17** | Sprint 16 | `DRIVER_APP/src/pages/DelegatePortal.tsx`, `Console.tsx` | Frontend §5.2, Frontend §5.3 | Medium |
-| **Sprint 18** | Sprint 3, 11 | `src/infrastructure/circuitBreaker.ts`, `src/modules/health/*` | Resilience §4, Resilience §5 | High |
-| **Sprint 19** | All (1–18) | `tests/load/k6-telemetry.js`, Deployment configs | Req §4, Arch §5 | Critical |
+| **Sprint 18** | Sprint 3, 14 | `src/services/geofenceEngine.ts`, `RideStatusSheet.tsx` | Protocol §2, Frontend §5.1 | Medium |
+| **Sprint 19** | Sprint 3, 11 | `src/infrastructure/circuitBreaker.ts`, `src/modules/health/*` | Resilience §4, Resilience §5 | High |
+| **Sprint 20** | All (1–19) | `tests/load/k6-telemetry.js`, Deployment configs | Req §4, Arch §5 | Critical |
 
 ---
 
