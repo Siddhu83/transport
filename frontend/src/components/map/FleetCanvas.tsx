@@ -20,6 +20,9 @@ export interface VehicleFeatureProperties {
   progress?: VehicleRouteProgress;
   isDelegated?: boolean;
   delegateName?: string;
+  delegatePhone?: string;
+  driverName?: string;
+  driverPhone?: string;
 }
 
 export interface FleetCanvasProps {
