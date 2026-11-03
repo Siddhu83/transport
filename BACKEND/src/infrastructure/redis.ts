@@ -1,17 +1,23 @@
 import { Redis } from 'ioredis';
 import { env } from '../config/env.js';
 
+const isTest =
+  env.NODE_ENV === 'test' ||
+  process.env.NODE_ENV === 'test' ||
+  process.env.npm_lifecycle_event === 'test' ||
+  process.execArgv.includes('--test') ||
+  process.argv.includes('--test');
+
 export const redis = new Redis(env.REDIS_URL, {
-  maxRetriesPerRequest: null, // Required by BullMQ
+  maxRetriesPerRequest: 1, // Fail fast on errors
   enableReadyCheck: false,
-  lazyConnect: true, // Don't crash process immediately if Redis is unreachable on boot
+  lazyConnect: true, // Don't block process boot
+  enableOfflineQueue: false, // ZERO hanging commands when Redis is down: fail immediately to trigger in-memory fallbacks
   retryStrategy(times) {
-    // In test environment, limit retries to 3 attempts to prevent hanging process
-    if (env.NODE_ENV === 'test' && times > 3) {
+    if (isTest || times > 2) {
       return null; // Stop reconnecting if Redis is not running
     }
-    const delay = Math.min(times * 50, 2000);
-    return delay;
+    return Math.min(times * 50, 1000);
   },
 });
 
@@ -20,7 +26,7 @@ redis.on('connect', () => {
 });
 
 redis.on('error', (err) => {
-  if (env.NODE_ENV !== 'test') {
+  if (!isTest) {
     console.error('❌ Redis Connection Error:', err.message);
   }
 });
