@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, QrCode, Share2, Copy, Check, Clock, UserCheck, AlertCircle, Trash2 } from 'lucide-react';
-import { AestheticQRCode } from './AestheticQRCode';
+import { AestheticQRCode, AestheticQRCodeHandle } from './AestheticQRCode';
 import { AuthService, DelegationTicketResponse, DelegationActiveStatus } from '../services/auth';
 
 interface DelegateShiftModalProps {
@@ -37,6 +37,7 @@ export const DelegateShiftModal: React.FC<DelegateShiftModalProps> = ({
 
   const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const qrRef = useRef<AestheticQRCodeHandle | null>(null);
 
   // Initial fetch of any existing active delegation status upon modal open
   useEffect(() => {
@@ -147,10 +148,37 @@ export const DelegateShiftModal: React.FC<DelegateShiftModalProps> = ({
     }
   };
 
-  // Handle Share WhatsApp
-  const handleShareWhatsApp = () => {
+  // Handle Share WhatsApp with QR Image + URL
+  const handleShareWhatsApp = async () => {
     if (!claimDeepLink) return;
     const shareText = `🚌 ATS Driver Shift Handover Pass\n\nCaptain ${driverName} is delegating duty for ${busNumber}.\n\nTap to start telemetry (valid 4 hours):\n${claimDeepLink}`;
+
+    try {
+      const blob = await qrRef.current?.getBlob();
+      if (blob) {
+        const file = new File([blob], `pass-${busNumber.replace(/\s+/g, '_')}.png`, { type: 'image/png' });
+        // Native mobile Web Share API: shares QR image directly into WhatsApp
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            title: `ATS Shift Handover Pass - ${busNumber}`,
+            text: shareText,
+            files: [file],
+          });
+          return;
+        }
+
+        // Desktop / browser fallback: save QR image to downloads and open WhatsApp web
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `pass-${busNumber.replace(/\s+/g, '_')}.png`;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+    } catch (err) {
+      console.warn('Web share failed, falling back to direct WhatsApp link:', err);
+    }
+
     window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`, '_blank');
   };
 
@@ -211,11 +239,11 @@ export const DelegateShiftModal: React.FC<DelegateShiftModalProps> = ({
           {/* STATE 1: Active Claimed Session in progress */}
           {activeSession ? (
             <div className="space-y-4 text-center">
-              <div className="w-16 h-16 mx-auto rounded-3xl bg-emerald-500/15 border border-emerald-500/40 flex items-center justify-center text-emerald-400">
+              <div className="w-16 h-16 mx-auto rounded-3xl bg-blue-500/15 border border-blue-500/40 flex items-center justify-center text-blue-400">
                 <UserCheck className="w-8 h-8" />
               </div>
               <div>
-                <h3 className="text-sm font-semibold text-emerald-400">Relief Driver Active</h3>
+                <h3 className="text-sm font-semibold text-blue-400">Relief Driver Active</h3>
                 <p className="text-xs text-slate-300 mt-1">
                   <span className="font-bold text-white">{activeSession.delegateName || 'Relief Driver'}</span> is currently transmitting telemetry for <span className="font-mono text-amber-400">{busNumber}</span>.
                 </p>
@@ -240,10 +268,11 @@ export const DelegateShiftModal: React.FC<DelegateShiftModalProps> = ({
               <div className="p-4 rounded-3xl bg-slate-950/70 border border-slate-800 flex flex-col items-center justify-center shadow-inner">
                 {/* Aesthetic Rounded Dots QR Code */}
                 <AestheticQRCode
+                  ref={qrRef}
                   data={claimDeepLink}
                   size={200}
-                  dotsColor="#38bdf8"
-                  cornersColor="#818cf8"
+                  dotsColor="#0284c7"
+                  cornersColor="#2563eb"
                 />
 
                 {/* Expiry Countdown */}
@@ -255,17 +284,17 @@ export const DelegateShiftModal: React.FC<DelegateShiftModalProps> = ({
               </div>
 
               <p className="text-xs text-slate-300 leading-relaxed px-2">
-                Have the substitute driver or bus in-charge scan this QR code or open the link below.
+                Have the substitute driver or bus in-charge scan this QR code or share the link with image.
               </p>
 
               {/* Share & Copy Action Buttons */}
               <div className="grid grid-cols-2 gap-2.5 pt-1">
                 <button
                   onClick={handleShareWhatsApp}
-                  className="py-2.5 px-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 active:scale-[0.98] text-white font-sans text-xs font-semibold flex items-center justify-center gap-1.5 transition-all shadow-md shadow-emerald-950/30 cursor-pointer"
+                  className="py-2.5 px-3 rounded-2xl bg-blue-600 hover:bg-blue-500 active:scale-[0.98] text-white font-sans text-xs font-semibold flex items-center justify-center gap-1.5 transition-all shadow-md shadow-blue-950/30 cursor-pointer"
                 >
                   <Share2 className="w-3.5 h-3.5" />
-                  WhatsApp Link
+                  Share with QR
                 </button>
 
                 <button
@@ -274,8 +303,8 @@ export const DelegateShiftModal: React.FC<DelegateShiftModalProps> = ({
                 >
                   {copiedLink ? (
                     <>
-                      <Check className="w-3.5 h-3.5 text-emerald-400" />
-                      <span className="text-emerald-400">Copied!</span>
+                      <Check className="w-3.5 h-3.5 text-sky-400" />
+                      <span className="text-sky-400">Copied!</span>
                     </>
                   ) : (
                     <>
@@ -288,7 +317,7 @@ export const DelegateShiftModal: React.FC<DelegateShiftModalProps> = ({
 
               <button
                 onClick={() => setTicket(null)}
-                className="w-full text-xs text-slate-400 hover:text-slate-200 pt-1 transition-colors cursor-pointer"
+                className="w-full text-xs text-slate-400 hover:text-slate-200 pt-1 transition-colors cursor-pointer underline"
               >
                 Cancel & Generate New Pass
               </button>
@@ -305,7 +334,7 @@ export const DelegateShiftModal: React.FC<DelegateShiftModalProps> = ({
                   placeholder="e.g. Vamsi (Student Rep) or Ramesh"
                   value={delegateName}
                   onChange={(e) => setDelegateName(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-950/60 border border-slate-700 text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-cyan-500"
+                  className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-950/60 border border-slate-700 text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-blue-500"
                 />
               </div>
 
@@ -318,7 +347,7 @@ export const DelegateShiftModal: React.FC<DelegateShiftModalProps> = ({
                   placeholder="e.g. 9876543210"
                   value={delegatePhone}
                   onChange={(e) => setDelegatePhone(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-950/60 border border-slate-700 text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-cyan-500"
+                  className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-950/60 border border-slate-700 text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-blue-500"
                 />
               </div>
 
@@ -353,14 +382,14 @@ export const DelegateShiftModal: React.FC<DelegateShiftModalProps> = ({
                   placeholder="e.g. Medical leave / emergency relief"
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-950/60 border border-slate-700 text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-cyan-500"
+                  className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-950/60 border border-slate-700 text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-blue-500"
                 />
               </div>
 
               <button
                 onClick={handleGenerateTicket}
                 disabled={isGenerating}
-                className="w-full mt-2 py-3.5 px-4 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 active:scale-[0.98] font-sans font-bold text-xs tracking-wider uppercase text-slate-950 transition-all shadow-lg shadow-cyan-900/30 flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full mt-2 py-3.5 px-4 rounded-2xl bg-blue-600 hover:bg-blue-500 active:scale-[0.98] font-sans font-bold text-xs tracking-wider uppercase text-white transition-all shadow-lg shadow-blue-900/30 flex items-center justify-center gap-2 cursor-pointer"
               >
                 <QrCode className="w-4 h-4" />
                 {isGenerating ? 'Generating Secure QR...' : 'Generate 15-Min Handover Pass'}

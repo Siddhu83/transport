@@ -1,5 +1,9 @@
-import React, { useEffect, useRef } from 'react';
+import { useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
 import QRCodeStyling from 'qr-code-styling';
+
+export interface AestheticQRCodeHandle {
+  getBlob: () => Promise<Blob | null>;
+}
 
 export interface AestheticQRCodeProps {
   data: string;
@@ -13,26 +17,41 @@ export interface AestheticQRCodeProps {
  * Modern Aesthetic QR Code Generator
  * Uses rounded dots and extra-rounded corner eyes with dark-mode transparent background
  */
-export const AestheticQRCode: React.FC<AestheticQRCodeProps> = ({
+export const AestheticQRCode = forwardRef<AestheticQRCodeHandle, AestheticQRCodeProps>(({
   data,
   size = 220,
-  dotsColor = '#38bdf8', // Theme cyan/sky
-  cornersColor = '#818cf8', // Indigo accent
+  dotsColor = '#0284c7',
+  cornersColor = '#2563eb',
   className = '',
-}) => {
+}, ref) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const qrRef = useRef<QRCodeStyling | null>(null);
+
+  useImperativeHandle(ref, () => ({
+    async getBlob() {
+      if (!qrRef.current) return null;
+      try {
+        const raw = await qrRef.current.getRawData('png');
+        if (raw instanceof Blob) return raw;
+        if (raw) return new Blob([raw as any], { type: 'image/png' });
+        return null;
+      } catch (err) {
+        console.warn('Failed to extract QR blob:', err);
+        return null;
+      }
+    },
+  }));
 
   useEffect(() => {
     if (!qrRef.current) {
       qrRef.current = new QRCodeStyling({
         width: size,
         height: size,
-        type: 'svg',
+        type: 'canvas',
         data,
         margin: 4,
         dotsOptions: {
-          type: 'rounded',
+          type: 'dots',
           color: dotsColor,
         },
         cornersSquareOptions: {
@@ -53,7 +72,7 @@ export const AestheticQRCode: React.FC<AestheticQRCodeProps> = ({
         width: size,
         height: size,
         dotsOptions: {
-          type: 'rounded',
+          type: 'dots',
           color: dotsColor,
         },
         cornersSquareOptions: {
@@ -74,4 +93,6 @@ export const AestheticQRCode: React.FC<AestheticQRCodeProps> = ({
   }, [data, size, dotsColor, cornersColor]);
 
   return <div ref={containerRef} className={`flex items-center justify-center select-none ${className}`} />;
-};
+});
+
+AestheticQRCode.displayName = 'AestheticQRCode';
