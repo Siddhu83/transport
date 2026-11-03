@@ -19,6 +19,9 @@ export interface GeoJSONFeature {
     status: string;
     lastSeen: number;
     progress?: VehicleRouteProgress;
+    driverName?: string;
+    driverPhone?: string;
+    isDelegated?: boolean;
   };
 }
 
@@ -41,22 +44,43 @@ export class SSEHub {
   private batchTimer: NodeJS.Timeout | null = null;
   private heartbeatTimer: NodeJS.Timeout | null = null;
 
+  private isTestEnv(): boolean {
+    return (
+      env.NODE_ENV === 'test' ||
+      process.env.NODE_ENV === 'test' ||
+      process.env.npm_lifecycle_event === 'test' ||
+      process.execArgv.includes('--test') ||
+      process.argv.includes('--test')
+    );
+  }
+
   private constructor() {
+    const isTest = this.isTestEnv();
     this.subscriberRedis = new Redis(env.REDIS_URL, {
-      maxRetriesPerRequest: null,
+      maxRetriesPerRequest: 1,
       enableReadyCheck: false,
       lazyConnect: true,
+      enableOfflineQueue: false,
       retryStrategy(times) {
-        if (env.NODE_ENV === 'test' && times > 3) {
-          return null;
+        if (isTest || times > 2) {
+          return null; // Stop reconnecting immediately in tests when Redis is not running
         }
-        return Math.min(times * 50, 2000);
+        return Math.min(times * 50, 1000);
       },
     });
 
-    this.initPubSub();
-    this.startMicroBatchFlusher();
-    this.startHeartbeatEmitter();
+    // Suppress unhandled error crash when Redis is offline in test/dev
+    this.subscriberRedis.on('error', (err) => {
+      if (!isTest) {
+        console.warn('⚠️ SSEHub Redis subscriber error:', err.message);
+      }
+    });
+
+    if (!isTest) {
+      this.initPubSub();
+      this.startMicroBatchFlusher();
+      this.startHeartbeatEmitter();
+    }
   }
 
   public static getInstance(): SSEHub {
@@ -130,6 +154,9 @@ export class SSEHub {
             status: ping.status || 'ACTIVE',
             lastSeen: timestampMs,
             progress: (ping as any).progress,
+            driverName: (ping as any).driverName,
+            driverPhone: (ping as any).driverPhone,
+            isDelegated: Boolean((ping as any).isDelegated),
           },
         };
 
