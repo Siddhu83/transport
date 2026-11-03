@@ -2,7 +2,7 @@ import { FastifyInstance } from 'fastify';
 import { randomUUID } from 'node:crypto';
 import { Role } from '@prisma/client';
 import { authenticate, requireRoles } from '../auth/rbac.middleware.js';
-import { isDelegationRevoked } from '../auth/delegation.service.js';
+import { isDelegationRevoked, isBusDelegationActive } from '../auth/delegation.service.js';
 import { TelemetryPingSchema, BatchDrainSchema, IngestionStatus } from './telemetry.schemas.js';
 import { processTelemetryPing } from './telemetry.service.js';
 import { sseHub } from './sseHub.js';
@@ -97,7 +97,28 @@ export async function telemetryRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const result = await processTelemetryPing(ping);
+      // Concurrency Lock: Prevent parent driver from emitting telemetry while a substitute driver is active
+      if (request.user.role === Role.DRIVER) {
+        const isDelegatedActive = await isBusDelegationActive(ping.busId, request.user.userId);
+        if (isDelegatedActive) {
+          return reply.code(409).send({
+            statusCode: 409,
+            error: 'Conflict',
+            message: 'Shift is currently delegated to an active substitute driver. Telemetry transmission is paused for primary driver.',
+          });
+        }
+      }
+
+      // Populate live driver metadata for student map & dialer
+      const isDelegated = request.user.role === 'DELEGATED_DRIVER';
+      const driverName = isDelegated
+        ? (request.user.delegateName || request.user.name || 'Substitute Captain')
+        : (request.user.name || 'Fleet Captain');
+      const driverPhone = isDelegated
+        ? (request.user.delegatePhone || '')
+        : (request.user.phone || '+91 98480 00000');
+
+      const result = await processTelemetryPing(ping, { driverName, driverPhone, isDelegated });
 
       switch (result.status) {
         case IngestionStatus.CLOCK_DRIFT_REJECTED:

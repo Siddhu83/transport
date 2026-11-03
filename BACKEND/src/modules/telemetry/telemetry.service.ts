@@ -2,6 +2,12 @@ import { redis } from '../../infrastructure/redis.js';
 import { TelemetryPing, IngestionResult, IngestionStatus } from './telemetry.schemas.js';
 import { evaluateVehicleProgress } from '../../services/geofenceEngine.js';
 
+export interface TelemetryDriverInfo {
+  driverName?: string;
+  driverPhone?: string;
+  isDelegated?: boolean;
+}
+
 /**
  * Calculates distance in km between two lat/lng points using Haversine formula
  */
@@ -23,7 +29,10 @@ function haversineDistanceKm(lat1: number, lon1: number, lat2: number, lon2: num
  * High-Frequency Telemetry Ingestion Service (Hot Path)
  * ZERO Database Writes - All Operations Execute In-Memory in Redis 7
  */
-export async function processTelemetryPing(ping: TelemetryPing): Promise<IngestionResult> {
+export async function processTelemetryPing(
+  ping: TelemetryPing,
+  driverInfo?: TelemetryDriverInfo
+): Promise<IngestionResult> {
   const nowMs = Date.now();
   const pingTimestampMs = typeof ping.timestamp === 'number' ? ping.timestamp : new Date(ping.timestamp).getTime();
   const pingAccuracy = ping.accuracy ?? 5;
@@ -139,6 +148,9 @@ export async function processTelemetryPing(ping: TelemetryPing): Promise<Ingesti
         passengerCount: passengerCount.toString(),
         status: busStatus,
         lastSeen: pingTimestampMs.toString(),
+        driverName: driverInfo?.driverName || '',
+        driverPhone: driverInfo?.driverPhone || '',
+        isDelegated: driverInfo?.isDelegated ? '1' : '0',
       });
 
       // 3. Set short-lived TTL to auto-expire orphaned / disconnected vehicles after 30s
@@ -153,6 +165,9 @@ export async function processTelemetryPing(ping: TelemetryPing): Promise<Ingesti
         passengerCount,
         status: busStatus,
         progress: progress ?? undefined,
+        driverName: driverInfo?.driverName,
+        driverPhone: driverInfo?.driverPhone,
+        isDelegated: driverInfo?.isDelegated ?? false,
       }));
 
       await pipeline.exec();
