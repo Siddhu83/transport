@@ -148,6 +148,31 @@ describe('Shift Continuity & Ephemeral Delegation Engine (Sprint 16)', () => {
     assert.ok(res.statusCode === 200 || res.statusCode === 204);
   });
 
+  it('Dual-Transmission Lockout: Parent driver is blocked (409 Conflict) while delegated session is active', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/v1/telemetry/ping',
+      headers: {
+        authorization: `Bearer ${driverToken}`, // Parent driver
+      },
+      payload: {
+        busId: testBusId,
+        latitude: 17.4455,
+        longitude: 78.3489,
+        speed: 30,
+        heading: 90,
+        accuracy: 4,
+        timestamp: Date.now(),
+        routeId: testRouteId,
+      },
+    });
+
+    assert.equal(res.statusCode, 409);
+    const body = JSON.parse(res.body);
+    assert.equal(body.statusCode, 409);
+    assert.ok(body.message.includes('delegated'));
+  });
+
   it('POST /api/v1/auth/delegation/revoke blacklists active session JTI in Redis', async () => {
     const res = await app.inject({
       method: 'POST',
