@@ -27,12 +27,14 @@ export interface TokenPayload {
   name?: string;
   assignedBusId?: string | null;
   assignedRouteId?: string | null;
-  // Ephemeral Shift Delegation Claims (Sprint 16)
+  // Ephemeral Shift Delegation Claims (Sprint 16 & Feedback Fixes)
   isDelegated?: boolean;
   delegationId?: string;
   parentDriverId?: string;
   parentDriverName?: string;
   delegateName?: string;
+  delegatePhone?: string;
+  phone?: string;
   jti?: string;
 }
 

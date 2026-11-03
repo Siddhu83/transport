@@ -159,6 +159,7 @@ export async function claimDelegationTicket(
   const jti = 'dsess_' + randomBytes(16).toString('hex');
 
   const delegateName = rawTicket.delegateName || 'Relief Driver';
+  const delegatePhone = rawTicket.delegatePhone || '';
   const parentDriverName = rawTicket.parentDriverName || 'Assigned Captain';
   const parentDriverId = rawTicket.parentDriverId;
   const busId = rawTicket.busId;
@@ -178,6 +179,7 @@ export async function claimDelegationTicket(
       parentDriverId,
       parentDriverName,
       delegateName,
+      delegatePhone,
       jti,
     },
     {
@@ -193,6 +195,7 @@ export async function claimDelegationTicket(
     busId,
     routeId,
     delegateName,
+    delegatePhone,
     claimedAt: Date.now(),
     expiresAt: sessionExpiresAt,
   };
@@ -207,17 +210,20 @@ export async function claimDelegationTicket(
       });
       sessionPipeline.expire(`delegation:session:${jti}`, durationSeconds);
       sessionPipeline.set(`delegation:active_for_driver:${parentDriverId}`, jti, 'EX', durationSeconds);
+      sessionPipeline.set(`delegation:active_for_bus:${busId}`, jti, 'EX', durationSeconds);
       sessionPipeline.del(`delegation:driver_pending:${parentDriverId}`);
       await sessionPipeline.exec();
     } catch (err) {
       console.warn('[DelegationService] Redis session save failed, falling back to memory store:', err);
       memoryStore.set(`delegation:session:${jti}`, { value: sessionData, expiresAt: sessionExpiresAt });
       memoryStore.set(`delegation:active_for_driver:${parentDriverId}`, { value: jti, expiresAt: sessionExpiresAt });
+      memoryStore.set(`delegation:active_for_bus:${busId}`, { value: jti, expiresAt: sessionExpiresAt });
       memoryStore.delete(`delegation:driver_pending:${parentDriverId}`);
     }
   } else {
     memoryStore.set(`delegation:session:${jti}`, { value: sessionData, expiresAt: sessionExpiresAt });
     memoryStore.set(`delegation:active_for_driver:${parentDriverId}`, { value: jti, expiresAt: sessionExpiresAt });
+    memoryStore.set(`delegation:active_for_bus:${busId}`, { value: jti, expiresAt: sessionExpiresAt });
     memoryStore.delete(`delegation:driver_pending:${parentDriverId}`);
   }
 
@@ -264,12 +270,23 @@ export async function revokeDelegation(
     }
   }
 
+  let busIdToClean: string | undefined;
+
   if (isRedisReady()) {
     try {
+      if (jti) {
+        const sess = await redis.hgetall(`delegation:session:${jti}`);
+        if (sess && sess.busId) {
+          busIdToClean = sess.busId;
+        }
+      }
       const pipeline = redis.pipeline();
       if (jti) {
         pipeline.set(`delegation:revoked:${jti}`, '1', 'EX', MAX_SESSION_SECONDS);
         pipeline.del(`delegation:session:${jti}`);
+      }
+      if (busIdToClean) {
+        pipeline.del(`delegation:active_for_bus:${busIdToClean}`);
       }
       pipeline.del(`delegation:active_for_driver:${parentDriverId}`);
       pipeline.del(`delegation:driver_pending:${parentDriverId}`);
@@ -280,13 +297,58 @@ export async function revokeDelegation(
   }
 
   if (jti) {
+    const memSess = memoryStore.get(`delegation:session:${jti}`);
+    if (memSess?.value?.busId) {
+      busIdToClean = memSess.value.busId;
+    }
     memoryStore.set(`delegation:revoked:${jti}`, { value: '1', expiresAt: Date.now() + MAX_SESSION_SECONDS * 1000 });
     memoryStore.delete(`delegation:session:${jti}`);
+  }
+  if (busIdToClean) {
+    memoryStore.delete(`delegation:active_for_bus:${busIdToClean}`);
   }
   memoryStore.delete(`delegation:active_for_driver:${parentDriverId}`);
   memoryStore.delete(`delegation:driver_pending:${parentDriverId}`);
 
   return { revoked: true, jti };
+}
+
+/**
+ * Checks if a bus currently has an active, unrevoked delegated driver session (<0.1ms hot path check)
+ */
+export async function isBusDelegationActive(busId: string, parentDriverId?: string): Promise<boolean> {
+  let activeJti: string | null = null;
+  if (isRedisReady()) {
+    try {
+      if (parentDriverId) {
+        activeJti = await redis.get(`delegation:active_for_driver:${parentDriverId}`);
+      }
+      if (!activeJti) {
+        activeJti = await redis.get(`delegation:active_for_bus:${busId}`);
+      }
+    } catch {
+      // Fallback to memory
+    }
+  }
+
+  if (!activeJti) {
+    if (parentDriverId) {
+      const entry = memoryStore.get(`delegation:active_for_driver:${parentDriverId}`);
+      if (entry && Date.now() <= entry.expiresAt) {
+        activeJti = entry.value;
+      }
+    }
+    if (!activeJti) {
+      const entry = memoryStore.get(`delegation:active_for_bus:${busId}`);
+      if (entry && Date.now() <= entry.expiresAt) {
+        activeJti = entry.value;
+      }
+    }
+  }
+
+  if (!activeJti) return false;
+  const revoked = await isDelegationRevoked(activeJti);
+  return !revoked;
 }
 
 /**
