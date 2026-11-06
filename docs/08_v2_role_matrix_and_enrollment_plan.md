@@ -73,7 +73,7 @@ To ensure safety and minimize driver distraction:
            └───────────────────────────┬────────────────────────────┘
                                        │
            ┌───────────────────────────┴────────────────────────────┐
-           │    TIER 3: DECENTRALIZED IN-BUS ONBOARDING (CHANNEL C) │
+           │    TIER 3: DECENTRALIZED IN-BUS ONBOARDING             │
            │  • Physical/Digital QR posted in each bus              │
            │  • Student scans QR on morning commute & inputs details│
            │  • In-Charge approves riders face-to-face in app       │
