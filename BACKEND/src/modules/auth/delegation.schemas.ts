@@ -41,6 +41,7 @@ export interface DelegationSessionData {
   busId: string;
   routeId: string;
   delegateName: string;
+  delegatePhone?: string;
   claimedAt: number;
   expiresAt: number;
 }
