@@ -36,16 +36,16 @@ export const MobileNavBar: React.FC<MobileNavBarProps> = ({
               onClick={() => onTabChange(tab.id)}
               className={`relative flex flex-col items-center justify-center py-2 px-1 rounded-2xl transition-all duration-200 cursor-pointer active:scale-95 ${
                 isActive
-                  ? 'bg-gradient-to-b from-amber-500/15 via-amber-500/5 to-transparent border border-amber-500/35 text-amber-500 dark:text-amber-400 shadow-sm'
+                  ? 'bg-amber-500/10 border border-amber-500/30 text-amber-500 dark:text-amber-400 shadow-sm'
                   : 'text-theme-muted hover:text-theme-main hover:bg-theme-hover'
               }`}
               style={{ minHeight: '52px' }}
               aria-current={isActive ? 'page' : undefined}
             >
-              {/* Luminous Top Glow Bar on Active Tab */}
+              {/* Luminous Top Bar on Active Tab */}
               {isActive && (
                 <div className="absolute -top-2 left-1/2 -translate-x-1/2 flex flex-col items-center">
-                  <span className="w-8 h-1 bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 rounded-full shadow-[0_0_6px_#f59e0b]" />
+                  <span className="w-8 h-1 bg-amber-500 rounded-full shadow-[0_0_6px_rgba(245,158,11,0.5)]" />
                 </div>
               )}
 
@@ -62,8 +62,8 @@ export const MobileNavBar: React.FC<MobileNavBarProps> = ({
                 {/* Active Ride Live Indicator Dot on My Bus */}
                 {tab.id === 'mybus' && hasActiveBus && (
                   <span className="absolute -top-1 -right-1 flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500" />
                   </span>
                 )}
               </div>
