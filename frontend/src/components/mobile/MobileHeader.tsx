@@ -55,7 +55,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
                   {getGreeting()}
                 </h1>
                 <p className="text-[11px] text-theme-muted mt-0.5">
-                  ANITS Campus Transit • <span className="text-emerald-600 dark:text-emerald-400 font-bold">{totalBusesCount} Buses Active</span>
+                  ANITS Campus Transit • <span className="text-cyan-600 dark:text-cyan-400 font-bold">{totalBusesCount} Buses Active</span>
                 </p>
               </div>
 
@@ -63,10 +63,10 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
               <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-theme-card-subtle border border-theme-border font-mono text-[10px]">
                 <Radio
                   className={`w-3 h-3 ${
-                    isConnected ? 'text-emerald-500 dark:text-emerald-400 animate-pulse' : 'text-amber-500 dark:text-amber-400'
+                    isConnected ? 'text-cyan-500 dark:text-cyan-400 animate-pulse' : 'text-amber-500 dark:text-amber-400'
                   }`}
                 />
-                <span className={isConnected ? 'text-emerald-600 dark:text-emerald-400 font-bold' : 'text-amber-600 dark:text-amber-400'}>
+                <span className={isConnected ? 'text-cyan-600 dark:text-cyan-400 font-bold' : 'text-amber-600 dark:text-amber-400'}>
                   {isConnected ? `${latencyMs ?? 16}ms` : 'Connecting'}
                 </span>
               </div>
@@ -115,7 +115,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
                 <span className="truncate">{dynamicBusTitle}</span>
               </h2>
               {selectedRouteName ? (
-                <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-mono truncate max-w-[180px]">
+                <p className="text-[10px] text-cyan-600 dark:text-cyan-400 font-mono truncate max-w-[180px]">
                   {selectedRouteName}
                 </p>
               ) : (
@@ -126,13 +126,12 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
             {/* Right Column (aligned end) */}
             <div className="flex justify-end">
               <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-theme-card-subtle border border-theme-border font-mono text-[10px]">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-ping"></span>
-                <span className="text-emerald-600 dark:text-emerald-400 font-bold">LIVE</span>
+                <span className="w-2 h-2 rounded-full bg-cyan-500 dark:bg-cyan-400 animate-ping"></span>
+                <span className="text-cyan-600 dark:text-cyan-400 font-bold">LIVE</span>
               </div>
             </div>
           </div>
         )}
-
 
         {/* State D: Settings Header */}
         {activeTab === 'settings' && (
