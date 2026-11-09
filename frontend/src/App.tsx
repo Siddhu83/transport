@@ -229,7 +229,7 @@ export const App: React.FC = () => {
                       </span>
                     </div>
                   </div>
-                  <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded">
+                  <span className="text-[10px] font-mono text-cyan-600 dark:text-cyan-400 font-bold bg-cyan-500/10 px-2 py-0.5 rounded">
                     {p.speed || 35} km/h
                   </span>
                 </button>
