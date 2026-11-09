@@ -29,8 +29,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   streamStatus,
   onResetPreferences,
 }) => {
-
-
   const topPadding = isFullscreen
     ? 'calc(max(env(safe-area-inset-top, 0px), 3.25rem) + 4rem)'
     : 'calc(max(env(safe-area-inset-top, 0px), 2.75rem) + 2.5rem)';
@@ -103,7 +101,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           <div className="space-y-2 text-xs">
             <div className="flex items-center justify-between bg-theme-card-subtle p-2.5 rounded-xl border border-theme-border">
               <span className="text-theme-muted text-[11px] flex items-center gap-1.5 font-sans">
-                <Radio className="w-3.5 h-3.5 text-emerald-500 dark:text-emerald-400" />
+                <Radio className="w-3.5 h-3.5 text-cyan-500 dark:text-cyan-400" />
                 Connection Protocol:
               </span>
               <span className="text-theme-main font-bold">Fastify SSE Stream</span>
@@ -111,7 +109,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
             <div className="flex items-center justify-between bg-theme-card-subtle p-2.5 rounded-xl border border-theme-border">
               <span className="text-theme-muted text-[11px] font-sans">Stream Latency:</span>
-              <span className="text-emerald-600 dark:text-emerald-400 font-bold tabular-nums">
+              <span className="text-cyan-600 dark:text-cyan-400 font-bold tabular-nums">
                 {isConnected ? `${latencyMs ?? 16} ms (Sub-Second)` : streamStatus || 'Reconnecting'}
               </span>
             </div>
