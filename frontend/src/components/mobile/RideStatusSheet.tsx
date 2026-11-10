@@ -293,7 +293,7 @@ export const RideStatusSheet: React.FC<RideStatusSheetProps> = ({
                 {speed} km/h
               </span>
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-theme-card-subtle text-theme-muted border border-theme-border">
-                <Wind className="w-3 h-3 text-cyan-500 dark:text-cyan-400" />
+                <Wind className="w-3 h-3 text-blue-500 dark:text-blue-400" />
                 AC Express
               </span>
             </div>
