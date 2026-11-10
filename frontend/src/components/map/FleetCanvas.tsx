@@ -212,7 +212,7 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
             'DELAYED',
             '#d97706',
             'ACTIVE',
-            '#16a34a',
+            '#0284c7',
             '#64748b',
           ],
           'circle-opacity': 0.25,
@@ -242,7 +242,7 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
             'DELAYED',
             '#d97706',
             'ACTIVE',
-            '#16a34a',
+            '#0284c7',
             '#64748b',
           ],
           'circle-stroke-width': [
