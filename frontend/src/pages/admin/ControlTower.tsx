@@ -657,7 +657,7 @@ export const ControlTower: React.FC = () => {
             <div>
               <h1 className="text-sm font-black tracking-tight text-white flex items-center gap-1.5">
                 CONTROL TOWER
-                <span className="text-[10px] font-bold px-1.5 py-0.2 bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 rounded">
+                <span className="text-[10px] font-bold px-1.5 py-0.2 bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded">
                   v2.0
                 </span>
               </h1>
@@ -681,7 +681,7 @@ export const ControlTower: React.FC = () => {
           <div className="flex items-center gap-2">
             <div
               className={`w-2 h-2 rounded-full ${
-                isConnected ? 'bg-cyan-500 animate-pulse' : 'bg-amber-500'
+                isConnected ? 'bg-blue-500 animate-pulse' : 'bg-amber-500'
               }`}
             />
             <span className="text-[11px] font-mono text-slate-300">
@@ -699,9 +699,9 @@ export const ControlTower: React.FC = () => {
             <div className="text-[10px] font-bold text-slate-400 uppercase">Fleet</div>
             <div className="text-base font-black text-white tabular-nums">{metrics.total}</div>
           </div>
-          <div className="p-2 rounded-xl bg-cyan-950/20 border border-cyan-800/30">
-            <div className="text-[10px] font-bold text-cyan-400 uppercase">Nominal</div>
-            <div className="text-base font-black text-cyan-400 tabular-nums">{metrics.nominal}</div>
+          <div className="p-2 rounded-xl bg-blue-950/20 border border-blue-800/30">
+            <div className="text-[10px] font-bold text-blue-400 uppercase">Nominal</div>
+            <div className="text-base font-black text-blue-400 tabular-nums">{metrics.nominal}</div>
           </div>
           <div className="p-2 rounded-xl bg-amber-950/20 border border-amber-800/30">
             <div className="text-[10px] font-bold text-amber-400 uppercase">Stale</div>
@@ -796,7 +796,7 @@ export const ControlTower: React.FC = () => {
                             ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
                             : bus.status === 'DELAYED'
                             ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-                            : 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30'
+                            : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
                         }`}
                       >
                         {isIncidentBus ? 'SOS BREAKDOWN' : bus.status}
@@ -956,7 +956,7 @@ export const ControlTower: React.FC = () => {
                       key={candidate.busId}
                       className={`p-3 rounded-2xl border flex items-center justify-between transition-all ${
                         isDispatched
-                          ? 'bg-cyan-950/40 border-cyan-500/80 text-cyan-200'
+                          ? 'bg-blue-950/40 border-blue-500/80 text-blue-200'
                           : 'bg-slate-800/50 border-slate-700/60 text-slate-200'
                       }`}
                     >
@@ -966,7 +966,7 @@ export const ControlTower: React.FC = () => {
                           <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-700 text-slate-300">
                             {candidate.distanceKm} km away
                           </span>
-                          <span className="text-[10px] font-mono text-cyan-400 font-bold">
+                          <span className="text-[10px] font-mono text-blue-400 font-bold">
                             ETA: ~{candidate.etaMinutes} mins
                           </span>
                         </div>
@@ -976,7 +976,7 @@ export const ControlTower: React.FC = () => {
                       </div>
 
                       {isDispatched ? (
-                        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-cyan-500/20 text-cyan-400 border border-cyan-500/40 text-xs font-bold">
+                        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-500/20 text-blue-400 border border-blue-500/40 text-xs font-bold">
                           <CheckCircle2 className="w-3.5 h-3.5" />
                           <span>Dispatched</span>
                         </div>
