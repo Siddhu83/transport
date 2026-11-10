@@ -238,7 +238,7 @@ export const LinearRouteManifest: React.FC<LinearRouteManifestProps> = ({
           <MapPin className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400" />
           <span>Linear Corridor Window (3 Stops)</span>
         </span>
-        <span className="text-cyan-600 dark:text-cyan-400 font-mono text-[9px] bg-cyan-500/10 px-1.5 py-0.5 rounded border border-cyan-500/20">
+        <span className="text-blue-600 dark:text-blue-400 font-mono text-[9px] bg-blue-500/10 px-1.5 py-0.5 rounded border border-blue-500/20">
           Stop {window.currentStop.stopOrder} of {totalStopsCount}
         </span>
       </div>
@@ -278,14 +278,14 @@ export const LinearRouteManifest: React.FC<LinearRouteManifestProps> = ({
                       className={`w-7 h-7 rounded-full flex items-center justify-center shadow-md border transition-transform ${
                         isEmergency
                           ? 'bg-rose-600 text-white border-rose-300 shadow-rose-950/60 animate-bounce'
-                          : 'bg-cyan-500 text-slate-950 border-white dark:border-slate-900 shadow-cyan-500/50 scale-105'
+                          : 'bg-blue-600 text-white border-white dark:border-slate-900 shadow-blue-500/50 scale-105'
                       }`}
                       title="Bus Current Location"
                     >
                       <Bus className="w-3.5 h-3.5 fill-current" />
                     </div>
                   ) : isPrevious ? (
-                    <div className="w-5 h-5 rounded-full bg-slate-700/80 text-cyan-400 flex items-center justify-center border border-slate-600 shadow-sm">
+                    <div className="w-5 h-5 rounded-full bg-slate-700/80 text-blue-400 flex items-center justify-center border border-slate-600 shadow-sm">
                       <Check className="w-3 h-3 stroke-[3]" />
                     </div>
                   ) : row.isTerminus ? (
@@ -314,7 +314,7 @@ export const LinearRouteManifest: React.FC<LinearRouteManifestProps> = ({
                       {row.name}
                     </span>
                     {isCurrent && (
-                      <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.2 rounded bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
+                      <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.2 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30">
                         TARGET
                       </span>
                     )}
@@ -330,7 +330,7 @@ export const LinearRouteManifest: React.FC<LinearRouteManifestProps> = ({
                     isEmergency && isCurrent
                       ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
                       : isCurrent
-                      ? 'bg-cyan-500/20 text-cyan-600 dark:text-cyan-300 border border-cyan-500/30'
+                      ? 'bg-blue-500/20 text-blue-600 dark:text-blue-300 border border-blue-500/30'
                       : isPrevious
                       ? 'bg-theme-hover text-theme-muted'
                       : 'bg-theme-card text-theme-muted border border-theme-border'
