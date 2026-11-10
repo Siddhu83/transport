@@ -11,6 +11,7 @@ import {
   AlertTriangle,
   ShieldAlert,
   LifeBuoy,
+  Clock,
 } from 'lucide-react';
 import { VehicleFeatureProperties } from '../map/FleetCanvas';
 import { LinearRouteManifest } from './LinearRouteManifest';
@@ -125,6 +126,15 @@ export const RideStatusSheet: React.FC<RideStatusSheetProps> = ({
 
   const isEmergency = vehicle.status === 'SOS';
 
+  // Stale signal detection (Item 3C: GPS Dropout / Engine Off > 25 seconds)
+  const lastSeenMs = vehicle.lastSeen
+    ? typeof vehicle.lastSeen === 'number'
+      ? vehicle.lastSeen
+      : new Date(vehicle.lastSeen).getTime()
+    : null;
+  const isStale = Boolean(lastSeenMs && Date.now() - lastSeenMs > 25000);
+  const staleSecondsAgo = lastSeenMs ? Math.max(0, Math.round((Date.now() - lastSeenMs) / 1000)) : 0;
+
   // Derive realistic operational metrics
   const busNumber = vehicle.plateNumber || `BUS-${vehicle.busId.slice(0, 4).toUpperCase()}`;
   const routeName = vehicle.routeName || manifest?.name || 'Sector 1 Express Corridor';
@@ -176,6 +186,16 @@ export const RideStatusSheet: React.FC<RideStatusSheetProps> = ({
                     </h2>
                     <span className="text-[10px] font-extrabold text-amber-500 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded">
                       Relief Dispatched
+                    </span>
+                  </div>
+                ) : isStale ? (
+                  <div className="flex items-baseline gap-2">
+                    <h2 className="text-xl font-black tracking-tight text-amber-500 dark:text-amber-400 tabular-nums flex items-center gap-1.5">
+                      <Clock className="w-4 h-4 text-amber-500" />
+                      SIGNAL PAUSED
+                    </h2>
+                    <span className="text-[10px] font-extrabold text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded font-mono">
+                      {staleSecondsAgo > 60 ? `${Math.floor(staleSecondsAgo / 60)}m ago` : `${staleSecondsAgo}s ago`}
                     </span>
                   </div>
                 ) : (
@@ -240,6 +260,16 @@ export const RideStatusSheet: React.FC<RideStatusSheetProps> = ({
                     <span className="font-bold text-blue-500 dark:text-blue-400 tabular-nums">~6 mins away</span>
                   </div>
                 </div>
+              </div>
+            )}
+
+            {/* Stale Vehicle Warning Banner (Item 3C: Signal Paused) */}
+            {isStale && !isEmergency && (
+              <div className="p-2.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex items-center gap-2 animate-in fade-in duration-200">
+                <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+                <span className="text-[11px] text-theme-muted">
+                  Vehicle signal paused ({staleSecondsAgo > 60 ? `${Math.floor(staleSecondsAgo / 60)}m` : `${staleSecondsAgo}s`} ago). Bus may be in cellular shadow or engine off.
+                </span>
               </div>
             )}
 
