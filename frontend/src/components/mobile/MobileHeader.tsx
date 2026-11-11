@@ -127,7 +127,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
             <div className="flex justify-end">
               <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-theme-card-subtle border border-theme-border font-mono text-[10px]">
                 <span className="w-2 h-2 rounded-full bg-blue-500 dark:bg-blue-400 animate-ping"></span>
-                <span className="text-blue-600 dark:text-blue-400 font-bold">LIVE</span>
+                <span className="text-blue-600 dark:text-blue-400 font-bold pt-0.5">LIVE</span>
               </div>
             </div>
           </div>
