@@ -272,7 +272,7 @@ export const DelegateShiftModal: React.FC<DelegateShiftModalProps> = ({
                   data={claimDeepLink}
                   size={200}
                   dotsColor="#0284c7"
-                  cornersColor="#2563eb"
+                  cornersColor="#7819fcff"
                 />
 
                 {/* Expiry Countdown */}
