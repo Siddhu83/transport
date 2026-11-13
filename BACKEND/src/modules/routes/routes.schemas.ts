@@ -70,6 +70,8 @@ export const VehicleRouteProgressSchema = z.object({
   progressPercent: z.number().min(0).max(100),
   window: SlidingStopWindowSchema,
   updatedAt: z.number(),
+  isOffRoute: z.boolean().optional(),
+  deviationMeters: z.number().optional(),
 });
 
 export type VehicleRouteProgress = z.infer<typeof VehicleRouteProgressSchema>;
