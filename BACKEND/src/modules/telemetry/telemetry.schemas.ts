@@ -10,7 +10,7 @@ export const TelemetryPingSchema = z.object({
   heading: z.number().min(0).max(359),        // Degrees relative to true north (0-359)
   accuracy: z.number().min(0).max(100).optional().default(5),       // GPS accuracy radius in meters
   passengerCount: z.number().min(0).max(55).optional().default(0), // On-board passenger count
-  status: z.enum(['ACTIVE', 'OFF_DUTY', 'SOS', 'DELAYED']).optional().default('ACTIVE'),
+  status: z.enum(['ACTIVE', 'OFF_DUTY', 'SOS', 'DELAYED', 'DETOUR']).optional().default('ACTIVE'),
   timestamp: z.union([z.number(), z.string()]), // Epoch milliseconds or ISO String
 });
 
@@ -38,4 +38,6 @@ export interface IngestionResult {
   status: IngestionStatus;
   message: string;
   busId: string;
+  isOffRoute?: boolean;
+  deviationMeters?: number;
 }
