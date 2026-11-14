@@ -1,6 +1,6 @@
 import { redis } from '../../infrastructure/redis.js';
 import { TelemetryPing, IngestionResult, IngestionStatus } from './telemetry.schemas.js';
-import { evaluateVehicleProgress } from '../../services/geofenceEngine.js';
+import { evaluateVehicleProgress, clearVehicleProgress } from '../../services/geofenceEngine.js';
 
 export interface TelemetryDriverInfo {
   driverName?: string;
@@ -42,12 +42,14 @@ export async function processTelemetryPing(
 
   // Handle explicit OFF_DUTY signal when Captain taps "END DUTY"
   if (busStatus === 'OFF_DUTY') {
+    await clearVehicleProgress(ping.busId);
     if (redis.status === 'ready' || redis.status === 'connect') {
       try {
         const pipeline = redis.pipeline();
         pipeline.zrem('buses:live', ping.busId);
         pipeline.del(`bus:${ping.busId}:state`);
         pipeline.del(`bus:${ping.busId}:progress`);
+        pipeline.del(`bus:${ping.busId}:detour`);
         pipeline.publish('telemetry:broadcast', JSON.stringify({
           busId: ping.busId,
           routeId: routeIdStr,
@@ -58,6 +60,8 @@ export async function processTelemetryPing(
           passengerCount: 0,
           status: 'OFF_DUTY',
           timestamp: pingTimestampMs,
+          isOffRoute: false,
+          deviationMeters: 0,
         }));
         await pipeline.exec();
       } catch (err) {
@@ -69,6 +73,8 @@ export async function processTelemetryPing(
       status: IngestionStatus.OFF_DUTY_CLEANED,
       message: `Bus '${ping.busId}' successfully marked OFF_DUTY and removed from live spatial index`,
       busId: ping.busId,
+      isOffRoute: false,
+      deviationMeters: 0,
     };
   }
 
@@ -132,6 +138,11 @@ export async function processTelemetryPing(
     }
   }
 
+  // Off-route detour status escalation (Sprint 18)
+  const isOffRoute = Boolean(progress?.isOffRoute);
+  const deviationMeters = progress?.deviationMeters ?? 0;
+  const effectiveStatus = (isOffRoute && busStatus !== 'SOS') ? 'DETOUR' : busStatus;
+
   // Atomic Redis Pipeline Transaction
   if (redis.status === 'ready' || redis.status === 'connect') {
     try {
@@ -146,11 +157,13 @@ export async function processTelemetryPing(
         speed: ping.speed.toString(),
         heading: ping.heading.toString(),
         passengerCount: passengerCount.toString(),
-        status: busStatus,
+        status: effectiveStatus,
         lastSeen: pingTimestampMs.toString(),
         driverName: driverInfo?.driverName || '',
         driverPhone: driverInfo?.driverPhone || '',
         isDelegated: driverInfo?.isDelegated ? '1' : '0',
+        isOffRoute: isOffRoute ? '1' : '0',
+        deviationMeters: deviationMeters.toString(),
       });
 
       // 3. Set short-lived TTL to auto-expire orphaned / disconnected vehicles after 30s
@@ -163,11 +176,13 @@ export async function processTelemetryPing(
         routeId: routeIdStr,
         accuracy: pingAccuracy,
         passengerCount,
-        status: busStatus,
+        status: effectiveStatus,
         progress: progress ?? undefined,
         driverName: driverInfo?.driverName,
         driverPhone: driverInfo?.driverPhone,
         isDelegated: driverInfo?.isDelegated ?? false,
+        isOffRoute,
+        deviationMeters,
       }));
 
       await pipeline.exec();
@@ -180,5 +195,7 @@ export async function processTelemetryPing(
     status: IngestionStatus.SUCCESS,
     message: 'Telemetry ping successfully processed into memory',
     busId: ping.busId,
+    isOffRoute,
+    deviationMeters,
   };
 }
