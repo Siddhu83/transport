@@ -138,6 +138,8 @@ export async function telemetryRoutes(fastify: FastifyInstance) {
             statusCode: 200,
             message: result.message,
             busId: result.busId,
+            isOffRoute: result.isOffRoute ?? false,
+            deviationMeters: result.deviationMeters ?? 0,
           });
       }
     }
