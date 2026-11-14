@@ -22,6 +22,8 @@ export interface GeoJSONFeature {
     driverName?: string;
     driverPhone?: string;
     isDelegated?: boolean;
+    isOffRoute?: boolean;
+    deviationMeters?: number;
   };
 }
 
@@ -139,6 +141,10 @@ export class SSEHub {
         const routeId = ping.routeId || '';
         const timestampMs = typeof ping.timestamp === 'number' ? ping.timestamp : new Date(ping.timestamp).getTime();
 
+        const progressObj = (ping as any).progress as VehicleRouteProgress | undefined;
+        const isOffRoute = Boolean((ping as any).isOffRoute ?? progressObj?.isOffRoute);
+        const deviationMeters = Number((ping as any).deviationMeters ?? progressObj?.deviationMeters ?? 0);
+
         const feature: GeoJSONFeature = {
           type: 'Feature',
           geometry: {
@@ -153,10 +159,12 @@ export class SSEHub {
             passengerCount: ping.passengerCount ?? 0,
             status: ping.status || 'ACTIVE',
             lastSeen: timestampMs,
-            progress: (ping as any).progress,
+            progress: progressObj,
             driverName: (ping as any).driverName,
             driverPhone: (ping as any).driverPhone,
             isDelegated: Boolean((ping as any).isDelegated),
+            isOffRoute,
+            deviationMeters,
           },
         };
 
