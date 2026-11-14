@@ -89,7 +89,7 @@ export const ControlTower: React.FC = () => {
 
   // UI State
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(true);
-  const [statusFilter, setStatusFilter] = useState<'ALL' | 'NOMINAL' | 'DELAYED' | 'EMERGENCY'>('ALL');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'NOMINAL' | 'DETOUR' | 'DELAYED' | 'EMERGENCY'>('ALL');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedBusId, setSelectedBusId] = useState<string | null>(null);
 
@@ -211,9 +211,10 @@ export const ControlTower: React.FC = () => {
   const metrics = useMemo(() => {
     const total = vehicles.length;
     const emergency = vehicles.filter((v) => v.status === 'SOS').length + (activeIncident ? 1 : 0);
+    const detour = vehicles.filter((v) => v.status === 'DETOUR' || Boolean(v.isOffRoute || v.progress?.isOffRoute)).length;
     const delayed = vehicles.filter((v) => v.status === 'DELAYED').length;
-    const nominal = Math.max(0, total - emergency - delayed);
-    return { total, nominal, delayed, emergency };
+    const nominal = Math.max(0, total - emergency - detour - delayed);
+    return { total, nominal, detour, delayed, emergency };
   }, [vehicles, activeIncident]);
 
   // Filtered vehicles for sidebar roster
@@ -227,7 +228,8 @@ export const ControlTower: React.FC = () => {
       if (!matchesSearch) return false;
 
       if (statusFilter === 'ALL') return true;
-      if (statusFilter === 'NOMINAL') return v.status === 'ACTIVE';
+      if (statusFilter === 'NOMINAL') return v.status === 'ACTIVE' && !v.isOffRoute && !v.progress?.isOffRoute;
+      if (statusFilter === 'DETOUR') return v.status === 'DETOUR' || Boolean(v.isOffRoute || v.progress?.isOffRoute);
       if (statusFilter === 'DELAYED') return v.status === 'DELAYED';
       if (statusFilter === 'EMERGENCY') return v.status === 'SOS' || v.busId === activeIncident?.busId;
 
@@ -315,9 +317,11 @@ export const ControlTower: React.FC = () => {
             'case',
             ['==', ['get', 'status'], 'SOS'],
             '#ef4444',
+            ['==', ['get', 'status'], 'DETOUR'],
+            '#f59e0b',
             ['==', ['get', 'status'], 'DELAYED'],
             '#f59e0b',
-            '#10b981',
+            '#3b82f6',
           ],
           'circle-opacity': 0.25,
           'circle-blur': 0.8,
@@ -335,9 +339,11 @@ export const ControlTower: React.FC = () => {
             'case',
             ['==', ['get', 'status'], 'SOS'],
             '#ef4444',
+            ['==', ['get', 'status'], 'DETOUR'],
+            '#f59e0b',
             ['==', ['get', 'status'], 'DELAYED'],
             '#f59e0b',
-            '#10b981',
+            '#3b82f6',
           ],
           'circle-stroke-width': 2,
           'circle-stroke-color': '#0b0f17',
@@ -694,28 +700,32 @@ export const ControlTower: React.FC = () => {
         </div>
 
         {/* Fleet KPI Metric Grid */}
-        <div className="p-3 grid grid-cols-4 gap-2 border-b border-slate-800/80 bg-slate-900/30 text-center">
-          <div className="p-2 rounded-xl bg-slate-800/40 border border-slate-700/40">
-            <div className="text-[10px] font-bold text-slate-400 uppercase">Fleet</div>
-            <div className="text-base font-black text-white tabular-nums">{metrics.total}</div>
+        <div className="p-3 grid grid-cols-5 gap-1.5 border-b border-slate-800/80 bg-slate-900/30 text-center">
+          <div className="p-1.5 rounded-xl bg-slate-800/40 border border-slate-700/40">
+            <div className="text-[9px] font-bold text-slate-400 uppercase">Fleet</div>
+            <div className="text-sm font-black text-white tabular-nums">{metrics.total}</div>
           </div>
-          <div className="p-2 rounded-xl bg-blue-950/20 border border-blue-800/30">
-            <div className="text-[10px] font-bold text-blue-400 uppercase">Nominal</div>
-            <div className="text-base font-black text-blue-400 tabular-nums">{metrics.nominal}</div>
+          <div className="p-1.5 rounded-xl bg-blue-950/20 border border-blue-800/30">
+            <div className="text-[9px] font-bold text-blue-400 uppercase">Nominal</div>
+            <div className="text-sm font-black text-blue-400 tabular-nums">{metrics.nominal}</div>
           </div>
-          <div className="p-2 rounded-xl bg-amber-950/20 border border-amber-800/30">
-            <div className="text-[10px] font-bold text-amber-400 uppercase">Stale</div>
-            <div className="text-base font-black text-amber-400 tabular-nums">{metrics.delayed}</div>
+          <div className="p-1.5 rounded-xl bg-amber-950/20 border border-amber-800/30">
+            <div className="text-[9px] font-bold text-amber-400 uppercase">Detour</div>
+            <div className="text-sm font-black text-amber-400 tabular-nums">{metrics.detour}</div>
+          </div>
+          <div className="p-1.5 rounded-xl bg-amber-950/20 border border-amber-800/30">
+            <div className="text-[9px] font-bold text-amber-400 uppercase">Stale</div>
+            <div className="text-sm font-black text-amber-400 tabular-nums">{metrics.delayed}</div>
           </div>
           <div
-            className={`p-2 rounded-xl border ${
+            className={`p-1.5 rounded-xl border ${
               metrics.emergency > 0
                 ? 'bg-rose-950/40 border-rose-600/60 animate-pulse'
                 : 'bg-slate-800/40 border-slate-700/40'
             }`}
           >
-            <div className="text-[10px] font-bold text-rose-400 uppercase">SOS</div>
-            <div className="text-base font-black text-rose-400 tabular-nums">{metrics.emergency}</div>
+            <div className="text-[9px] font-bold text-rose-400 uppercase">SOS</div>
+            <div className="text-sm font-black text-rose-400 tabular-nums">{metrics.emergency}</div>
           </div>
         </div>
 
@@ -733,8 +743,8 @@ export const ControlTower: React.FC = () => {
           </div>
 
           {/* Filter Tabs */}
-          <div className="grid grid-cols-4 gap-1 p-1 bg-slate-900/60 rounded-xl border border-slate-800/80 text-[11px] font-bold">
-            {(['ALL', 'NOMINAL', 'DELAYED', 'EMERGENCY'] as const).map((tab) => (
+          <div className="grid grid-cols-5 gap-1 p-1 bg-slate-900/60 rounded-xl border border-slate-800/80 text-[10px] font-bold">
+            {(['ALL', 'NOMINAL', 'DETOUR', 'DELAYED', 'EMERGENCY'] as const).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setStatusFilter(tab)}
@@ -744,7 +754,7 @@ export const ControlTower: React.FC = () => {
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
-                {tab === 'EMERGENCY' ? 'SOS' : tab.charAt(0) + tab.slice(1).toLowerCase()}
+                {tab === 'EMERGENCY' ? 'SOS' : tab === 'DETOUR' ? 'Detour' : tab.charAt(0) + tab.slice(1).toLowerCase()}
               </button>
             ))}
           </div>
@@ -790,17 +800,24 @@ export const ControlTower: React.FC = () => {
                           DELEGATED
                         </span>
                       )}
-                      <span
-                        className={`text-[9px] font-black px-1.5 py-0.5 rounded tracking-wide ${
-                          isIncidentBus || bus.status === 'SOS'
-                            ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
-                            : bus.status === 'DELAYED'
-                            ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-                            : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
-                        }`}
-                      >
-                        {isIncidentBus ? 'SOS BREAKDOWN' : bus.status}
-                      </span>
+                      {(() => {
+                        const isDetour = bus.status === 'DETOUR' || Boolean(bus.isOffRoute || bus.progress?.isOffRoute);
+                        return (
+                          <span
+                            className={`text-[9px] font-black px-1.5 py-0.5 rounded tracking-wide ${
+                              isIncidentBus || bus.status === 'SOS'
+                                ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                                : isDetour
+                                ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                                : bus.status === 'DELAYED'
+                                ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                                : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                            }`}
+                          >
+                            {isIncidentBus ? 'SOS BREAKDOWN' : isDetour ? 'DETOUR' : bus.status}
+                          </span>
+                        );
+                      })()}
                     </div>
                   </div>
 
