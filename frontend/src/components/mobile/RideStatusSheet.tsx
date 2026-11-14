@@ -125,6 +125,8 @@ export const RideStatusSheet: React.FC<RideStatusSheetProps> = ({
   if (!vehicle) return null;
 
   const isEmergency = vehicle.status === 'SOS';
+  const isDetour = Boolean(vehicle.isOffRoute || vehicle.status === 'DETOUR' || vehicle.progress?.isOffRoute);
+  const deviationMeters = vehicle.deviationMeters || vehicle.progress?.deviationMeters || 0;
 
   // Stale signal detection (Item 3C: GPS Dropout / Engine Off > 25 seconds)
   const lastSeenMs = vehicle.lastSeen
@@ -186,6 +188,16 @@ export const RideStatusSheet: React.FC<RideStatusSheetProps> = ({
                     </h2>
                     <span className="text-[10px] font-extrabold text-amber-500 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded">
                       Relief Dispatched
+                    </span>
+                  </div>
+                ) : isDetour ? (
+                  <div className="flex items-baseline gap-2">
+                    <h2 className="text-xl font-black tracking-tight text-amber-500 dark:text-amber-400 tabular-nums flex items-center gap-1.5">
+                      <AlertTriangle className="w-4 h-4 text-amber-500" />
+                      ON DETOUR
+                    </h2>
+                    <span className="text-[10px] font-extrabold text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded font-mono">
+                      ETAs Paused
                     </span>
                   </div>
                 ) : isStale ? (
@@ -260,6 +272,16 @@ export const RideStatusSheet: React.FC<RideStatusSheetProps> = ({
                     <span className="font-bold text-blue-500 dark:text-blue-400 tabular-nums">~6 mins away</span>
                   </div>
                 </div>
+              </div>
+            )}
+
+            {/* Off-Route Detour Warning Banner (Sprint 18) */}
+            {isDetour && !isEmergency && (
+              <div className="p-2.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-500 dark:text-amber-400 text-xs flex items-center gap-2 animate-in fade-in duration-200">
+                <AlertTriangle className="w-4 h-4 text-amber-500 dark:text-amber-400 shrink-0" />
+                <span className="text-[11px] text-theme-muted">
+                  ⚠️ Vehicle is taking an alternate detour due to road conditions{deviationMeters > 0 ? ` (~${deviationMeters}m off corridor)` : ''} • Stop arrival times paused until vehicle rejoins route corridor.
+                </span>
               </div>
             )}
 
