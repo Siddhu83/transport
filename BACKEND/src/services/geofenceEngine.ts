@@ -3,6 +3,111 @@ import { getRouteManifest, haversineKm } from '../modules/routes/routes.service.
 import { RouteManifest, VehicleRouteProgress, StopProgressStatus, SlidingStopWindow } from '../modules/routes/routes.schemas.js';
 import { TelemetryPing } from '../modules/telemetry/telemetry.schemas.js';
 
+export const DETOUR_THRESHOLD_METERS = 300; // Trigger: vehicle is off corridor by > 300m
+export const DETOUR_RECOVERY_METERS = 150;  // Recovery: hysteresis boundary (returning <= 150m clears detour)
+export const DETOUR_SUSTAINED_MS = 45000;    // Time threshold: deviation must persist for >= 45 seconds
+
+export interface VehicleDetourState {
+  isOffRoute: boolean;
+  deviationMeters: number;
+  firstDivergedAt?: number;
+  lastEvaluatedAt: number;
+}
+
+// In-memory detour fallback store (resilient across network blips & unit testing)
+const detourMemoryStore = new Map<string, VehicleDetourState>();
+
+export function _resetDetourMemoryStore(): void {
+  detourMemoryStore.clear();
+}
+
+/**
+ * Evaluates whether a vehicle has diverged off its designated polyline corridor.
+ * Enforces a 45-second sustained duration before tripping DETOUR and a 150m hysteresis recovery boundary.
+ */
+export async function evaluateVehicleDetour(
+  busId: string,
+  distanceToPolylineMeters: number,
+  nowMs: number = Date.now()
+): Promise<{ isOffRoute: boolean; deviationMeters: number }> {
+  let prevState: VehicleDetourState | undefined = detourMemoryStore.get(busId);
+
+  if (!prevState && (redis.status === 'ready' || redis.status === 'connect')) {
+    try {
+      const raw = await redis.hgetall(`bus:${busId}:detour`);
+      if (raw && Object.keys(raw).length > 0) {
+        prevState = {
+          isOffRoute: raw.isOffRoute === '1',
+          deviationMeters: parseInt(raw.deviationMeters || '0', 10),
+          firstDivergedAt: raw.firstDivergedAt ? parseInt(raw.firstDivergedAt, 10) : undefined,
+          lastEvaluatedAt: raw.lastEvaluatedAt ? parseInt(raw.lastEvaluatedAt, 10) : nowMs,
+        };
+      }
+    } catch {
+      // Redis degradation fallback
+    }
+  }
+
+  let isOffRoute = false;
+  let firstDivergedAt: number | undefined = prevState?.firstDivergedAt;
+
+  if (distanceToPolylineMeters <= DETOUR_RECOVERY_METERS) {
+    // 1. Vehicle is safely within corridor (<= 150m): reset detour state completely
+    isOffRoute = false;
+    firstDivergedAt = undefined;
+  } else if (distanceToPolylineMeters > DETOUR_THRESHOLD_METERS) {
+    // 2. Vehicle is outside nominal corridor (> 300m)
+    if (!firstDivergedAt) {
+      firstDivergedAt = nowMs;
+    }
+    const divergedDuration = nowMs - firstDivergedAt;
+    if (divergedDuration >= DETOUR_SUSTAINED_MS) {
+      isOffRoute = true;
+    } else {
+      isOffRoute = prevState?.isOffRoute ?? false;
+    }
+  } else {
+    // 3. Hysteresis corridor: 150m < distanceToPolylineMeters <= 300m
+    // Retain previous state: if already on detour, remain on detour until <= 150m.
+    if (prevState?.isOffRoute) {
+      isOffRoute = true;
+    } else {
+      isOffRoute = false;
+      firstDivergedAt = undefined;
+    }
+  }
+
+  const newState: VehicleDetourState = {
+    isOffRoute,
+    deviationMeters: distanceToPolylineMeters,
+    firstDivergedAt,
+    lastEvaluatedAt: nowMs,
+  };
+  detourMemoryStore.set(busId, newState);
+
+  if (redis.status === 'ready' || redis.status === 'connect') {
+    try {
+      if (!isOffRoute && !firstDivergedAt) {
+        await redis.del(`bus:${busId}:detour`);
+      } else {
+        const pipeline = redis.pipeline();
+        pipeline.hset(`bus:${busId}:detour`, {
+          isOffRoute: isOffRoute ? '1' : '0',
+          deviationMeters: distanceToPolylineMeters.toString(),
+          firstDivergedAt: firstDivergedAt ? firstDivergedAt.toString() : '',
+          lastEvaluatedAt: nowMs.toString(),
+        });
+        pipeline.expire(`bus:${busId}:detour`, 120);
+        await pipeline.exec();
+      }
+    } catch {
+      // Redis degradation fallback
+    }
+  }
+
+  return { isOffRoute, deviationMeters: distanceToPolylineMeters };
+}
+
 export interface SnappedPoint {
   latitude: number;
   longitude: number;
@@ -146,6 +251,17 @@ export async function evaluateVehicleProgress(
   // 2. Spatial Map-Matching: Snap coordinate to polyline
   const snapped = snapToPolyline(ping.latitude, ping.longitude, polylineCoordinates);
   const busLinearKm = snapped.linearDistanceKm;
+
+  // 2.1 Off-Route Detour State Machine (Sprint 18)
+  const pingTimestampMs = typeof ping.timestamp === 'number'
+    ? ping.timestamp
+    : (ping.timestamp ? new Date(ping.timestamp).getTime() : Date.now());
+
+  const detour = await evaluateVehicleDetour(
+    ping.busId,
+    snapped.distanceToPolylineMeters,
+    pingTimestampMs
+  );
 
   // 3. Retrieve Previous Progress State from Redis (if any)
   let prevStopOrder = 0;
@@ -322,6 +438,11 @@ export async function evaluateVehicleProgress(
     };
   }
 
+  // 7.1 Pause stop arrival ETA when off-route detour is active (Sprint 18)
+  if (detour.isOffRoute && window.currentStop) {
+    window.currentStop.etaSeconds = undefined;
+  }
+
   const progress: VehicleRouteProgress = {
     busId: ping.busId,
     routeId,
@@ -331,6 +452,8 @@ export async function evaluateVehicleProgress(
     progressPercent,
     window,
     updatedAt: Date.now(),
+    isOffRoute: detour.isOffRoute,
+    deviationMeters: detour.deviationMeters,
   };
 
   // 8. Atomic Cache Update to Redis hash (60-second TTL, ZERO database writes)
@@ -345,6 +468,8 @@ export async function evaluateVehicleProgress(
         progressPercent: progress.progressPercent.toString(),
         window: JSON.stringify(window),
         updatedAt: progress.updatedAt.toString(),
+        isOffRoute: detour.isOffRoute ? '1' : '0',
+        deviationMeters: detour.deviationMeters.toString(),
       });
       pipeline.expire(`bus:${ping.busId}:progress`, 60);
       await pipeline.exec();
@@ -360,9 +485,15 @@ export async function evaluateVehicleProgress(
  * Cleans up vehicle progress cache when driver ends transit duty
  */
 export async function clearVehicleProgress(busId: string): Promise<void> {
+  detourMemoryStore.delete(busId);
   try {
-    await redis.del(`bus:${busId}:progress`);
+    if (redis.status === 'ready' || redis.status === 'connect') {
+      const pipeline = redis.pipeline();
+      pipeline.del(`bus:${busId}:progress`);
+      pipeline.del(`bus:${busId}:detour`);
+      await pipeline.exec();
+    }
   } catch (err) {
-    console.warn(`[GeofenceEngine] Failed to delete progress cache for bus ${busId}:`, err);
+    console.warn(`[GeofenceEngine] Failed to delete progress/detour cache for bus ${busId}:`, err);
   }
 }
