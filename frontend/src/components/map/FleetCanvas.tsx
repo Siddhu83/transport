@@ -12,7 +12,7 @@ export interface VehicleFeatureProperties {
   routeName?: string;
   speed: number;
   heading: number;
-  status: 'ACTIVE' | 'DELAYED' | 'SOS' | 'OFF_DUTY';
+  status: 'ACTIVE' | 'DELAYED' | 'SOS' | 'OFF_DUTY' | 'DETOUR';
   passengerCount?: number;
   capacity?: number;
   lastPing: string;
@@ -23,6 +23,8 @@ export interface VehicleFeatureProperties {
   delegatePhone?: string;
   driverName?: string;
   driverPhone?: string;
+  isOffRoute?: boolean;
+  deviationMeters?: number;
 }
 
 export interface FleetCanvasProps {
@@ -209,6 +211,8 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
             ['get', 'status'],
             'SOS',
             '#dc2626',
+            'DETOUR',
+            '#f59e0b',
             'DELAYED',
             '#d97706',
             'ACTIVE',
@@ -239,6 +243,8 @@ export const FleetCanvas: React.FC<FleetCanvasProps> = ({
             ['get', 'status'],
             'SOS',
             '#dc2626',
+            'DETOUR',
+            '#f59e0b',
             'DELAYED',
             '#d97706',
             'ACTIVE',
