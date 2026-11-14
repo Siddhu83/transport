@@ -53,5 +53,7 @@ export interface VehicleRouteProgress {
   progressPercent: number;
   window?: SlidingStopWindow;
   updatedAt: number;
+  isOffRoute?: boolean;
+  deviationMeters?: number;
 }
 
