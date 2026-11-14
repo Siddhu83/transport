@@ -547,6 +547,14 @@ export const App: React.FC = () => {
         </span>
       );
     }
+    if (daemonState.isOffRoute) {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse">
+          <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
+          OFF-ROUTE DETOUR
+        </span>
+      );
+    }
     if (!daemonState.isOnline) {
       return (
         <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20 animate-pulse">
@@ -895,6 +903,24 @@ export const App: React.FC = () => {
             Ping Rate: 5s
           </span>
         </div>
+
+        {/* Off-Route Detour Warning Banner (Sprint 18) */}
+        {daemonState.isOffRoute && daemonState.isRunning && (
+          <div className="p-3.5 rounded-2xl bg-amber-500/15 border-2 border-amber-500/50 text-amber-200 text-xs space-y-1.5 shadow-lg shadow-amber-950/30 animate-in fade-in duration-200">
+            <div className="flex items-center justify-between">
+              <span className="font-extrabold text-amber-400 flex items-center gap-2 text-xs">
+                <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+                Off-Route Detour Detected
+              </span>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/25 text-amber-300 font-bold border border-amber-500/40">
+                ~{daemonState.deviationMeters}m off corridor
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-300 leading-snug">
+              Vehicle has diverged from the designated polyline corridor for over 45 seconds. Stop ETAs are temporarily paused. Detour alert will auto-clear once you return within 150m of the corridor.
+            </p>
+          </div>
+        )}
 
         {/* ACTIVE SOS EMERGENCY BANNER (If Incident Triggered) */}
         {activeIncident && (
