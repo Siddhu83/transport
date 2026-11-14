@@ -36,6 +36,8 @@ export interface TrackingDaemonState {
   notificationChannel: string;
   status: 'IDLE' | 'ACTIVE_FOREGROUND' | 'PAUSED' | 'ERROR';
   isEmergency: boolean;
+  isOffRoute: boolean;
+  deviationMeters: number;
 }
 
 const NOTIFICATION_CHANNEL_ID = 'transit_driver_tracking_channel';
@@ -70,6 +72,8 @@ export class ForegroundTrackingDaemon {
   private currentPassengerCount = 38;
   private wakeLockSentinel: any = null;
   private isEmergency = false;
+  private isOffRoute = false;
+  private deviationMeters = 0;
 
   constructor() {
     if (typeof window !== 'undefined') {
@@ -149,6 +153,8 @@ export class ForegroundTrackingDaemon {
 
     this.isRunning = false;
     this.currentStatus = 'IDLE';
+    this.isOffRoute = false;
+    this.deviationMeters = 0;
     console.info(`⏹️ Android Foreground Service [${NOTIFICATION_CHANNEL_ID}] Stopped (Off-Duty Cleanup Sent)`);
   }
 
@@ -285,6 +291,14 @@ export class ForegroundTrackingDaemon {
         this.lastPingTime = Date.now();
         this.isOnline = true;
 
+        try {
+          const body = await res.json();
+          if (body && typeof body.isOffRoute === 'boolean') {
+            this.isOffRoute = body.isOffRoute;
+            this.deviationMeters = body.deviationMeters ?? 0;
+          }
+        } catch {}
+
         if (!this.telemetryBuffer.isEmpty()) {
           await this.flushBufferedPings();
         }
@@ -367,6 +381,8 @@ export class ForegroundTrackingDaemon {
       notificationChannel: NOTIFICATION_CHANNEL_ID,
       status: this.currentStatus,
       isEmergency: this.isEmergency,
+      isOffRoute: this.isOffRoute,
+      deviationMeters: this.deviationMeters,
     };
   }
 }
