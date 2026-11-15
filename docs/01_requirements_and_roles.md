@@ -15,7 +15,8 @@ The system enforces four deterministic roles via cryptographically signed JWT to
 
 | Resource / Action | Super Admin | Bus In-Charge | Driver | Student |
 | :--- | :---: | :---: | :---: | :---: |
-| **Manage Fleet (Buses, Routes, Stops)** | Full CRUD | Read-Only | Read-Only | Read-Only |
+| **Manage Fleet (Buses, Routes, Stops)** | Full CRUD (All Buses) | Scoped Config (Assigned Bus) | Scoped Config (Assigned Bus) | Read-Only |
+| **Route Studio & KML/GPX Ingestion** | Full Ingest (Any Bus) | Ingest (Assigned Bus Only) | Ingest (Assigned Bus Only) | None |
 | **Manage Users & Role Assignments** | Full CRUD | None | None | None |
 | **Stream Telemetry (Emit GPS)** | None | None | **Write** (Assigned bus only) | None |
 | **Global Canvas Map View** | **Read** (All buses) | **Read** (All buses) | Read (Own route) | **Read** (Assigned/All) |
@@ -41,18 +42,21 @@ The system enforces four deterministic roles via cryptographically signed JWT to
   - **FR-D1 (Shift Initialization):** Authenticate and bind their device to an assigned `busId` and active `routeId`.
   - **FR-D2 (Persistent Tracking Daemon):** Runs a native Android Foreground Service with a sticky system notification (`"Transit Tracker Active"`).
   - **FR-D3 (1-Tap SOS Breakdown Trigger):** Large, prominent dashboard trigger to dispatch an immediate SOS signal with a 1-tap stranded passenger count selector (`[<15]`, `[15-30]`, `[30-50]`, `[Full: 50+]`).
+  - **FR-D4 (Assigned Bus Route Configuration):** Ability to configure or update the route for their assigned bus via mobile Map Studio or by uploading Google My Maps `.kml` / `.gpx` files.
 
 ### 3.3 Bus In-Charge Persona
 - **Primary Goal:** Assist the driver with operational duties, verify route status, and manage emergency incident coordination.
 - **Functional Requirements:**
   - **FR-I1 (Secondary SOS Dispatch):** Authority to trigger or cancel an SOS incident if the driver's device loses power or connectivity.
   - **FR-I2 (Direct Dispatch Comm Channel):** View incoming detour/redirection directives pushed by Super Admins.
+  - **FR-I3 (Assigned Bus Route Ingestion):** Ingest and update route stops and polyline corridors for their specific bus via mobile Map Studio or KML/GPX import.
 
 ### 3.4 Super Admin (Transport Manager) Persona
 - **Primary Goal:** Real-time visibility across the entire fleet, route scheduling, and emergency diversion management.
 - **Functional Requirements:**
   - **FR-A1 (Global Canvas Control Tower):** Single-pane dashboard rendering all 60–100 active vehicles simultaneously using MapLibre GL JS symbol layers.
   - **FR-A2 (Emergency Incident Resolver):** Real-time visualization of disabled vehicles, candidate relief vehicles within an \(R\)-km radius, and 1-click authorization of backup passenger pickup routes.
+  - **FR-A3 (Institutional Route Studio & File Ingestion):** Desktop map studio to visually draft routes with landmark autocomplete and OSRM road snapping, or batch-import Google My Maps `.kml` / `.gpx` corridors for any vehicle in the fleet.
 
 ---
 
