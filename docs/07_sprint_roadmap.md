@@ -283,9 +283,69 @@ This document details the **20-Sprint (40-Week)** master engineering roadmap for
 
 ---
 
-### 3.8 Phase 8: System Hardening, Stress Testing & Production Rollout
+### 3.8 Phase 8: Dynamic Route & Stop Ingestion Engine (Visual Studio & KML/GPX)
 
-#### Sprint 19: System Hardening, Circuit Breakers & Health Probes
+#### Sprint 19: Route & Stop Ingestion Engine, KML/GPX Parsers & Scoped RBAC API
+- **Objective:** Build backend services and scoped Fastify endpoints to ingest, validate, and persist routes and stops from visual studio payloads and Google My Maps `.kml` / `.gpx` files with strict role scoping.
+- **Key Tasks:**
+  1. **OSRM Route Connector Service (`routes.service.ts`):** Implement `fetchRoadPolyline(coordinates: [number, number][])` querying OpenStreetMap OSRM driving engine with local straight-line fallback to generate realistic road-following polylines without manual coordinates.
+  2. **KML / GPX Geometry Parser (`routeParser.ts`):** Parse XML files to extract `<Placemark>` / `<wpt>` elements as sequential bus stops with names/descriptions and `<LineString>` / `<trkseg>` coordinates as the high-resolution route polyline.
+  3. **Automated Distance & Time Pipeline:** Automatically compute cumulative `distanceFromOriginKm` via `snapToPolyline` and `estimatedMinutesFromStart` ($30\text{ km/h}$ average transit speed + $90\text{s}$ boarding dwell time per stop).
+  4. **Fastify Endpoints (`routes.routes.ts`):**
+     - `POST /api/v1/routes/studio`: Ingests stop array; runs OSRM road snapping, calculates metrics, and updates `Route`, `Stop`, and `RouteStop`.
+     - `POST /api/v1/routes/import-file`: Accepts multipart `.kml` or `.gpx` upload; auto-extracts stops and polyline.
+  5. **Role Scoping Guard:** Enforce that `SUPER_ADMIN` can configure routes for any vehicle or standalone routes, while `DRIVER` and `BUS_INCHARGE` can configure routes strictly for `user.assignedBusId` (rejecting cross-bus edits with HTTP 403).
+  6. **Cache Invalidation:** Invalidate Redis route cache (`DEL route:<id>:manifest`) and notify SSE stream clients upon corridor updates.
+- **Deliverables & Definition of Done (DoD):**
+  - Sub-50ms KML/GPX parsing for corridors with up to 50 stops and 2,000 polyline points.
+  - Zero manual polyline coordinates required; OSRM automatically resolves road curves.
+  - Automated unit tests covering: KML/GPX parsing accuracy, OSRM curve generation, distance calculations, and 403 authorization rejections for unassigned buses.
+- **Contract Mappings:** [01_requirements_and_roles.md §2.2](https://github.com/Siddhu83/transport/docs/01_requirements_and_roles.md#22-user-personas--functional-requirements), [02_system_architecture.md §2](https://github.com/Siddhu83/transport/docs/02_system_architecture.md#2-telemetry-processing-pipeline-the-hot-path), [03_telemetry_and_realtime_protocol.md §2](https://github.com/Siddhu83/transport/docs/03_telemetry_and_realtime_protocol.md#2-ingestion-interface-contract-driver--backend).
+
+#### Sprint 20: Super Admin Interactive Route Studio & KML/GPX Importer (Web UI)
+- **Objective:** Deliver a full-featured desktop web interface in the Admin Portal for creating, editing, and importing routes for any bus in the institution.
+- **Key Tasks:**
+  1. **Interactive Route Studio Canvas (`RouteStudio.tsx`):**
+     - MapLibre GL JS vector canvas with road network basemap.
+     - Landmark/place search autocomplete powered by Nominatim geocoder.
+     - Click-to-place stop pins with 50m geofence boundary rings and editable stop names.
+     - Sidebar stop list with drag-and-drop reordering that triggers real-time OSRM polyline re-routing.
+  2. **KML / GPX File Dropzone:**
+     - 1-click drag-and-drop file upload supporting Google My Maps `.kml` and standard `.gpx` files.
+     - Pre-commit interactive preview: renders imported stops and polyline over the map canvas for administrative inspection before committing.
+  3. **Bus Fleet Association Dropdown:**
+     - Allows Super Admin to assign the generated route to any vehicle in the fleet (`BUS-101`, `BUS-102`, etc.) or save as a reusable corridor template.
+  4. **Corridor Metrics Card:**
+     - Live readout of total route mileage ($X\text{ km}$), stop count, and estimated complete corridor run duration.
+- **Deliverables & Definition of Done (DoD):**
+  - Super Admin can draft a 15-stop corridor from landmark clicks in $< 60$ seconds.
+  - 1-click Google My Maps KML import renders instant visual preview in $< 1$ second.
+  - Clean responsive styling matching existing Royal Blue (`blue-500`) theme.
+- **Contract Mappings:** [05_frontend_guidelines.md §5.3](https://github.com/Siddhu83/transport/docs/05_frontend_guidelines.md#53-control-tower-super-admin-fids-dashboard), [01_requirements_and_roles.md §3.3](https://github.com/Siddhu83/transport/docs/01_requirements_and_roles.md#33-super-admin-persona).
+
+#### Sprint 21: Bus In-Charge & Driver Route Configuration Kiosk (Mobile PWA)
+- **Objective:** Empower bus in-charges and drivers to configure or update their specific bus's route directly from their smartphone without requiring desktop computer access.
+- **Key Tasks:**
+  1. **Driver App "Configure Route" Action Card (`DRIVER_APP`):**
+     - Add "Manage Bus Route" card in Driver Console header/quick actions, strictly pre-scoped to `user.assignedBusId`.
+  2. **Mobile KML / GPX Upload Picker:**
+     - Native file picker enabling in-charges to upload `.kml` or `.gpx` files received via WhatsApp or Google Drive.
+     - Instant mobile preview sheet showing route name, total stops, and route summary.
+  3. **Lightweight Mobile Map Studio:**
+     - Touch-optimized map viewer allowing in-charges to tap to add boarding points, adjust geofences, or delete outdated stops.
+  4. **1-Tap "Apply to My Bus":**
+     - Commits changes, updates `assignedRouteId`, and restarts local `ForegroundTrackingDaemon` with the new polyline without logging out.
+- **Deliverables & Definition of Done (DoD):**
+  - Scoped security: Driver can only modify their assigned vehicle; attempting to target other buses is blocked on client and server.
+  - Frictionless mobile upload flow completing in $< 10$ seconds.
+  - Zero disruption to background tracking daemon upon route application.
+- **Contract Mappings:** [05_frontend_guidelines.md §5.2](https://github.com/Siddhu83/transport/docs/05_frontend_guidelines.md#52-driver-tracking-console-distraction-free-kiosk), [01_requirements_and_roles.md §3.2](https://github.com/Siddhu83/transport/docs/01_requirements_and_roles.md#32-fleet-captain--driver-persona).
+
+---
+
+### 3.9 Phase 9: System Hardening, Stress Testing & Production Rollout
+
+#### Sprint 22: System Hardening, Circuit Breakers & Health Probes
 - **Objective:** Enforce infrastructure resilience, database statement timeouts, circuit breaker fallbacks, and health checks.
 - **Key Tasks:**
   1. Implement Fastify circuit breakers tripping at \(> 50\%\) failure rate within 10s window (returning HTTP 503).
@@ -297,7 +357,7 @@ This document details the **20-Sprint (40-Week)** master engineering roadmap for
   - Health probes integrated for Docker container orchestrator monitoring.
 - **Contract Mappings:** [06_resilience_and_failure_modes.md §4](https://github.com/Siddhu83/transport/docs/06_resilience_and_failure_modes.md#4-database--cache-circuit-breakers), [06_resilience_and_failure_modes.md §5](https://github.com/Siddhu83/transport/docs/06_resilience_and_failure_modes.md#5-health-probes--disaster-triage-matrix).
 
-#### Sprint 20: End-to-End Stress Testing, Security Audit & Production Launch
+#### Sprint 23: End-to-End Stress Testing, Security Audit & Production Launch
 - **Objective:** Conduct high-throughput load testing, security penetration testing, 5-bus pilot field test, and deploy to production environment.
 - **Key Tasks:**
   1. Conduct K6 load test simulating 100 concurrent drivers emitting telemetry at 2-second intervals while 2,000 student SSE streams run concurrently.
@@ -342,7 +402,11 @@ This document details the **20-Sprint (40-Week)** master engineering roadmap for
          │
   ┌──────┘
   ▼
-[Sprint 19: Circuit Breakers & Probes] ──▶ [Sprint 20: Load Testing & Production Launch]
+[Sprint 19: Route Ingestion & KML/GPX API] ──▶ [Sprint 20: Admin Map Studio (Web)] ──▶ [Sprint 21: Driver Route Kiosk (Mobile)]
+                                                                                                    │
+  ┌─────────────────────────────────────────────────────────────────────────────────────────────────┘
+  ▼
+[Sprint 22: Circuit Breakers & Probes] ──▶ [Sprint 23: Load Testing & Production Launch]
 ```
 
 ### Technical Component Mapping Matrix
@@ -367,8 +431,11 @@ This document details the **20-Sprint (40-Week)** master engineering roadmap for
 | **Sprint 16** | Sprint 2, 3 | `src/modules/auth/delegation.routes.ts`, `redis.ts` | Req §2.2, Protocol §2 | Medium |
 | **Sprint 17** | Sprint 16 | `DRIVER_APP/src/pages/DelegatePortal.tsx`, `Console.tsx` | Frontend §5.2, Frontend §5.3 | Medium |
 | **Sprint 18** | Sprint 3, 14 | `src/services/geofenceEngine.ts`, `RideStatusSheet.tsx` | Protocol §2, Frontend §5.1 | Medium |
-| **Sprint 19** | Sprint 3, 11 | `src/infrastructure/circuitBreaker.ts`, `src/modules/health/*` | Resilience §4, Resilience §5 | High |
-| **Sprint 20** | All (1–19) | `tests/load/k6-telemetry.js`, Deployment configs | Req §4, Arch §5 | Critical |
+| **Sprint 19** | Sprint 2, 14 | `src/modules/routes/routes.service.ts`, `src/services/routeParser.ts` | Req §2.2, Protocol §2 | Medium |
+| **Sprint 20** | Sprint 19 | `frontend/src/pages/admin/RouteStudio.tsx`, `ControlTower.tsx` | Frontend §5.3, Req §3.3 | Medium |
+| **Sprint 21** | Sprint 19 | `DRIVER_APP/src/pages/RouteConfigModal.tsx`, `App.tsx` | Frontend §5.2, Req §3.2 | Medium |
+| **Sprint 22** | Sprint 3, 11 | `src/infrastructure/circuitBreaker.ts`, `src/modules/health/*` | Resilience §4, Resilience §5 | High |
+| **Sprint 23** | All (1–22) | `tests/load/k6-telemetry.js`, Deployment configs | Req §4, Arch §5 | Critical |
 
 ---
 
