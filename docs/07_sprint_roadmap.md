@@ -318,7 +318,7 @@ This document details the **20-Sprint (40-Week)** master engineering roadmap for
   4. **Corridor Metrics Card:**
      - Live readout of total route mileage ($X\text{ km}$), stop count, and estimated complete corridor run duration.
 - **Deliverables & Definition of Done (DoD):**
-  - Super Admin can draft a 15-stop corridor from landmark clicks in $< 60$ seconds.
+  - Super Admin can draft an atmost 20-stop corridor from landmark clicks in $< 60$ seconds.
   - 1-click Google My Maps KML import renders instant visual preview in $< 1$ second.
   - Clean responsive styling matching existing Royal Blue (`blue-500`) theme.
 - **Contract Mappings:** [05_frontend_guidelines.md §5.3](https://github.com/Siddhu83/transport/docs/05_frontend_guidelines.md#53-control-tower-super-admin-fids-dashboard), [01_requirements_and_roles.md §3.3](https://github.com/Siddhu83/transport/docs/01_requirements_and_roles.md#33-super-admin-persona).
