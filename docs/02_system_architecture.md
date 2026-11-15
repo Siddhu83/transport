@@ -160,3 +160,37 @@ The platform implements a **Decoupled Dual-Plane Architecture**:
                       ▼
           [Supabase Managed PostgreSQL DB]
 ```
+
+---
+
+## 6. Route Ingestion & Geometry Processing Architecture
+
+To eliminate manual coordinate entry for stops and polylines, the system provides two distinct ingestion workflows for administrators and bus in-charges:
+
+```
+[Pathway A: Map Studio]                     [Pathway C: KML / GPX File]
+(Point-and-click / landmark search)         (Google My Maps .kml / standard .gpx)
+         │                                               │
+         ▼                                               ▼
+[OSRM Road Snapping Engine]                 [XML DOM / Geometry Parser]
+(Resolves street curves & bypasses)         (Extracts Placemark stops & LineStrings)
+         │                                               │
+         └───────────────────────┬───────────────────────┘
+                                 ▼
+           [Automated Geometry & Timing Pipeline]
+           ├── 1. snapToPolyline calculates cumulative distanceFromOriginKm
+           ├── 2. Transit velocity model generates estimatedMinutesFromStart
+           ├── 3. Default 50m geofence radius generated for every stop
+           ├── 4. Prisma atomic transaction writes Route, Stop, and RouteStop
+           └── 5. Evicts Redis route:<id>:manifest cache for instant fleet sync
+```
+
+### 6.1 Role Scoping & Multi-Tenant Authorization
+- **Super Admin (`SUPER_ADMIN`):** Unrestricted authority to create, modify, or replace corridors for any bus in the fleet roster, or maintain standalone corridor templates.
+- **Bus In-Charge & Driver (`BUS_INCHARGE`, `DRIVER`):** Cryptographically scoped to `user.assignedBusId`. Ingestion endpoints enforce that drivers/in-charges can only publish or overwrite routes bound to their designated vehicle, blocking unassigned bus modifications with HTTP 403 Forbidden.
+
+### 6.2 Cache Invalidation & Telemetry Sync
+Upon route creation or replacement:
+1. Fastify issues an immediate `DEL route:<routeId>:manifest` to Redis.
+2. The active `bus:<busId>:progress` hash is flushed.
+3. Connected driver daemons and student PWA canvases receive an instant refresh directive via the SSE control channel, synchronizing the new stops and polyline without requiring an application restart.
