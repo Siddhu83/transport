@@ -8,6 +8,7 @@ import { RideStatusSheet } from './components/mobile/RideStatusSheet';
 import { MobileNavBar, NavTab } from './components/mobile/MobileNavBar';
 import { SettingsView } from './components/mobile/SettingsView';
 import { ControlTower } from './pages/admin/ControlTower';
+import { RouteStudio } from './pages/admin/RouteStudio';
 import { Bus, AlertCircle, X } from 'lucide-react';
 
 export const App: React.FC = () => {
@@ -150,6 +151,11 @@ export const App: React.FC = () => {
     setSearchQuery('');
     setRecenterTrigger((prev) => prev + 1);
   };
+
+  // Super Admin Route Studio (Sprint 20)
+  if (location.pathname.startsWith('/admin/route-studio') || location.pathname.startsWith('/admin/routes')) {
+    return <RouteStudio />;
+  }
 
   // Super Admin Control Tower HUD Route (Sprint 12)
   if (location.pathname.startsWith('/admin') || location.pathname.startsWith('/control-tower')) {
