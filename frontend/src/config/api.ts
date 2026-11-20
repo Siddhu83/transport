@@ -13,6 +13,8 @@ export const ENDPOINTS = {
   TELEMETRY_BATCH_DRAIN: `${API_BASE_URL}/telemetry/batch-drain`,
   ROUTE_MANIFEST: (id: string) => `${API_BASE_URL}/routes/${id}/manifest`,
   ROUTES_LIST: `${API_BASE_URL}/routes`,
+  ROUTES_STUDIO: `${API_BASE_URL}/routes/studio`,
+  ROUTES_IMPORT_FILE: `${API_BASE_URL}/routes/import-file`,
   SOS_ACTIVE: `${API_BASE_URL}/sos/active`,
   SOS_TRIGGER: `${API_BASE_URL}/sos/trigger`,
   SOS_DISPATCH: (id: string) => `${API_BASE_URL}/sos/${id}/dispatch`,
