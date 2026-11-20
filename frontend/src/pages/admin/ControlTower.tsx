@@ -17,6 +17,7 @@ import {
   ExternalLink,
   SlidersHorizontal,
   Compass,
+  Route as RouteIcon,
 } from 'lucide-react';
 import { useTelemetryStream } from '../../hooks/useTelemetryStream';
 import { useFleetInterpolation } from '../../hooks/useFleetInterpolation';
@@ -671,15 +672,24 @@ export const ControlTower: React.FC = () => {
             </div>
           </div>
 
-          {/* Quick Exit to Student View */}
-          <button
-            onClick={() => navigate('/')}
-            className="text-[11px] font-semibold text-slate-400 hover:text-white px-2.5 py-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-700/60 border border-slate-700/50 transition-colors flex items-center gap-1 cursor-pointer"
-            title="Switch to Student Mobile PWA"
-          >
-            <span>Student App</span>
-            <ExternalLink className="w-3 h-3" />
-          </button>
+          {/* Action Buttons: Route Studio & Student App */}
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => navigate('/admin/route-studio')}
+              className="text-[11px] font-semibold text-blue-400 hover:text-white px-2.5 py-1.5 rounded-lg bg-blue-500/15 hover:bg-blue-600 border border-blue-500/30 transition-colors flex items-center gap-1 cursor-pointer"
+              title="Open Route Ingestion Studio"
+            >
+              <RouteIcon className="w-3 h-3" />
+              <span>Studio</span>
+            </button>
+            <button
+              onClick={() => navigate('/')}
+              className="text-[11px] font-semibold text-slate-400 hover:text-white px-2 py-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-700/60 border border-slate-700/50 transition-colors flex items-center gap-1 cursor-pointer"
+              title="Switch to Student Mobile PWA"
+            >
+              <ExternalLink className="w-3 h-3" />
+            </button>
+          </div>
         </div>
 
         {/* Live System Status Pill */}
